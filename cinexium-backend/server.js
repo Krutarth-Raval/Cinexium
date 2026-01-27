@@ -29,7 +29,7 @@ app.use("/api/rating", ratingRoutes)
 //review route
 app.use("/api/reviews", reviewRoutes)
 //movie routes
-app.use("/api/movies", movieRoutes)
+app.use("/api/movie", movieRoutes)
 //series routes
 app.use("/api/tv", tvRoutes)
 

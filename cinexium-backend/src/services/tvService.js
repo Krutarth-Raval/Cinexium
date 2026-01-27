@@ -29,9 +29,9 @@ export const getTvDetailsService = async (tmdbId) => {
 
   try {
     const [details, credits, videos] = await Promise.all([
-      tmdbGet(`tv/${tmdbId}`),
+      tmdbGet(`/tv/${tmdbId}`),
       tmdbGet(`/tv/${tmdbId}/credits`),
-      tmdbGet(`'tv/${tmdbId}/videos`),
+      tmdbGet(`/tv/${tmdbId}/videos`),
     ]);
     return {
       details,
