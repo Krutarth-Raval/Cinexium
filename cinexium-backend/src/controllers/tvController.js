@@ -4,6 +4,8 @@ import {
   getPopularTvService,
   getTopRatedTvService,
   getTvDetailsService,
+  getTvSeasonEpisodesService,
+  getTvSeasonsService,
 } from "../services/tvService.js";
 
 export const getOnTheAirTvController = async (req, res) => {
@@ -71,6 +73,46 @@ export const getTvDetailsController = async (req, res) => {
     });
   } catch (error) {
     return res.status(error.status || 500).json({
+      message: error.message,
+    });
+  }
+};
+
+//get TV seasons
+export const getTvSeasonsController = async (req, res) => {
+  try {
+    const { tmdbId, seasonNumber } = req.params;
+
+    const data = await getTvSeasonsService(tmdbId, seasonNumber);
+
+    return res.status(200).json({
+      status: 200,
+      data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+
+//get TV seasons episodes
+export const getTvSeasonEpisodesController = async (req, res) => {
+  try {
+    const { tmdbId, seasonNumber, episodeNumber } = req.params;
+    const data = await getTvSeasonEpisodesService(
+      tmdbId,
+      seasonNumber,
+      episodeNumber,
+    );
+    return res.status(200).json({
+      status: 200,
+      data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
       message: error.message,
     });
   }
