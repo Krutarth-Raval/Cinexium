@@ -7,7 +7,9 @@ import historyRoutes from "./src/routes/historyRoutes.js";
 import ratingRoutes from "./src/routes/ratingRoutes.js";
 import reviewRoutes from "./src/routes/reviewRoutes.js";
 import movieRoutes from "./src/routes/movieRoutes.js"
-import tvRoutes from "./src/routes/tvRoutes.js"
+import tvRoutes from "./src/routes/tvRoutes.js";
+import genresRoutes from "./src/routes/genresRoutes.js"
+import discoverRoutes from "./src/routes/discoverRoutes.js"
 dotenv.config();
 
 //connect DB
@@ -32,6 +34,10 @@ app.use("/api/reviews", reviewRoutes)
 app.use("/api/movie", movieRoutes)
 //series routes
 app.use("/api/tv", tvRoutes)
+//genres routes
+app.use("/api/genres", genresRoutes)
+//discover routes
+app.use("/api/discover", discoverRoutes)
 
 app.get("/", (req, res) => {
   res.send("Cinexium Backend is running");
