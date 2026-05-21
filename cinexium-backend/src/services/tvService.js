@@ -111,3 +111,55 @@ export const getTvSeasonEpisodesService = async (
     };
   }
 };
+
+// tv recommendation service
+export const getTvRecommendationService = async (tmdbId) => {
+  if (!tmdbId) {
+    throw {
+      status: 400,
+      message: "TV show ID is Required",
+    };
+  }
+
+  try {
+    const recommendations = await tmdbGet(`/tv/${tmdbId}/recommendations`);
+    return recommendations;
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "Failed to fetch TV recommendations",
+    };
+  }
+};
+
+// tv genres service
+export const getTvGenresService = async () => {
+  try {
+    const res = await tmdbGet("/genre/tv/list");
+    return res.genres;
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "Failed to fetch tv genres list",
+    };
+  }
+};
+
+// discover tv by genre service
+export const getDiscoverTvService = async (genre, page = 1) => {
+  try {
+    const res = await tmdbGet(`/discover/tv?with_genres=${genre}&page=${page}`);
+
+    return {
+      results: res.results,
+      page: res.page,
+      totalPages: res.total_pages,
+      totalResults: res.total_results,
+    };
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "failed to discover Tv Shows by genre",
+    };
+  }
+};

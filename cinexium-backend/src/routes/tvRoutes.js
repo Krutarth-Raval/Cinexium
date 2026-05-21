@@ -1,5 +1,5 @@
 import express from "express"
-import { getLatestTvController, getOnTheAirTvController, getPopularTvController, getTopRatedTvController, getTvDetailsController,  getTvSeasonEpisodesController,  getTvSeasonsController } from "../controllers/tvController.js"
+import { getLatestTvController, getOnTheAirTvController, getPopularTvController, getTvRecommendationController, getTopRatedTvController, getTvDetailsController,  getTvSeasonEpisodesController,  getTvSeasonsController } from "../controllers/tvController.js"
 
 const router = express.Router()
 
@@ -14,4 +14,6 @@ router.get("/:tmdbId/details", getTvDetailsController)
 router.get("/:tmdbId/season/:seasonNumber", getTvSeasonsController)
 router.get("/:tmdbId/season/:seasonNumber/episode/:episodeNumber", getTvSeasonEpisodesController)
 
+//series recommendation route
+router.get("/:tmdbId/recommendations", getTvRecommendationController)
 export default router

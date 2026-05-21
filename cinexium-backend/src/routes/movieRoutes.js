@@ -2,6 +2,7 @@ import express from "express";
 import {
   getLatestMoviesController,
   getMovieDetailsController,
+  getMovieRecommendationController,
   getNowPlayingMoviesController,
   getPopularMoviesController,
   getTopRatedMoviesController,
@@ -16,6 +17,10 @@ router.get("/latest", getLatestMoviesController);
 
 //movie details route
 router.get("/:tmdbId/details", getMovieDetailsController)
+
+//movie recommendation route
+
+router.get("/:tmdbId/recommendations", getMovieRecommendationController)
 
 
 export default router;

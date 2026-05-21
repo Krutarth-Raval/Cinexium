@@ -44,3 +44,60 @@ export const getMovieDetailsService = async (tmdbId) => {
     };
   }
 };
+
+//movie recommendation service
+export const getMovieRecommendationService = async (tmdbId) => {
+  // check if tmdb id Exists or not
+  if (!tmdbId) {
+    throw {
+      status: 400,
+      message: "Movie ID is required",
+    };
+  }
+
+  try {
+    const recommendations = await tmdbGet(`/movie/${tmdbId}/recommendations`);
+    return recommendations;
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "Failed to fetch movie recommendations",
+      original: error.original || error,
+    };
+  }
+};
+
+// movie genres list
+export const getMovieGenresService = async () => {
+  try {
+    const res = await tmdbGet("/genre/movie/list");
+
+    return res.genres;
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "Failed to fetch Movie Genres.",
+    };
+  }
+};
+
+// discover movie service
+export const getDiscoverMovieService = async (genre, page = 1) => {
+  try {
+    const res = await tmdbGet(
+      `/discover/movie?with_genres=${genre}&page=${page}`,
+    );
+
+    return {
+      results: res.results,
+      page: res.page,
+      totalPages: res.total_pages,
+      totalResults: res.total_results,
+    };
+  } catch (error) {
+    throw {
+      status: error.status || 500,
+      message: error.message || "failed to discover movies by genre",
+    };
+  }
+};

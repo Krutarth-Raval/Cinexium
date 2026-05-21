@@ -1,9 +1,12 @@
 import {
+  getDiscoverTvService,
   getLatestTvService,
   getOnTheAirTvService,
   getPopularTvService,
   getTopRatedTvService,
   getTvDetailsService,
+  getTvGenresService,
+  getTvRecommendationService,
   getTvSeasonEpisodesService,
   getTvSeasonsService,
 } from "../services/tvService.js";
@@ -115,5 +118,57 @@ export const getTvSeasonEpisodesController = async (req, res) => {
       status: 500,
       message: error.message,
     });
+  }
+};
+
+// get Tv recommendations
+export const getTvRecommendationController = async (req, res) => {
+  const tmdbId = req.params.tmdbId;
+
+  const recommendations = await getTvRecommendationService(tmdbId);
+  try {
+    return res.status(200).json({
+      status: 200,
+      data: recommendations,
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+
+// get Tv Genres
+
+export const getTvGenresController = async (req, res) => {
+  try {
+    const genres = await getTvGenresService();
+    return res.status(200).json({
+      status: 200,
+      data: genres,
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+
+// discover Tv by genre
+export const getDiscoverTvController = async (req, res) => {
+  try {
+    const { genre,page } = req.query;
+    const tv = await getDiscoverTvService(genre, page);
+
+    return res.status(200).json({
+      status: 200,
+      data: tv,
+    });
+  } catch (error) {
+    return res
+      .status(error.status || 500)
+      .json({ status: 500, message: error.message });
   }
 };

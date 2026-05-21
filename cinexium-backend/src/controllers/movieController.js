@@ -1,6 +1,9 @@
 import {
+  getDiscoverMovieService,
   getLatestMoviesService,
   getMovieDetailsService,
+  getMovieGenresService,
+  getMovieRecommendationService,
   getNowPlayingMoviesService,
   getPopularMoviesService,
   getTopRatedMoviesService,
@@ -65,5 +68,51 @@ export const getMovieDetailsController = async (req, res) => {
     });
   } catch (error) {
     return res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
+//movie recommendation controller
+export const getMovieRecommendationController = async (req, res) => {
+  try {
+    const tmdbId = req.params.tmdbId;
+    const recommendations = await getMovieRecommendationService(tmdbId);
+    return res.status(200).json({
+      status: 200,
+      data: recommendations,
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
+// Movie genres Controller
+export const getMovieGenresController = async (req, res) => {
+  try {
+    const genres = await getMovieGenresService();
+    return res.status(200).json({
+      status: 200,
+      data: genres,
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({ message: error.message });
+  }
+};
+
+// discover movie by genre
+
+export const getDiscoverMovieController = async (req, res) => {
+  try {
+    const { genre, page } = req.query;
+
+    const movies = await getDiscoverMovieService(genre, page);
+    
+    return res.status(200).json({
+      status: 200,
+      data: movies,
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      message: error.message,
+    });
   }
 };
