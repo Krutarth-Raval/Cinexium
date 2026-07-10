@@ -8,7 +8,7 @@ import { useSocket } from '@/components/providers/SocketProvider';
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const router = useRouter();
-  const { socket } = useSocket();
+  const { pusherClient } = useSocket();
 
   useEffect(() => {
     fetchNotifications();
@@ -16,13 +16,13 @@ export default function NotificationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!pusherClient) return;
     const handleNewNotification = () => fetchNotifications();
-    socket.on('receiveNotification', handleNewNotification);
+    pusherClient.bind('receiveNotification', handleNewNotification);
     return () => {
-      socket.off('receiveNotification', handleNewNotification);
+      pusherClient.unbind('receiveNotification', handleNewNotification);
     };
-  }, [socket]);
+  }, [pusherClient]);
 
   const fetchNotifications = async () => {
     try {
@@ -49,11 +49,15 @@ export default function NotificationsPage() {
         body: JSON.stringify({ notificationId, actorId })
       });
       if (res.ok) {
-        if (action === 'accept' && socket) {
-          socket.emit('sendNotification', {
-            targetUserId: actorId,
-            type: 'REQUEST_ACCEPTED',
-            actor: { username: 'Someone' } 
+        if (action === 'accept') {
+          fetch('/api/notifications/pusher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUserId: actorId,
+              type: 'REQUEST_ACCEPTED',
+              actor: { username: 'Someone' } 
+            })
           });
         }
         fetchNotifications();
@@ -80,11 +84,15 @@ export default function NotificationsPage() {
       const res = await fetch(`/api/users/${username}/follow`, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
-        if (socket && data.targetUserId && data.status !== 'NONE') {
-          socket.emit('sendNotification', {
-            targetUserId: data.targetUserId,
-            type: data.status === 'PENDING' ? 'FOLLOW_REQUEST' : 'FOLLOW',
-            actor: { username }
+        if (data.targetUserId && data.status !== 'NONE') {
+          fetch('/api/notifications/pusher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUserId: data.targetUserId,
+              type: data.status === 'PENDING' ? 'FOLLOW_REQUEST' : 'FOLLOW',
+              actor: { username }
+            })
           });
         }
         fetchNotifications();

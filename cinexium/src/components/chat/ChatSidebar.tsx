@@ -16,7 +16,7 @@ export default function ChatSidebar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { isHiddenModeActive, setIsHiddenModeActive } = useHiddenChat();
   const pathname = usePathname();
-  const { socket } = useSocket();
+  const { pusherClient } = useSocket();
 
   const fetchConversations = async () => {
     try {
@@ -34,12 +34,14 @@ export default function ChatSidebar() {
   }, [pathname, isHiddenModeActive]);
 
   useEffect(() => {
-    if (!socket) return;
-    socket.on('receiveMessage', fetchConversations);
+    if (!pusherClient) return;
+    pusherClient.bind('receiveMessage', fetchConversations);
+    pusherClient.bind('receiveGroupMessage', fetchConversations);
     return () => {
-      socket.off('receiveMessage', fetchConversations);
+      pusherClient.unbind('receiveMessage', fetchConversations);
+      pusherClient.unbind('receiveGroupMessage', fetchConversations);
     };
-  }, [socket]);
+  }, [pusherClient]);
 
   const filteredConversations = conversations.filter(conv =>
     conv.user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||

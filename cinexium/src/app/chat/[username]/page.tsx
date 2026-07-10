@@ -10,7 +10,7 @@ import GroupInviteCard from '@/components/chat/GroupInviteCard';
 export default function ChatRoom({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const router = useRouter();
-  const { socket } = useSocket();
+  const { pusherClient } = useSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [targetUser, setTargetUser] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -70,7 +70,14 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   }, [messages]);
 
   useEffect(() => {
-    if (!socket || !targetUser || !currentUser) return;
+    if (!pusherClient || !targetUser || !currentUser) return;
+
+    const channelName = `user-${currentUser.id}`;
+    let channel = pusherClient.channel(channelName);
+    
+    if (!channel) {
+      channel = pusherClient.subscribe(channelName);
+    }
 
     const handleMessage = (data: any) => {
       // If we receive a message from the target user
@@ -98,20 +105,20 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       }
     };
 
-    socket.on('receiveMessage', handleMessage);
-    socket.on('messageSent', handleMessageSent);
-    socket.on('messageUpdated', handleMessageUpdated);
+    channel.bind('receiveMessage', handleMessage);
+    channel.bind('messageSent', handleMessageSent);
+    channel.bind('messageUpdated', handleMessageUpdated);
     
     return () => {
-      socket.off('receiveMessage', handleMessage);
-      socket.off('messageSent', handleMessageSent);
-      socket.off('messageUpdated', handleMessageUpdated);
+      channel?.unbind('receiveMessage', handleMessage);
+      channel?.unbind('messageSent', handleMessageSent);
+      channel?.unbind('messageUpdated', handleMessageUpdated);
     };
-  }, [socket, targetUser, currentUser, settings]);
+  }, [pusherClient, targetUser, currentUser, settings]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !socket || !targetUser || !currentUser) return;
+    if (!input.trim() || !targetUser || !currentUser) return;
     
     let content = input.trim();
     if (content.length > 1000) {
@@ -121,10 +128,15 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
     if (editingMessageId) {
       try {
-        socket.emit('editMessage', {
-          messageId: editingMessageId,
-          targetUserId: targetUser.id,
-          content
+        fetch('/api/chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'editMessage',
+            messageId: editingMessageId,
+            targetUserId: targetUser.id,
+            content
+          })
         });
         setEditingMessageId(null);
       } catch (e: any) { alert(e.message); }
@@ -141,10 +153,14 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
     }]);
 
     try {
-      socket.emit('sendMessage', {
-        senderId: currentUser.id,
-        targetUserId: targetUser.id,
-        content
+      fetch('/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sendMessage',
+          targetUserId: targetUser.id,
+          content
+        })
       });
     } catch (e: any) {
       alert(e.message);
@@ -152,7 +168,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   };
 
   const handleReact = (messageId: string, emoji: string) => {
-    if (!socket || !currentUser) return;
+    if (!currentUser) return;
     
     // Optimistic UI update
     setMessages(prev => prev.map(m => {
@@ -167,11 +183,20 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       return m;
     }));
 
-    socket.emit('reactMessage', { messageId, reaction: emoji, targetUserId: targetUser.id, userId: currentUser.id });
+    fetch('/api/chat/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'reactMessage',
+        messageId,
+        reaction: emoji,
+        targetUserId: targetUser.id
+      })
+    });
   };
 
   const handleDelete = (messageId: string) => {
-    if (!socket || !targetUser) return;
+    if (!targetUser) return;
     setConfirmConfig({
       isOpen: true,
       title: 'Delete Message',
@@ -179,7 +204,15 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       confirmText: 'Delete',
       isDestructive: true,
       onConfirm: () => {
-        socket.emit('deleteMessageForEveryone', { messageId, targetUserId: targetUser.id });
+        fetch('/api/chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'deleteMessageForEveryone',
+            messageId,
+            targetUserId: targetUser.id
+          })
+        });
       }
     });
   };

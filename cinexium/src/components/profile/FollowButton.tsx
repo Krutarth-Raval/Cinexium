@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSocket } from '@/components/providers/SocketProvider';
+
 
 export const FollowButton = ({ 
   username, 
@@ -16,7 +16,7 @@ export const FollowButton = ({
   const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { socket } = useSocket();
+
 
   const handleFollow = async () => {
     const previousStatus = status;
@@ -33,12 +33,16 @@ export const FollowButton = ({
         // Use the server's definitive state
         setStatus(data.status); 
         
-        // Emit real-time notification via WebSocket if we successfully followed or requested
-        if (socket && data.targetUserId && data.status !== 'NONE') {
-          socket.emit('sendNotification', {
-            targetUserId: data.targetUserId,
-            type: data.status === 'PENDING' ? 'FOLLOW_REQUEST' : 'FOLLOW',
-            actor: { username }
+        // Emit real-time notification via Pusher
+        if (data.targetUserId && data.status !== 'NONE') {
+          fetch('/api/notifications/pusher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUserId: data.targetUserId,
+              type: data.status === 'PENDING' ? 'FOLLOW_REQUEST' : 'FOLLOW',
+              actor: { username }
+            })
           });
         }
         

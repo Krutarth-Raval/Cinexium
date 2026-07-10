@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSocket } from '@/components/providers/SocketProvider';
+
 import { useSession } from 'next-auth/react';
 
 export default function ShareGroupModal({ 
@@ -22,7 +22,7 @@ export default function ShareGroupModal({
   const [contacts, setContacts] = useState<any[]>([]);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
-  const { socket } = useSocket();
+
   const { data: session } = useSession();
   const currentUserId = (session?.user as any)?.id;
 
@@ -41,7 +41,7 @@ export default function ShareGroupModal({
   }, [isOpen]);
 
   const handleShare = (targetUserId: string) => {
-    if (!socket || !currentUserId || sentIds.has(targetUserId)) return;
+    if (!currentUserId || sentIds.has(targetUserId)) return;
     
     const metadata = {
       type: 'GROUP_INVITE',
@@ -52,10 +52,14 @@ export default function ShareGroupModal({
     };
     const content = `[GROUP_INVITE]:${JSON.stringify(metadata)}`;
     
-    socket.emit('sendMessage', { 
-      senderId: currentUserId, 
-      targetUserId, 
-      content 
+    fetch('/api/chat/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sendMessage',
+        targetUserId,
+        content
+      })
     });
     
     setSentIds(prev => new Set(prev).add(targetUserId));

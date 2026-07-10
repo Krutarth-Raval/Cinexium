@@ -11,7 +11,7 @@ import ShareGroupModal from '@/components/chat/ShareGroupModal';
 export default function GroupChatRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { socket } = useSocket();
+  const { pusherClient } = useSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [group, setGroup] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -96,9 +96,13 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   }, [messages]);
 
   useEffect(() => {
-    if (!socket || !group || !currentUser) return;
+    if (!pusherClient || !group || !currentUser) return;
 
-    socket.emit('joinGroup', group.id);
+    const channelName = `group-${group.id}`;
+    let channel = pusherClient.channel(channelName);
+    if (!channel) {
+      channel = pusherClient.subscribe(channelName);
+    }
 
     const handleReceive = (data: any) => {
       if (data?.message?.groupId === group.id) {
@@ -115,25 +119,29 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       }
     };
 
-    socket.on('receiveGroupMessage', handleReceive);
-    socket.on('groupMessageUpdated', handleUpdate);
+    channel.bind('receiveGroupMessage', handleReceive);
+    channel.bind('groupMessageUpdated', handleUpdate);
     
     return () => {
-      socket.off('receiveGroupMessage', handleReceive);
-      socket.off('groupMessageUpdated', handleUpdate);
+      channel?.unbind('receiveGroupMessage', handleReceive);
+      channel?.unbind('groupMessageUpdated', handleUpdate);
     };
-  }, [socket, group, currentUser]);
+  }, [pusherClient, group, currentUser]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !socket || !group || !currentUser) return;
+    if (!input.trim() || !group || !currentUser) return;
     
     let content = input.trim();
     if (content.length > 1000) content = content.substring(0, 1000);
     setInput('');
 
     if (editingMessageId) {
-      socket.emit('editGroupMessage', { messageId: editingMessageId, groupId: group.id, content });
+      fetch('/api/chat/group/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'editGroupMessage', messageId: editingMessageId, groupId: group.id, content })
+      });
       setEditingMessageId(null);
       return;
     }
@@ -149,11 +157,15 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       reactions: []
     }]);
 
-    socket.emit('sendGroupMessage', { groupId: group.id, senderId: currentUser.id, content });
+    fetch('/api/chat/group/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sendGroupMessage', groupId: group.id, content })
+    });
   };
 
   const handleReact = (messageId: string, reaction: string) => {
-    if (!socket || !group || !currentUser) return;
+    if (!group || !currentUser) return;
 
     setMessages(prev => prev.map(m => {
       if (m.id === messageId) {
@@ -167,11 +179,15 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       return m;
     }));
 
-    socket.emit('reactGroupMessage', { messageId, groupId: group.id, reaction, userId: currentUser.id });
+    fetch('/api/chat/group/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reactGroupMessage', messageId, groupId: group.id, reaction })
+    });
   };
 
   const handleDelete = (messageId: string) => {
-    if (!socket || !group) return;
+    if (!group) return;
     setConfirmConfig({
       isOpen: true,
       title: 'Delete Message',
@@ -179,7 +195,11 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       confirmText: 'Delete',
       isDestructive: true,
       onConfirm: () => {
-        socket.emit('deleteGroupMessage', { messageId, groupId: group.id });
+        fetch('/api/chat/group/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'deleteGroupMessage', messageId, groupId: group.id })
+        });
       }
     });
   };
