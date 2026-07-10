@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(uuid())
+  name                 String
+  username             String    @unique
+  email                String    @unique
+  password             String?   @default("")
+  country              String?   @default("")
+  avatar               String?   @default("")
+  bio                  String?   @default("")
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  verified             Boolean   @default(false)
+  role                 String    @default("user")
+  deleteRequested      Boolean   @default(false)
+  deleteAt             DateTime?
+  isPrivate            Boolean   @default(false)
+  lastSeen             DateTime?
+
+  // Hidden Chats
+  chatPin              String?
+  chatPinResetOtp      String?
+  chatPinResetExpires  DateTime?
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // For nested arrays from Mongoose, in relational DBs it's better to use separate tables.
+  // We'll define them as 1-to-many relationships.
+  favorites            Favorite[]
+  history              History[]
+  collections          Collection[]
+  ownedGroupChats      GroupChat[]
+  
+  // Follows: M-to-M self relation
+  followers            Follows[] @relation("following")
+  following            Follows[] @relation("follower")
+
+  // Notifications
+  receivedNotifications Notification[] @relation("receivedNotifications")
+  sentNotifications     Notification[] @relation("sentNotifications")
+
+  // Chat
+  conversations1        Conversation[] @relation("ConversationUser1")
+  conversations2        Conversation[] @relation("ConversationUser2")
+  messages              Message[]      @relation("SentMessages")
+  messageReactions      MessageReaction[]
+
+  // Group Chat
+  groupMembers          GroupMember[]
+  groupMessages         GroupMessage[]
+  groupMessageReactions GroupMessageReaction[]
+
+  // Blocks
+  blocking              Block[]        @relation("BlockingUsers")
+  blockedBy             Block[]        @relation("BlockedUsers")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  mediaId   String
+  mediaType String   // "movie" or "tv"
+  addedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model History {
+  id        String   @id @default(uuid())
+  userId    String
+  mediaId   String
+  mediaType String   // "movie" or "tv"
+  viewedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Follows {
+  followerId  String
+  followingId String
+  status      String @default("ACCEPTED") // "ACCEPTED" or "PENDING"
+
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @default("")
+  isPublic    Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       CollectionItem[]
+}
+
+model CollectionItem {
+  id           String   @id @default(uuid())
+  collectionId String
+  mediaId      String
+  mediaType    String   // "movie" or "tv"
+  addedAt      DateTime @default(now())
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+}
+
+model GroupChat {
+  id          String   @id @default(uuid())
+  name        String
+  avatar      String?  @default("")
+  description String?  @default("")
+  isPublic    Boolean  @default(true)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  messages    GroupMessage[]
+}
+
+model GroupMember {
+  id          String   @id @default(uuid())
+  groupId     String
+  userId      String
+  role        String   @default("MEMBER") // "ADMIN", "MEMBER"
+  isHidden    Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+
+  group       GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([groupId, userId])
+}
+
+model GroupMessage {
+  id                  String   @id @default(uuid())
+  groupId             String
+  senderId            String
+  content             String
+  isEdited            Boolean  @default(false)
+  isDeletedForEveryone Boolean @default(false)
+  createdAt           DateTime @default(now())
+  
+  group               GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender              User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reactions           GroupMessageReaction[]
+}
+
+model GroupMessageReaction {
+  id          String   @id @default(uuid())
+  messageId   String
+  userId      String
+  emoji       String
+  createdAt   DateTime @default(now())
+
+  message     GroupMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   // The user receiving the notification
+  actorId   String   // The user who triggered it
+  type      String   // "FOLLOW", "FOLLOW_REQUEST", "REQUEST_ACCEPTED"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation("receivedNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User     @relation("sentNotifications", fields: [actorId], references: [id], onDelete: Cascade)
+}
+
+// Chat System
+model Conversation {
+  id              String    @id @default(uuid())
+  user1Id         String
+  user2Id         String
+  
+  // Per-user settings
+  isHiddenByUser1 Boolean   @default(false)
+  isHiddenByUser2 Boolean   @default(false)
+  isMutedByUser1  Boolean   @default(false)
+  isMutedByUser2  Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user1           User      @relation("ConversationUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2           User      @relation("ConversationUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages        Message[]
+
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id                  String   @id @default(uuid())
+  conversationId      String
+  senderId            String
+  content             String
+  // Interactive Chat Features
+  isEdited            Boolean  @default(false)
+  isDeletedForEveryone Boolean @default(false)
+  
+  isRead              Boolean  @default(false)
+  
+  // Independent deletion
+  isDeletedBySender   Boolean  @default(false)
+  isDeletedByReceiver Boolean  @default(false)
+  
+  createdAt           DateTime @default(now())
+  
+  conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender              User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  reactions           MessageReaction[]
+}
+
+model MessageReaction {
+  id          String   @id @default(uuid())
+  messageId   String
+  userId      String
+  emoji       String
+  createdAt   DateTime @default(now())
+
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+}
+
+
+// Blocking System
+model Block {
+  id          String   @id @default(uuid())
+  blockerId   String
+  blockedId   String
+  createdAt   DateTime @default(now())
+
+  blocker     User     @relation("BlockingUsers", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked     User     @relation("BlockedUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}

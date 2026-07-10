@@ -1,0 +1,44 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const followings = await prisma.follows.findMany({
+      where: { followerId: user.id, status: 'ACCEPTED' },
+      include: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatar: true,
+          }
+        }
+      }
+    });
+
+    // Map `following` to `follower` to match the old expected structure by frontend
+    const mapped = followings.map(f => ({ follower: f.following }));
+
+    return NextResponse.json(mapped);
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
