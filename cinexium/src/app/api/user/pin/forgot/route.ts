@@ -31,33 +31,25 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Cinexium Security" <${process.env.SMTP_USER}>`,
-      to: user.email,
-      subject: 'Reset your Hidden Chats PIN',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    // Send email using shared email service
+    const { sendEmail } = await import('@/lib/email');
+    const htmlContent = `
+        <div style="text-align: center;">
           <h2 style="color: #e50914;">Reset Hidden Chats PIN</h2>
           <p>Hello ${user.name || user.username},</p>
           <p>You requested to reset your PIN for Hidden Chats on Cinexium. Please use the following 6-digit OTP to reset your PIN:</p>
-          <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-            ${otp}
+          <div style="background-color: #1a1d24; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            <h1 style="font-size: 36px; letter-spacing: 8px; margin: 0; color: #ffffff;">${otp}</h1>
           </div>
           <p>This code will expire in 10 minutes.</p>
           <p>If you did not request this, please ignore this email.</p>
         </div>
-      `
-    });
+    `;
+
+    const emailSent = await sendEmail(user.email, 'Reset your Hidden Chats PIN', htmlContent);
+    if (!emailSent) {
+      throw new Error('Failed to send email');
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

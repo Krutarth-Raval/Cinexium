@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSocket } from '@/components/providers/SocketProvider';
 
 export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) => {
@@ -12,7 +12,14 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { pusherClient } = useSocket();
+
+  useEffect(() => {
+    if (pathname === '/notifications' && unreadCount > 0) {
+      setUnreadCount(0);
+    }
+  }, [pathname, unreadCount]);
 
   useEffect(() => {
     setMounted(true);
@@ -182,13 +189,14 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                     </Link>
                     <div className="flex-1 text-sm pr-4">
                       <Link href={`/profile/${n.actor.username}`} className="font-semibold text-white hover:underline" onClick={() => setIsOpen(false)}>
-                        {n.actor.username}
+                        @{n.actor.username}
                       </Link>
                       {' '}
                       <span className="text-gray-300">
                         {n.type === 'FOLLOW' && 'started following you.'}
                         {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                         {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
+                        {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
                       </span>
                       
                       {n.type === 'FOLLOW_REQUEST' && (
@@ -205,6 +213,18 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                           >
                             Reject
                           </button>
+                        </div>
+                      )}
+
+                      {n.type === 'COMMENT_REPLY' && n.referenceId && (
+                        <div className="mt-2">
+                          <Link
+                            href={`/${n.referenceType === 'tv' ? 'series' : 'movie'}/${n.referenceId}`}
+                            onClick={() => setIsOpen(false)}
+                            className="inline-block py-1 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded text-xs font-medium"
+                          >
+                            View Reply
+                          </Link>
                         </div>
                       )}
 

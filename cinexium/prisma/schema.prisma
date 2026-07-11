@@ -24,6 +24,8 @@ model User {
   deleteRequested      Boolean   @default(false)
   deleteAt             DateTime?
   isPrivate            Boolean   @default(false)
+  chatNotifications    Boolean   @default(true)
+  appNotifications     Boolean   @default(true)
   lastSeen             DateTime?
 
   // Hidden Chats
@@ -39,6 +41,8 @@ model User {
   favorites            Favorite[]
   history              History[]
   collections          Collection[]
+  collectionLikes      CollectionLike[]
+  collectionSaves      CollectionSave[]
   ownedGroupChats      GroupChat[]
   
   // Follows: M-to-M self relation
@@ -63,6 +67,12 @@ model User {
   // Blocks
   blocking              Block[]        @relation("BlockingUsers")
   blockedBy             Block[]        @relation("BlockedUsers")
+
+  // Media Comments
+  mediaComments         MediaComment[]
+  mediaCommentLikes     MediaCommentLike[]
+  mediaLikes            MediaLike[]
+  mediaShares           MediaShare[]
 }
 
 model Favorite {
@@ -73,6 +83,8 @@ model Favorite {
   addedAt   DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
 }
 
 model History {
@@ -83,6 +95,8 @@ model History {
   viewedAt  DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
 }
 
 model Follows {
@@ -109,12 +123,17 @@ model Collection {
   name        String
   description String?  @default("")
   isPublic    Boolean  @default(true)
+  thumbnail   String?
   userId      String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   items       CollectionItem[]
+  likes       CollectionLike[]
+  saves       CollectionSave[]
+
+  @@unique([userId, name])
 }
 
 model CollectionItem {
@@ -125,6 +144,32 @@ model CollectionItem {
   addedAt      DateTime @default(now())
 
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([mediaId])
+}
+
+model CollectionLike {
+  id           String   @id @default(uuid())
+  userId       String
+  collectionId String
+  createdAt    DateTime @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collectionId])
+}
+
+model CollectionSave {
+  id           String   @id @default(uuid())
+  userId       String
+  collectionId String
+  createdAt    DateTime @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collectionId])
 }
 
 model GroupChat {
@@ -187,7 +232,9 @@ model Notification {
   id        String   @id @default(uuid())
   userId    String   // The user receiving the notification
   actorId   String   // The user who triggered it
-  type      String   // "FOLLOW", "FOLLOW_REQUEST", "REQUEST_ACCEPTED"
+  type      String   // "FOLLOW", "FOLLOW_REQUEST", "REQUEST_ACCEPTED", "COMMENT_REPLY"
+  referenceId String? // e.g. mediaId
+  referenceType String? // e.g. "movie", "tv"
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -264,4 +311,59 @@ model Block {
   blocked     User     @relation("BlockedUsers", fields: [blockedId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
+}
+
+// Media Comments System
+model MediaComment {
+  id        String   @id @default(uuid())
+  mediaId   String   // TMDB ID
+  mediaType String   // "movie" or "series"
+  content   String
+  userId    String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    MediaComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   MediaComment[] @relation("CommentReplies")
+  likes     MediaCommentLike[]
+
+  @@index([mediaId])
+}
+
+model MediaCommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment   MediaComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+model MediaLike {
+  id        String   @id @default(uuid())
+  mediaId   String   // TMDB ID
+  mediaType String   // "movie" or "series"
+  userId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, userId])
+}
+
+model MediaShare {
+  id        String   @id @default(uuid())
+  mediaId   String   // TMDB ID
+  mediaType String   // "movie" or "series"
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([mediaId])
 }

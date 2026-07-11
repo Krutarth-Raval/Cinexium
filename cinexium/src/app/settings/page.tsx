@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
-import { PrivacyToggle } from '@/components/profile/PrivacyToggle';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -23,12 +22,6 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  // Deletion states
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteOtp, setDeleteOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -103,49 +96,18 @@ export default function SettingsPage() {
     }
   };
 
-  const requestDeleteOtp = async () => {
-    setDeleteError('');
-    try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, action: 'login' }) // Reuse OTP generation logic
-      });
-      if (res.ok) {
-        setOtpSent(true);
-      } else {
-        setDeleteError('Failed to send OTP.');
-      }
-    } catch {
-      setDeleteError('Error sending OTP.');
-    }
-  };
-
-  const confirmDelete = async () => {
-    setDeleteError('');
-    try {
-      const res = await fetch('/api/user/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otp: deleteOtp })
-      });
-      if (res.ok) {
-        signOut({ callbackUrl: '/' });
-      } else {
-        setDeleteError('Invalid OTP');
-      }
-    } catch {
-      setDeleteError('Error deleting account');
-    }
-  };
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-8">Settings</h1>
+    <div className="min-h-screen pt-4 md:pt-24 pb-12 px-4 max-w-2xl mx-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5" aria-label="Go back">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <h1 className="text-xl md:text-3xl font-bold text-white">Edit Profile</h1>
+      </div>
 
       <div className="bg-[#1a1d24] rounded-2xl p-6 md:p-8 shadow-xl border border-white/5 mb-8">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -201,70 +163,6 @@ export default function SettingsPage() {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Privacy Settings */}
-      {user && (
-        <div className="bg-[#1a1d24] rounded-2xl p-6 md:p-8 shadow-xl border border-white/5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-white mb-1">Account Privacy</h2>
-            <p className="text-sm text-gray-400">When private, only approved followers can see your profile and collection.</p>
-          </div>
-          <PrivacyToggle initialIsPrivate={user.isPrivate} />
-        </div>
-      )}
-
-      {/* Danger Zone */}
-      <div className="bg-[#1a1d24] rounded-2xl p-6 md:p-8 shadow-xl border border-primary-500/20">
-        <h2 className="text-xl font-bold text-primary-500 mb-6">Danger Zone</h2>
-        
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/5">
-            <div>
-              <h3 className="text-white font-medium">Log out from all devices</h3>
-              <p className="text-gray-400 text-sm">You will need to sign in again to access your account.</p>
-            </div>
-            <button onClick={() => signOut({ callbackUrl: '/' })} className="px-6 py-2 bg-[#252a34] hover:bg-[#323844] text-white rounded-xl transition-colors font-medium border border-white/10 whitespace-nowrap">
-              Log Out
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-white font-medium">Delete Account</h3>
-                <p className="text-gray-400 text-sm">Permanently delete your account and all associated data.</p>
-              </div>
-              {!isDeleting && (
-                <button onClick={() => setIsDeleting(true)} className="px-6 py-2 bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 rounded-xl transition-colors font-bold border border-primary-500/50 whitespace-nowrap">
-                  Delete Account
-                </button>
-              )}
-            </div>
-
-            {isDeleting && (
-              <div className="mt-4 p-4 bg-primary-500/5 border border-primary-500/20 rounded-xl space-y-4">
-                <p className="text-sm text-gray-300">To confirm deletion, we will send an OTP to your email. This action <span className="font-bold text-primary-500">cannot be undone</span>.</p>
-                
-                {!otpSent ? (
-                  <div className="flex gap-4">
-                    <button onClick={requestDeleteOtp} className="px-6 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm shadow-[0_0_10px_rgba(229,9,20,0.3)]">Send OTP</button>
-                    <button onClick={() => setIsDeleting(false)} className="px-6 py-2 text-gray-400 hover:text-white font-medium text-sm">Cancel</button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <input type="text" value={deleteOtp} onChange={e => setDeleteOtp(e.target.value)} placeholder="Enter 6-digit OTP" className="w-full bg-[#0f1115] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary-500 tracking-widest text-center text-lg font-mono" maxLength={6} />
-                    <div className="flex gap-4">
-                      <button onClick={confirmDelete} className="flex-1 px-6 py-3 bg-primary-500 text-white rounded-xl font-bold">Confirm Deletion</button>
-                      <button onClick={() => { setIsDeleting(false); setOtpSent(false); setDeleteOtp(''); }} className="px-6 py-3 bg-[#252a34] text-white rounded-xl font-medium">Cancel</button>
-                    </div>
-                  </div>
-                )}
-                {deleteError && <p className="text-primary-500 text-sm font-medium">{deleteError}</p>}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -122,7 +122,30 @@ export const tmdb = {
       if (series[i] && series[i].bannerUrl) combined.push(series[i]); // Hero requires banner
     }
     
-    return combined.slice(0, 10);
+    const top10 = combined.slice(0, 10);
+    
+    // Fetch videos for the top 10 items to get trailers
+    const top10WithTrailers = await Promise.all(
+      top10.map(async (item) => {
+        try {
+          const typePath = item.type === 'movie' ? 'movie' : 'tv';
+          const response = await fetch(`${TMDB_BASE_URL}/${typePath}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`, { next: { revalidate: 3600 } });
+          if (response.ok) {
+            const data = await response.json();
+            const videos = data.videos?.results || [];
+            const trailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube') || videos.find((v: any) => v.site === 'YouTube');
+            if (trailer) {
+              return { ...item, trailerKey: trailer.key };
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to fetch trailer for ${item.id}`, e);
+        }
+        return item;
+      })
+    );
+    
+    return top10WithTrailers;
   },
 
   // Fetch specific media details by ID
@@ -139,7 +162,24 @@ export const tmdb = {
         bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
         posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
         type: type === 'movie' ? 'movie' : 'series',
+        releaseDate: item.release_date || item.first_air_date || item.primary_release_date || null,
       };
+    } catch {
+      return null;
+    }
+  },
+
+  // Fetch exhaustive media details
+  getFullMediaDetails: async (type: 'movie' | 'tv', id: string): Promise<any | null> => {
+    if (!TMDB_API_KEY) return null;
+    try {
+      const appendParams = type === 'movie' 
+        ? 'credits,videos,recommendations,similar,release_dates,watch/providers' 
+        : 'credits,videos,recommendations,similar,content_ratings,watch/providers';
+        
+      const response = await fetch(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=${appendParams}`, { next: { revalidate: 3600 } });
+      if (!response.ok) return null;
+      return await response.json();
     } catch {
       return null;
     }

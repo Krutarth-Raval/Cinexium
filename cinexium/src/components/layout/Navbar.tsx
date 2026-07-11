@@ -71,7 +71,20 @@ export const Navbar = () => {
     });
   };
 
-  if (pathname === '/login' || pathname === '/register' || pathname === '/verify-otp') {
+  const pathSegments = pathname?.split('/').filter(Boolean) || [];
+  if ((pathSegments[0] === 'movie' || pathSegments[0] === 'series') && pathSegments.length > 1) {
+    return null;
+  }
+
+  if (
+    pathname === '/login' || 
+    pathname === '/register' || 
+    pathname === '/verify-otp' ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
+    pathname === '/guidelines' ||
+    pathname === '/contact'
+  ) {
     return null;
   }
 
@@ -109,9 +122,29 @@ export const Navbar = () => {
 
   return (
     <>
-      {/* Region switch loader moved to RegionEdgePanel */}
-
-      <div className={(pathname?.startsWith('/chat') || pathname?.startsWith('/notifications')) ? 'hidden md:block' : ''}>
+      {isPending && (
+        <div className="fixed inset-0 z-[200] bg-[#0f1115] flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-red-800 tracking-widest scale-up-center mb-4">
+              {loadingText}
+            </h1>
+            <div className="flex justify-center gap-2">
+              <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            @keyframes scale-up-center {
+              0% { transform: scale(0.9); opacity: 0; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+            .scale-up-center { animation: scale-up-center 0.6s cubic-bezier(0.390, 0.575, 0.565, 1.000) both; }
+          `}} />
+        </div>
+      )}
+      <div className={(pathname?.startsWith('/chat') || pathname?.startsWith('/notifications') || pathname?.startsWith('/profile') || pathname?.startsWith('/settings') || pathname?.startsWith('/collection')) ? 'hidden md:block' : ''}>
         <nav className={`fixed z-50 transition-all duration-500 ease-in-out inset-x-0 mx-auto ${scrolled
           ? 'top-0 w-full max-w-full bg-[#0f1115]/90 backdrop-blur-xl border-b border-white/10 rounded-none'
           : 'top-4 w-[calc(100%-2rem)] max-w-7xl bg-[#0f1115]/60 backdrop-blur-lg border border-white/10 rounded-[32px]'
@@ -119,8 +152,8 @@ export const Navbar = () => {
           <div className="max-w-7xl mx-auto pl-4 pr-2 md:pl-6 md:pr-2 lg:pl-8 lg:pr-2 relative z-50">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex-shrink-0">
-                <span className="text-2xl font-bold text-primary-500 tracking-wider">CINEXIUM</span>
+              <Link href="/" className="flex-shrink-0 flex items-center">
+                <img src="/logo-full.svg" alt="CINEXIUM" className="h-8 md:h-10 w-auto" />
               </Link>
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-2">
@@ -161,6 +194,23 @@ export const Navbar = () => {
             </div>
 
             <div className="hidden md:flex items-center space-x-4">
+              {/* Desktop Region Selector */}
+              <div className="flex items-center space-x-1 bg-white/5 rounded-full p-1 border border-white/10">
+                {regions.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => handleRegionChange(r.id)}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-all duration-300 ${
+                      region === r.id
+                        ? 'bg-primary-500 text-white shadow-md'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {r.desktopLabel}
+                  </button>
+                ))}
+              </div>
+
               {session && <NotificationBell />}
 
               {/* Auth Buttons / Profile Circle */}

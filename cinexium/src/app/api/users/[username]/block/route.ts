@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { pusherServer } from '@/lib/pusher';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -29,6 +31,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       await prisma.block.delete({
         where: { id: existingBlock.id }
       });
+      revalidatePath(`/profile/${username}`);
+
+      // Notify both users via Pusher
+      await pusherServer.trigger([`user-${user.id}`, `user-${targetUser.id}`], 'blockStatusChanged', {
+        blockerId: user.id,
+        blockedId: targetUser.id,
+        isBlocked: false
+      });
+
       return NextResponse.json({ blocked: false });
     } else {
       // Block
@@ -54,6 +65,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
             { userId: targetUser.id, actorId: user.id }
           ]
         }
+      });
+
+      revalidatePath(`/profile/${username}`);
+
+      // Notify both users via Pusher
+      await pusherServer.trigger([`user-${user.id}`, `user-${targetUser.id}`], 'blockStatusChanged', {
+        blockerId: user.id,
+        blockedId: targetUser.id,
+        isBlocked: true
       });
 
       return NextResponse.json({ blocked: true });

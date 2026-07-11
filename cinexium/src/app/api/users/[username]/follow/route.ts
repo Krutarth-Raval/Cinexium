@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         }
       });
 
+      revalidatePath(`/profile/${username}`);
       return NextResponse.json({ status: 'NONE', targetUserId: targetUser.id });
     } else {
       // Follow or request
@@ -80,6 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         }
       });
 
+      revalidatePath(`/profile/${username}`);
       return NextResponse.json({ status, targetUserId: targetUser.id });
     }
   } catch (error) {

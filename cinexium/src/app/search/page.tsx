@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from 'use-debounce';
 import Link from 'next/link';
+import { CollectionQuickActions } from '@/components/collection/CollectionQuickActions';
 
 interface SearchResultItem {
   id: string;
@@ -177,6 +178,9 @@ const ResultRow = ({ title, items }: { title: string, items: SearchResultItem[] 
                   <span className="text-white text-sm font-semibold truncate block w-full text-center">
                     View
                   </span>
+                  {item.type === 'collection' && (
+                    <CollectionQuickActions collectionId={item.id} />
+                  )}
                 </div>
               </div>
               

@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import fs from 'fs';
-import path from 'path';
+import cloudinary from '@/lib/cloudinary';
 
 export async function POST(
   request: Request,
@@ -35,15 +34,19 @@ export async function POST(
     let avatarUrl = undefined;
     if (avatarFile && avatarFile.size > 0) {
       const buffer = Buffer.from(await avatarFile.arrayBuffer());
-      const filename = `group_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(avatarFile.name)}`;
       
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'groups');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const uploadResult: any = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'cinexium/groups' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(buffer);
+      });
       
-      fs.writeFileSync(path.join(uploadDir, filename), buffer);
-      avatarUrl = `/uploads/groups/${filename}`;
+      avatarUrl = uploadResult.secure_url;
     }
 
     const updatedGroup = await prisma.groupChat.update({

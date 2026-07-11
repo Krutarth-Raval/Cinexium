@@ -138,68 +138,68 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
   const showSpinner = isSearching ? searchLoading : (hasMore && !isSearching);
 
   return (
-    <div className={`min-h-screen px-4 md:px-8 w-full flex flex-col items-center transition-all duration-700 ease-in-out ${isSearching ? 'pt-24 pb-20 md:pb-8 justify-start' : 'justify-start pt-24 pb-32'}`}>
+    <div className="min-h-screen px-4 md:px-8 w-full flex flex-col items-center transition-all duration-700 ease-in-out justify-start pt-24 pb-32">
       
       {/* Desktop Title & Search Bar Row */}
-      <div className={`w-full flex flex-col md:flex-row items-center gap-6 mb-8 transition-all duration-700 ease-in-out mt-4 ${!isSearching ? 'justify-between' : 'justify-center'}`}>
+      <div className="w-full flex flex-col md:flex-row items-center gap-6 mb-8 transition-all duration-700 ease-in-out mt-4 justify-between">
         
         {/* Desktop Title */}
-        {!isSearching && (
-          <div className="hidden md:block flex-shrink-0">
-            <h1 className="text-4xl lg:text-5xl font-black text-primary-500 uppercase tracking-wider drop-shadow-[0_0_15px_rgba(229,9,20,0.5)]">{title}</h1>
-          </div>
-        )}
+        <div className="hidden md:block flex-shrink-0">
+          <h1 className="text-4xl lg:text-5xl font-black text-primary-500 uppercase tracking-wider drop-shadow-[0_0_15px_rgba(229,9,20,0.5)]">{title}</h1>
+        </div>
 
-        {/* Search Bar Area */}
-        <form onSubmit={handleSubmit} className={`relative transition-all duration-700 ease-in-out transform w-full ${!isSearching ? 'max-w-3xl md:max-w-xl lg:max-w-3xl' : 'max-w-3xl'}`}>
-          <button type="submit" className="absolute inset-y-0 left-0 pl-4 md:pl-6 flex items-center text-gray-400 hover:text-primary-500 transition-colors">
-            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          </button>
-          
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search for ${type === 'movie' ? 'movies' : 'series'}...`}
-            className="w-full bg-[#1a1d24] border border-white/10 rounded-[32px] py-3 md:py-4 pl-12 md:pl-16 pr-[90px] md:pr-[140px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors shadow-2xl text-base md:text-lg"
-          />
-          
-          <div className="absolute inset-y-0 right-0 pr-1 md:pr-1.5 flex items-center gap-2">
-            {query && (
-              <button 
-                type="button"
-                onClick={() => { setQuery(''); setSubmittedQuery(''); }}
-                className="text-gray-400 hover:text-white p-2"
-              >
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-              </button>
-            )}
+        {/* Search Bar Area Container */}
+        <div className="w-full max-w-3xl md:max-w-xl lg:max-w-3xl flex flex-col">
+          <form onSubmit={handleSubmit} className="relative transition-all duration-700 ease-in-out transform w-full">
+            <button type="submit" className="absolute inset-y-0 left-0 pl-4 md:pl-6 flex items-center text-gray-400 hover:text-primary-500 transition-colors">
+              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </button>
             
-            {!isSearching && (
-              <button 
-                type="button"
-                onClick={() => setIsMobileGenreOpen(true)}
-                className={`flex items-center justify-center gap-2 w-11 h-11 md:w-auto md:h-auto md:px-4 md:py-2 rounded-full transition-all text-sm md:text-base font-medium shadow-md flex-shrink-0 ${
-                  selectedGenre
-                    ? 'bg-primary-500 text-white border border-primary-500'
-                    : 'bg-[#111318] hover:bg-primary-500/20 text-gray-300 hover:text-primary-500 border border-white/10 hover:border-primary-500/50'
-                }`}
-              >
-                <svg className="w-5 h-5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
-                <span className="hidden md:block tracking-wide">{selectedGenre || 'Genres'}</span>
-              </button>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search for ${type === 'movie' ? 'movies' : 'series'}...`}
+              className="w-full bg-[#1a1d24] border border-white/10 rounded-[32px] py-3 md:py-4 pl-12 md:pl-16 pr-[90px] md:pr-[140px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors shadow-2xl text-base md:text-lg"
+            />
+            
+            <div className="absolute inset-y-0 right-0 pr-1 md:pr-1.5 flex items-center gap-2">
+              {query && (
+                <button 
+                  type="button"
+                  onClick={() => { setQuery(''); setSubmittedQuery(''); }}
+                  className="text-gray-400 hover:text-white p-2"
+                >
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              )}
+              
+              {!isSearching && (
+                <button 
+                  type="button"
+                  onClick={() => setIsMobileGenreOpen(true)}
+                  className={`flex items-center justify-center gap-2 w-11 h-11 md:w-auto md:h-auto md:px-4 md:py-2 rounded-full transition-all text-sm md:text-base font-medium shadow-md flex-shrink-0 ${
+                    selectedGenre
+                      ? 'bg-primary-500 text-white border border-primary-500'
+                      : 'bg-[#111318] hover:bg-primary-500/20 text-gray-300 hover:text-primary-500 border border-white/10 hover:border-primary-500/50'
+                  }`}
+                >
+                  <svg className="w-5 h-5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                  <span className="hidden md:block tracking-wide">{selectedGenre || 'Genres'}</span>
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Did You Mean */}
+          <div className={`w-full px-6 flex items-center transition-all duration-500 overflow-hidden ${didYouMean && isSearching && !searchLoading && searchResults.length < 5 ? 'h-6 mt-3 opacity-100' : 'h-0 mt-0 opacity-0'}`}>
+            {didYouMean && (
+              <p className="text-gray-400 text-sm">
+                Did you mean: <button onClick={() => { setQuery(didYouMean); setSubmittedQuery(didYouMean); }} className="text-primary-500 hover:underline font-medium italic">"{didYouMean}"</button>
+              </p>
             )}
           </div>
-        </form>
-      </div>
-
-      {/* Did You Mean */}
-      <div className={`w-full max-w-3xl px-6 flex items-center transition-all duration-500 overflow-hidden ${didYouMean && isSearching && !searchLoading && searchResults.length < 5 ? 'h-6 mb-4 opacity-100' : 'h-0 mb-0 opacity-0'}`}>
-        {didYouMean && (
-          <p className="text-gray-400 text-sm">
-            Did you mean: <button onClick={() => { setQuery(didYouMean); setSubmittedQuery(didYouMean); }} className="text-primary-500 hover:underline font-medium italic">"{didYouMean}"</button>
-          </p>
-        )}
+        </div>
       </div>
 
       {/* Unified Genre Overlay (Full Width Bottom Sheet) */}
@@ -277,8 +277,11 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
 
         {(!isSearching || (!searchLoading && searchResults.length > 0)) && (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 md:gap-6 w-full">
-            {currentItems.map((item: any, index) => (
-              <Link href={`/${item.type || type}/${item.id}`} key={`${item.id}-${index}`} className="group cursor-pointer flex flex-col gap-2">
+            {currentItems.map((item: any, index) => {
+              const itemType = item.media_type || item.type || type;
+              const linkPath = (itemType === 'tv' || itemType === 'series') ? 'series' : 'movie';
+              return (
+                <Link href={`/${linkPath}/${item.id}`} key={`${item.id}-${index}`} className="group cursor-pointer flex flex-col gap-2">
                 <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg border border-white/5 transition-transform duration-300 group-hover:scale-105 group-hover:border-primary-500/50 bg-[#1a1d24]">
                   <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
@@ -290,13 +293,11 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
                     {item.releaseDate && (
                       <p className="text-gray-500 text-[10px] md:text-xs">{new Date(item.releaseDate).getFullYear()}</p>
                     )}
-                    {isSearching && item.type && item.type !== type && (
-                      <p className="text-gray-500 text-[10px] uppercase border border-gray-700 rounded px-1">{item.type}</p>
-                    )}
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
 

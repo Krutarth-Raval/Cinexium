@@ -61,6 +61,20 @@ export async function GET(req: NextRequest) {
       return isHiddenQuery ? isHidden : !isHidden;
     });
 
+    // Fetch all blocks involving the current user
+    const blocks = await prisma.block.findMany({
+      where: {
+        OR: [
+          { blockerId: user.id },
+          { blockedId: user.id }
+        ]
+      }
+    });
+    
+    const blockedUserIds = new Set(
+      blocks.flatMap(b => [b.blockerId, b.blockedId]).filter(id => id !== user.id)
+    );
+
     const formatted = visibleConversations.map(conv => {
       const isUser1 = conv.user1Id === user.id;
       const otherUser = isUser1 ? conv.user2 : conv.user1;
@@ -80,6 +94,7 @@ export async function GET(req: NextRequest) {
         id: conv.id,
         isGroup: false,
         user: otherUser,
+        isBlocked: blockedUserIds.has(otherUser.id),
         isMuted,
         latestMessage: previewText,
         updatedAt: conv.updatedAt,
@@ -124,11 +139,11 @@ export async function GET(req: NextRequest) {
       include: { following: { select: { id: true, username: true, name: true, avatar: true } } }
     });
 
-    // Add followings that don't already have an active conversation
-    const activeUserIds = new Set(allChats.map(f => f.user.id));
+    // Add followings that don't already have an active conversation (even if hidden)
+    const allKnownUserIds = new Set(conversations.map(conv => conv.user1Id === user.id ? conv.user2Id : conv.user1Id));
     
     followings.forEach(f => {
-      if (!activeUserIds.has(f.following.id)) {
+      if (!allKnownUserIds.has(f.following.id)) {
         allChats.push({
           id: `contact-${f.following.id}`,
           isGroup: false,

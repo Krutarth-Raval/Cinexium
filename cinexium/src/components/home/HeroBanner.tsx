@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/Button';
+import { CustomTrailerPlayer } from '@/components/media/CustomTrailerPlayer';
+import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
 
 export interface MediaItem {
   id: string;
@@ -11,6 +13,8 @@ export interface MediaItem {
   bannerUrl: string;
   posterUrl?: string;
   type: 'movie' | 'series';
+  trailerKey?: string;
+  releaseDate?: string | null;
 }
 
 interface HeroBannerProps {
@@ -21,18 +25,24 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
+  const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+
   // Auto-scroll logic
   useEffect(() => {
-    if (items.length <= 1) return;
+    if (items.length <= 1 || isPlayingTrailer || isSaveModalOpen) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % items.length);
     }, 8000);
     return () => clearInterval(interval);
-  }, [items.length]);
+  }, [items.length, isPlayingTrailer, isSaveModalOpen, currentIndex]);
 
   // Reset index when items change
   useEffect(() => {
     setCurrentIndex(0);
+    setIsPlayingTrailer(false);
+    setIsTrailerPlaying(false);
   }, [items]);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -68,7 +78,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   const currentItem = items[currentIndex];
 
   const handleBannerClick = () => {
-    router.push(`/${currentItem.type === 'movie' ? 'movies' : 'series'}/${currentItem.id}`);
+    router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
   };
 
   return (
@@ -87,23 +97,35 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               key={item.id}
               className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
                 index === currentIndex ? 'opacity-100' : 'opacity-0'
-              }`}
+              } ${isPlayingTrailer && index === currentIndex ? 'z-20 bg-black' : ''}`}
             >
-              <img
-                src={item.bannerUrl}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-              {/* Gradients only on desktop to make overlaid text readable, softened for better image clarity */}
-              <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/50 to-transparent" />
-              <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#0f1115] via-[#0f1115]/20 to-transparent w-2/3" />
+              {isPlayingTrailer && index === currentIndex && item.trailerKey ? (
+                <div className="absolute inset-0 z-30 bg-black">
+                  <CustomTrailerPlayer 
+                    videoId={item.trailerKey}
+                    onClose={() => setIsPlayingTrailer(false)}
+                    onPlayingChange={setIsTrailerPlaying}
+                  />
+                </div>
+              ) : (
+                <>
+                  <img
+                    src={item.bannerUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
+                  {/* Gradients only on desktop to make overlaid text readable, softened for better image clarity */}
+                  <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/50 to-transparent" />
+                  <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#0f1115] via-[#0f1115]/20 to-transparent w-2/3" />
+                </>
+              )}
             </div>
           ))}
         </div>
 
         {/* Content Section (Mobile: bottom block, Desktop: absolute bottom overlay) */}
-        <div className="relative sm:absolute sm:inset-0 sm:pointer-events-none flex flex-col justify-between sm:justify-end p-5 sm:p-6 lg:p-10 z-10 min-h-[160px] sm:min-h-0 bg-[#16181d] sm:bg-transparent border-t border-white/5 sm:border-none overflow-hidden">
+        <div className={`relative sm:absolute sm:inset-0 sm:pointer-events-none flex flex-col justify-between sm:justify-end p-5 sm:p-6 lg:p-10 z-10 min-h-[160px] sm:min-h-0 bg-[#16181d] sm:bg-transparent border-t border-white/5 sm:border-none overflow-hidden transition-opacity duration-500 ${isPlayingTrailer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           
           {/* Ambient Blurred Background (Mobile Only) */}
           {items.map((item, index) => (
@@ -144,7 +166,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 className="gap-2 justify-center !rounded-full !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // handle watch trailer logic here
+                  if (currentItem.trailerKey) {
+                    setIsPlayingTrailer(true);
+                  } else {
+                    router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
+                  }
                 }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
@@ -157,7 +183,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 className="gap-2 text-white justify-center !rounded-full border-white/20 hover:bg-white/10 !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // handle save logic here
+                  setIsSaveModalOpen(true);
                 }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
@@ -216,6 +242,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
           }
         `}} />
       </div>
+
+      <SaveMediaModal 
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        mediaId={currentItem.id}
+        mediaType={currentItem.type}
+      />
     </div>
   );
 };

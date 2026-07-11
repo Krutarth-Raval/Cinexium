@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
+import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
+import { MediaShareCard } from '@/components/chat/MediaShareCard';
 import AddMemberModal from '@/components/chat/AddMemberModal';
 import ShareGroupModal from '@/components/chat/ShareGroupModal';
 
@@ -17,6 +20,8 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [input, setInput] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
@@ -79,7 +84,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     }
   };
 
+  const isInitialScroll = useRef(true);
+
   useEffect(() => {
+    isInitialScroll.current = true;
     fetchGroup();
   }, [id]);
 
@@ -91,8 +99,15 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     }
   }, [group, currentUser]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useLayoutEffect(() => {
+    if (messages.length > 0) {
+      if (isInitialScroll.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        isInitialScroll.current = false;
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -364,9 +379,9 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   };
 
   return (
-    <div className="flex-1 flex h-full min-h-0 bg-[#1a1d24] overflow-hidden">
+    <div className="flex-1 flex h-full min-h-0 md:bg-transparent bg-[#1a1d24] md:gap-4 overflow-hidden">
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#111318] relative">
+      <div className="flex-1 flex flex-col min-w-0 md:rounded-2xl md:border md:border-white/10 md:shadow-2xl overflow-hidden bg-[#111318] relative">
         {!group.isMember ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-10">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-red-800 mb-6 flex items-center justify-center shadow-xl">
@@ -441,34 +456,77 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                         return (
                           <div key={msg.id} className={`flex group ${isMe ? 'justify-end' : 'justify-start'} gap-2`}>
                             {!isMe && (
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex-shrink-0 overflow-hidden self-end mb-1 flex items-center justify-center">
-                                {msg.sender?.avatar ? (
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex-shrink-0 overflow-hidden self-end mb-5 flex items-center justify-center">
+                                {!msg.sender?.isBlocked && msg.sender?.avatar ? (
                                   <img src={msg.sender.avatar} className="w-full h-full object-cover" />
                                 ) : (
-                                  <span className="text-white text-xs font-bold">{msg.sender?.name?.charAt(0).toUpperCase()}</span>
+                                  <span className="text-white text-xs font-bold">{msg.sender?.isBlocked ? '@' : (msg.sender?.name || msg.sender?.username || '').charAt(0).toUpperCase()}</span>
                                 )}
                               </div>
                             )}
                             
                             <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%] min-w-0`}>
-                              {!isMe && <span className="text-xs text-gray-500 mb-1 ml-1">{msg.sender?.name}</span>}
+                              {!isMe && <span className="text-xs text-gray-500 mb-1 ml-1">{msg.sender?.isBlocked ? '@cinexium_user' : (msg.sender?.name || `@${msg.sender?.username}`)}</span>}
                               
-                              <div className="flex group items-center gap-2 relative min-w-0">
+                              <div 
+                                className="flex group items-center gap-2 relative min-w-0"
+                                onTouchStart={() => {
+                                  longPressTimer.current = setTimeout(() => setActiveMessageId(msg.id), 500);
+                                }}
+                                onTouchEnd={() => {
+                                  if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                                }}
+                                onTouchMove={() => {
+                                  if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                                }}
+                                onClick={() => {
+                                  if (activeMessageId === msg.id) setActiveMessageId(null);
+                                }}
+                              >
                                 {isMe && !isDeleted && !msg.id.startsWith('temp-') && (
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className={`flex items-center gap-2 transition-opacity ${activeMessageId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                     <div className="flex gap-1 bg-[#252a34] rounded-full px-2 py-1 border border-white/5 shadow-lg">
-                                      <button onClick={() => { setEditingMessageId(msg.id); setInput(msg.content); }} className="text-gray-400 hover:text-white p-1">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                      </button>
-                                      <button onClick={() => handleDelete(msg.id)} className="text-gray-400 hover:text-red-500 p-1">
+                                      {!msg.content.startsWith('[GROUP_INVITE]:') && !msg.content.startsWith('[COLLECTION_SHARE]:') && (
+                                        <button onClick={() => { setEditingMessageId(msg.id); setInput(msg.content); setActiveMessageId(null); }} className="text-gray-400 hover:text-white p-1">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        </button>
+                                      )}
+                                      <button onClick={() => { handleDelete(msg.id); setActiveMessageId(null); }} className="text-gray-400 hover:text-red-500 p-1">
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                       </button>
                                     </div>
                                   </div>
                                 )}
 
-                                <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
-                                  <p className="text-sm whitespace-pre-wrap break-words break-all">
+                                {msg.content.startsWith('[GROUP_INVITE]:') ? (() => {
+                                  try {
+                                    const meta = JSON.parse(msg.content.substring(15));
+                                    return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
+                                  } catch(e) {
+                                    return (
+                                      <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
+                                        <p className="text-sm whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                                      </div>
+                                    );
+                                  }
+                                })() : msg.content.startsWith('[COLLECTION_SHARE]:') ? (() => {
+                                  try {
+                                    const meta = JSON.parse(msg.content.substring(19));
+                                    const isMedia = meta.creatorUsername?.startsWith('Cinexium') && meta.itemCount === 0;
+                                    if (isMedia) {
+                                      return <MediaShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
+                                    }
+                                    return <CollectionShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
+                                  } catch(e) {
+                                    return (
+                                      <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
+                                        <p className="text-sm whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                                      </div>
+                                    );
+                                  }
+                                })() : (
+                                  <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
+                                    <p className="text-sm whitespace-pre-wrap break-words break-all">
                                     {msg.content.length > 1000 && !expandedMessages.has(msg.id) 
                                       ? msg.content.substring(0, 1000) + '... ' 
                                       : msg.content + ' '}
@@ -497,14 +555,15 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                       <span>{uniqueReactions.join(' ')}</span>
                                       {reactionCount > 1 && <span className="text-[10px] font-bold text-primary-500">{reactionCount}</span>}
                                     </div>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                )}
 
                                 {!isMe && !isDeleted && !msg.id.startsWith('temp-') && (
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className={`flex items-center gap-2 transition-opacity ${activeMessageId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                     <div className="flex gap-1 bg-[#252a34] rounded-full px-2 py-1 border border-white/5 shadow-lg">
                                       {['❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
-                                        <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="hover:scale-125 transition-transform p-0.5 text-sm">
+                                        <button key={emoji} onClick={() => { handleReact(msg.id, emoji); setActiveMessageId(null); }} className="hover:scale-125 transition-transform p-0.5 text-sm">
                                           {emoji}
                                         </button>
                                       ))}
@@ -582,7 +641,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
 
       {/* Right Side Panel: Group Info */}
       {isGroupInfoOpen && (
-        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l border-white/10 bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
+        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l md:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
           <div className="h-[73px] px-4 border-b border-white/10 flex justify-between items-center bg-[#1a1d24]">
             <h2 className="text-lg font-bold text-white">Group Info</h2>
             <button onClick={() => setIsGroupInfoOpen(false)} className="text-gray-400 hover:text-white transition-colors">
@@ -644,12 +703,12 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                 {group.members.map((m: any) => (
                   <div key={m.id} className="flex items-center justify-between group p-2 hover:bg-white/5 rounded-xl transition-colors border border-transparent">
                     <Link href={`/profile/${m.user.username}`} className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm">
-                        {m.user.avatar ? <img src={m.user.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white font-bold">{m.user.name.charAt(0).toUpperCase()}</div>}
+                      <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
+                        {!m.user.isBlocked && m.user.avatar ? <img src={m.user.avatar} className="w-full h-full object-cover" /> : <div className="text-white font-bold">{m.user.isBlocked ? '@' : m.user.name.charAt(0).toUpperCase()}</div>}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-100 text-sm font-medium truncate">{m.user.name}</p>
-                        <p className="text-gray-500 text-xs truncate">@{m.user.username}</p>
+                        <p className="text-gray-100 text-sm font-medium truncate">{m.user.isBlocked ? '@cinexium_user' : m.user.name}</p>
+                        <p className="text-gray-500 text-xs truncate">@{m.user.isBlocked ? 'cinexium_user' : m.user.username}</p>
                       </div>
                     </Link>
                     

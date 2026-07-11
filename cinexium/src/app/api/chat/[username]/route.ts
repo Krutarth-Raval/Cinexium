@@ -25,12 +25,42 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       }
     });
 
+    // Check block status
+    const blockRecord = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: user.id, blockedId: targetUser.id },
+          { blockerId: targetUser.id, blockedId: user.id }
+        ]
+      }
+    });
+    
+    const isBlockedByMe = blockRecord?.blockerId === user.id;
+    const hasBlockedMe = blockRecord?.blockerId === targetUser.id;
+
+    // Check follow status
+    const followStatus = await prisma.follows.findMany({
+      where: {
+        OR: [
+          { followerId: user.id, followingId: targetUser.id },
+          { followerId: targetUser.id, followingId: user.id }
+        ],
+        status: 'ACCEPTED'
+      }
+    });
+
+    const isFollowing = followStatus.some(f => f.followerId === user.id);
+    const isFollowedBy = followStatus.some(f => f.followingId === user.id);
+
     if (!conversation) {
       // Return empty array if no conversation yet, but include target user
       return NextResponse.json({ 
         conversation: { isMuted: false, isHidden: false }, 
         messages: [],
-        targetUser: { id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar },
+        targetUser: { 
+          id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar,
+          isBlockedByMe, hasBlockedMe, isFollowing, isFollowedBy
+        },
         currentUser: { id: user.id, username: user.username, name: user.name, avatar: user.avatar }
       });
     }
@@ -71,7 +101,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     return NextResponse.json({ 
       conversation: settings, 
       messages,
-      targetUser: { id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar },
+      targetUser: { 
+        id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar,
+        isBlockedByMe, hasBlockedMe, isFollowing, isFollowedBy
+      },
       currentUser: { id: user.id, username: user.username, name: user.name, avatar: user.avatar }
     });
   } catch (error) {

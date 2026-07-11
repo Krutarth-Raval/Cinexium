@@ -10,14 +10,20 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const pinStr = req.nextUrl.searchParams.get('pin');
-    if (!pinStr) return NextResponse.json({ error: 'PIN required' }, { status: 400 });
-
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (!user.chatPin) {
       return NextResponse.json({ error: 'PIN not set' }, { status: 400 });
+    }
+
+    const pinStr = req.nextUrl.searchParams.get('pin');
+    if (!pinStr) {
+      // If no pin is provided but one is set, we return success for the status check
+      // Or we can return PIN required if they were trying to verify.
+      // PinEntryModal expects 'PIN required' if it's set but they didn't provide it, 
+      // or we can just let it fall through and PinEntryModal will handle it.
+      return NextResponse.json({ error: 'PIN required' }, { status: 400 });
     }
 
     const isValid = await bcrypt.compare(pinStr, user.chatPin);

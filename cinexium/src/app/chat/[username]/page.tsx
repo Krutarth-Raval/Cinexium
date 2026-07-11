@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
-import GroupInviteCard from '@/components/chat/GroupInviteCard';
+import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
+import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
+import { MediaShareCard } from '@/components/chat/MediaShareCard';
 
 export default function ChatRoom({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -17,7 +19,25 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   const [settings, setSettings] = useState<any>(null);
   const [input, setInput] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+
+  // Derived state for block/follow logic
+  const isBlockedByMe = targetUser?.isBlockedByMe;
+  const hasBlockedMe = targetUser?.hasBlockedMe;
+  const isBlocked = isBlockedByMe || hasBlockedMe;
+  const isFollowing = targetUser?.isFollowing;
+  const isFollowedBy = targetUser?.isFollowedBy;
+  const showNotFollowingBanner = targetUser && !isBlocked && (!isFollowing || !isFollowedBy);
+
+  // Override target user display if blocked
+  const displayTargetUser = isBlocked ? {
+    ...targetUser,
+    name: '@cinexium_user',
+    username: 'cinexium_user',
+    avatar: null
+  } : targetUser;
 
   const toggleExpand = (id: string) => {
     setExpandedMessages(prev => {
@@ -40,6 +60,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
   const [reactionModalData, setReactionModalData] = useState<{ isOpen: boolean; reactions: any[] }>({ isOpen: false, reactions: [] });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialScroll = useRef(true);
 
   const fetchChat = async () => {
     try {
@@ -62,11 +83,19 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   };
 
   useEffect(() => {
+    isInitialScroll.current = true;
     fetchChat();
   }, [username]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useLayoutEffect(() => {
+    if (messages.length > 0) {
+      if (isInitialScroll.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        isInitialScroll.current = false;
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -105,14 +134,30 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       }
     };
 
+    const handleBlockStatusChanged = (data: any) => {
+      if (data.blockerId === targetUser.id || data.blockedId === targetUser.id) {
+        setTargetUser((prev: any) => {
+          if (!prev) return prev;
+          if (data.blockerId === currentUser.id) {
+            return { ...prev, isBlockedByMe: data.isBlocked };
+          } else if (data.blockerId === targetUser.id) {
+            return { ...prev, hasBlockedMe: data.isBlocked };
+          }
+          return prev;
+        });
+      }
+    };
+
     channel.bind('receiveMessage', handleMessage);
     channel.bind('messageSent', handleMessageSent);
     channel.bind('messageUpdated', handleMessageUpdated);
+    channel.bind('blockStatusChanged', handleBlockStatusChanged);
     
     return () => {
       channel?.unbind('receiveMessage', handleMessage);
       channel?.unbind('messageSent', handleMessageSent);
       channel?.unbind('messageUpdated', handleMessageUpdated);
+      channel?.unbind('blockStatusChanged', handleBlockStatusChanged);
     };
   }, [pusherClient, targetUser, currentUser, settings]);
 
@@ -278,9 +323,9 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   };
 
   return (
-    <div className="flex-1 flex h-full min-h-0 bg-[#1a1d24] overflow-hidden">
+    <div className="flex-1 flex h-full min-h-0 md:bg-transparent bg-[#1a1d24] md:gap-4 overflow-hidden">
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full min-h-0 relative">
+      <div className="flex-1 flex flex-col h-full min-h-0 relative md:rounded-2xl md:border md:border-white/10 md:shadow-2xl overflow-hidden bg-[#1a1d24]">
         {/* Header */}
         <div className="relative">
           <button 
@@ -304,7 +349,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
               </div>
               <div>
                 <p className="text-white font-medium">
-                  {targetUser.name}
+                  {targetUser.name || `@${targetUser.username}`}
                 </p>
                 <p className="text-xs text-gray-400">@{targetUser.username}</p>
               </div>
@@ -324,7 +369,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
           
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-gray-500 text-sm py-10">
-              Say hi to {targetUser.name}!
+              Say hi to {targetUser.name || `@${targetUser.username}`}!
             </div>
           ) : (
             <div className="space-y-6">
@@ -341,30 +386,46 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                     const isDeleted = msg.isDeletedForEveryone;
                     
                     // Get reaction representation
-                    const uniqueReactions = msg.reactions ? Array.from(new Set(msg.reactions.map((r: any) => r.emoji))) : [];
+                    const uniqueReactions: string[] = msg.reactions ? Array.from(new Set(msg.reactions.map((r: any) => r.emoji as string))) : [];
                     const reactionCount = msg.reactions?.length || 0;
 
                     return (
                       <div key={msg.id} className={`flex group items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         {!isMe && (
-                          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-1 shadow-sm">
-                            {targetUser.avatar ? (
-                              <img src={targetUser.avatar} alt={targetUser.name} className="w-full h-full object-cover" />
+                          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
+                            {displayTargetUser?.avatar ? (
+                              <img src={displayTargetUser.avatar} alt={displayTargetUser.name || displayTargetUser.username} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-white text-xs font-bold">{targetUser.name.charAt(0).toUpperCase()}</span>
+                              <span className="text-white text-xs font-bold">{(displayTargetUser?.name || displayTargetUser?.username).charAt(0).toUpperCase()}</span>
                             )}
                           </div>
                         )}
                         <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%] min-w-0`}>
-                          <div className="flex items-center gap-2 relative min-w-0">
+                          <div 
+                            className="flex items-center gap-2 relative min-w-0"
+                            onTouchStart={() => {
+                              longPressTimer.current = setTimeout(() => setActiveMessageId(msg.id), 500);
+                            }}
+                            onTouchEnd={() => {
+                              if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                            }}
+                            onTouchMove={() => {
+                              if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                            }}
+                            onClick={() => {
+                              if (activeMessageId === msg.id) setActiveMessageId(null);
+                            }}
+                          >
                         {/* Reaction / Edit / Delete Hover Menu */}
                         {isMe && !isDeleted && !msg.id.startsWith('temp-') && (
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity mr-2">
+                          <div className={`flex items-center gap-2 transition-opacity mr-2 ${activeMessageId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             <div className="flex gap-1 bg-[#252a34] rounded-full px-2 py-1 border border-white/5 shadow-lg">
-                              <button onClick={() => { setEditingMessageId(msg.id); setInput(msg.content); }} className="text-gray-400 hover:text-white p-1">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                              </button>
-                              <button onClick={() => handleDelete(msg.id)} className="text-gray-400 hover:text-red-500 p-1">
+                              {!msg.content.startsWith('[GROUP_INVITE]:') && !msg.content.startsWith('[COLLECTION_SHARE]:') && (
+                                <button onClick={() => { setEditingMessageId(msg.id); setInput(msg.content); setActiveMessageId(null); }} className="text-gray-400 hover:text-white p-1">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                              )}
+                              <button onClick={() => { handleDelete(msg.id); setActiveMessageId(null); }} className="text-gray-400 hover:text-red-500 p-1">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                               </button>
                             </div>
@@ -374,7 +435,22 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                             {msg.content.startsWith('[GROUP_INVITE]:') ? (() => {
                                     try {
                                       const meta = JSON.parse(msg.content.substring(15));
-                                      return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} />;
+                                      return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
+                                    } catch(e) {
+                                      return (
+                                        <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
+                                          <p className="text-sm whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                                        </div>
+                                      );
+                                    }
+                                  })() : msg.content.startsWith('[COLLECTION_SHARE]:') ? (() => {
+                                    try {
+                                      const meta = JSON.parse(msg.content.substring(19));
+                                      const isMedia = meta.creatorUsername?.startsWith('Cinexium') && meta.itemCount === 0;
+                                      if (isMedia) {
+                                        return <MediaShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
+                                      }
+                                      return <CollectionShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
                                     } catch(e) {
                                       return (
                                         <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
@@ -425,10 +501,10 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
                             {/* Reaction Hover Menu for Receiver's Messages */}
                             {!isMe && !isDeleted && !msg.id.startsWith('temp-') && (
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className={`flex items-center gap-2 transition-opacity ${activeMessageId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             <div className="flex gap-1 bg-[#252a34] rounded-full px-2 py-1 border border-white/5 shadow-lg">
                               {['❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
-                                <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="hover:scale-125 transition-transform p-0.5 text-sm">
+                                <button key={emoji} onClick={() => { handleReact(msg.id, emoji); setActiveMessageId(null); }} className="hover:scale-125 transition-transform p-0.5 text-sm">
                                   {emoji}
                                 </button>
                               ))}
@@ -459,52 +535,78 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
         {/* Input */}
         <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0">
-          <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
-            <div className="flex-1 relative">
-              <textarea 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage(e);
-                  }
-                }}
-                placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
-                className={`w-full max-h-32 min-h-[46px] bg-[#252a34] text-white text-sm rounded-[24px] px-5 py-3 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none border custom-scrollbar ${editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'}`}
-                rows={1}
-              />
-            </div>
-
-            {editingMessageId ? (
-              <button 
-                type="button"
-                onClick={() => { setEditingMessageId(null); setInput(''); }}
-                className="h-[46px] w-[46px] rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white transition-colors shrink-0"
-                title="Cancel Edit"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            ) : null}
-
-            <button 
-              type="submit"
-              disabled={!input.trim()}
-              className="h-[46px] w-[46px] rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-            >
-              {editingMessageId ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              ) : (
-                <svg className="w-5 h-5 rotate-90 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+          {isBlocked ? (
+            <div className="flex flex-col items-center justify-center py-2">
+              <p className="text-gray-400 text-sm mb-3">
+                {isBlockedByMe ? "You blocked this person" : "You can't send a message to this person."}
+              </p>
+              {isBlockedByMe && (
+                <button
+                  onClick={async () => {
+                    if (!targetUser) return;
+                    // Optimistic update
+                    setTargetUser((prev: any) => ({ ...prev, isBlockedByMe: false }));
+                    try {
+                      await fetch(`/api/users/${targetUser.username}/block`, { method: 'POST' });
+                    } catch (e) {
+                      console.error('Failed to unblock', e);
+                      setTargetUser((prev: any) => ({ ...prev, isBlockedByMe: true })); // Revert on failure
+                    }
+                  }}
+                  className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  Unblock
+                </button>
               )}
-            </button>
-          </form>
+            </div>
+          ) : (
+            <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
+              <div className="flex-1 relative">
+                <textarea 
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(e);
+                    }
+                  }}
+                  placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
+                  className={`w-full max-h-32 min-h-[46px] bg-[#252a34] text-white text-sm rounded-[24px] px-5 py-3 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none border custom-scrollbar ${editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'}`}
+                  rows={1}
+                />
+              </div>
+
+              {editingMessageId ? (
+                <button 
+                  type="button"
+                  onClick={() => { setEditingMessageId(null); setInput(''); }}
+                  className="h-[46px] w-[46px] rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white transition-colors shrink-0"
+                  title="Cancel Edit"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              ) : null}
+
+              <button 
+                type="submit"
+                disabled={!input.trim()}
+                className="h-[46px] w-[46px] rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                {editingMessageId ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                ) : (
+                  <svg className="w-5 h-5 rotate-90 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
       {/* Right Side Panel: Chat Info */}
       {isInfoOpen && (
-        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l border-white/10 bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
+        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l md:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
           <div className="h-[73px] px-4 border-b border-white/10 flex justify-between items-center bg-[#1a1d24]">
             <h2 className="text-lg font-bold text-white">Chat Info</h2>
             <button onClick={() => setIsInfoOpen(false)} className="text-gray-400 hover:text-white transition-colors">
@@ -514,20 +616,69 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
           
           <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
             <div className="flex flex-col items-center text-center">
-              <Link href={`/profile/${targetUser.username}`} className="w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-4 shadow-xl hover:scale-105 transition-transform">
-                {targetUser.avatar ? (
-                  <img src={targetUser.avatar} alt={targetUser.username} className="w-full h-full object-cover" />
+              <Link href={`/profile/${displayTargetUser?.username}`} className="w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-4 shadow-xl hover:scale-105 transition-transform pointer-events-none">
+                {displayTargetUser?.avatar ? (
+                  <img src={displayTargetUser.avatar} alt={displayTargetUser.username} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-white font-bold text-4xl">{targetUser.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-white font-bold text-4xl">{displayTargetUser?.name?.charAt(0).toUpperCase()}</span>
                 )}
               </Link>
-              <h3 className="text-2xl font-bold text-white">{targetUser.name}</h3>
-              <p className="text-gray-400">@{targetUser.username}</p>
+              <h3 className="text-2xl font-bold text-white">{displayTargetUser?.name}</h3>
+              <p className="text-gray-400">@{displayTargetUser?.username}</p>
             </div>
 
             <div>
                <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Options</h4>
                <div className="space-y-2">
+                 <button 
+                   onClick={async () => {
+                     // Optimistic update
+                     const newIsBlocked = !isBlockedByMe;
+                     setTargetUser((prev: any) => ({ ...prev, isBlockedByMe: newIsBlocked }));
+                     try {
+                       await fetch(`/api/users/${targetUser.username}/block`, { method: 'POST' });
+                     } catch (e) { 
+                       console.error('Failed to block/unblock', e);
+                       setTargetUser((prev: any) => ({ ...prev, isBlockedByMe: !newIsBlocked })); // Revert
+                     }
+                   }}
+                   className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+                 >
+                   <div className={`p-2 rounded-lg ${isBlockedByMe ? 'bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-400'}`}>
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                     </svg>
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-white font-medium">{isBlockedByMe ? 'Unblock User' : 'Block User'}</p>
+                     <p className="text-xs text-gray-500">{isBlockedByMe ? 'Allow messages again' : 'Stop receiving messages'}</p>
+                   </div>
+                 </button>
+
+                 <button 
+                   onClick={() => {
+                     setConfirmConfig({
+                       isOpen: true,
+                       title: 'Delete Chat',
+                       message: 'Are you sure you want to delete this chat history? This action cannot be undone.',
+                       confirmText: 'Delete',
+                       isDestructive: true,
+                       onConfirm: () => updateSettings('delete')
+                     });
+                   }}
+                   className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+                 >
+                   <div className="p-2 rounded-lg bg-red-500/10 text-red-500">
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                     </svg>
+                   </div>
+                   <div className="flex-1">
+                     <p className="text-white font-medium">Delete Chat</p>
+                     <p className="text-xs text-gray-500">Clear all messages</p>
+                   </div>
+                 </button>
+
                  <button 
                    onClick={() => updateSettings(settings?.isMuted ? 'unmute' : 'mute')} 
                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"

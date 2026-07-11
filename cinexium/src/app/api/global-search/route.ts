@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import { tmdb } from '@/lib/tmdb';
 import { prisma } from '@/lib/prisma';
 
@@ -11,6 +13,12 @@ export async function GET(req: Request) {
   }
 
   try {
+    const session = await getServerSession(authOptions);
+    let currentUser = null;
+    if (session?.user?.email) {
+      currentUser = await prisma.user.findUnique({ where: { email: session.user.email } });
+    }
+
     const [movies, series, users, collections, groupChats] = await Promise.all([
       tmdb.searchMedia(q, 'movie'),
       tmdb.searchMedia(q, 'tv'),
@@ -19,13 +27,31 @@ export async function GET(req: Request) {
           OR: [
             { name: { contains: q, mode: 'insensitive' } }, 
             { username: { contains: q, mode: 'insensitive' } }
-          ] 
+          ],
+          ...(currentUser ? {
+            AND: [
+              {
+                blockedBy: {
+                  none: { blockerId: currentUser.id }
+                }
+              },
+              {
+                blocking: {
+                  none: { blockedId: currentUser.id }
+                }
+              }
+            ]
+          } : {})
         },
         take: 20,
         select: { id: true, name: true, username: true, avatar: true }
       }),
       prisma.collection.findMany({
-        where: { name: { contains: q, mode: 'insensitive' }, isPublic: true },
+        where: { 
+          name: { contains: q, mode: 'insensitive' }, 
+          isPublic: true,
+          user: { isPrivate: false } 
+        },
         take: 20,
         include: { user: { select: { username: true } }, items: { take: 4 } }
       }),

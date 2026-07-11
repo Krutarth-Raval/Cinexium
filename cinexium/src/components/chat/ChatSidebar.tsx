@@ -30,6 +30,10 @@ export default function ChatSidebar() {
   };
 
   useEffect(() => {
+    setConversations([]);
+  }, [isHiddenModeActive]);
+
+  useEffect(() => {
     fetchConversations();
   }, [pathname, isHiddenModeActive]);
 
@@ -49,9 +53,12 @@ export default function ChatSidebar() {
   );
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-300 ${isHiddenModeActive ? 'bg-[#0a0a0c]' : ''}`}>
-      <div className={`p-4 border-b ${isHiddenModeActive ? 'border-red-900/30 bg-[#0a0a0c]' : 'border-white/10 bg-[#15181e]'} flex flex-col gap-4 sticky top-0 z-10 shrink-0`}>
-        <div className="flex items-center justify-between">
+    <div className={`flex flex-col h-full overflow-hidden md:gap-4 transition-colors duration-300 ${isHiddenModeActive ? 'md:bg-transparent bg-[#0a0a0c]' : 'md:bg-transparent'}`}>
+      {/* Mobile: Combined Header, Desktop: Title Bento Box */}
+      <div className={`flex flex-col sticky md:static top-0 z-20 shrink-0 md:rounded-2xl md:border md:shadow-2xl ${isHiddenModeActive ? 'bg-[#0a0a0c] md:bg-[#15181e] border-b border-red-900/30 md:border-white/10' : 'bg-[#15181e] border-b border-white/10 md:border-white/10'}`}>
+        
+        {/* Title and Dropdown */}
+        <div className="flex items-center justify-between p-4 w-full">
           <h2 className={`text-xl font-bold ${isHiddenModeActive ? 'text-red-500' : 'text-white'}`}>
             {isHiddenModeActive ? 'Hidden Chats' : 'Messages'}
           </h2>
@@ -94,8 +101,10 @@ export default function ChatSidebar() {
             )}
           </div>
         </div>
-        <div className="relative">
-          <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        
+        {/* Mobile Search Bar */}
+        <div className="relative px-4 pb-4 md:hidden">
+          <svg className="w-4 h-4 absolute left-7 top-1/2 -translate-y-1/2 -mt-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -111,7 +120,26 @@ export default function ChatSidebar() {
       <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
       <PinEntryModal isOpen={isPinModalOpen} onClose={() => setIsPinModalOpen(false)} onSuccess={() => setIsPinModalOpen(false)} />
 
-      <div className="flex-1 overflow-y-auto px-3 pt-2 pb-24 md:pb-2 space-y-1">
+      {/* Desktop Search & List Bento Box */}
+      <div className={`flex-1 flex flex-col min-h-0 md:rounded-2xl md:border md:shadow-2xl ${isHiddenModeActive ? 'md:bg-[#15181e] md:border-white/10 bg-[#0a0a0c]' : 'md:bg-[#15181e] md:border-white/10'}`}>
+        
+        {/* Desktop Search Bar */}
+        <div className="hidden md:block p-4 shrink-0 border-b border-white/5">
+          <div className="relative">
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search contacts & groups..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full ${isHiddenModeActive ? 'bg-red-900/10 focus:ring-red-500' : 'bg-[#1a1d24] focus:ring-primary-500'} text-white text-sm rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:ring-1 border border-white/5 placeholder-gray-500`}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 pt-2 md:pt-4 pb-24 md:pb-4 space-y-1 custom-scrollbar">
         {filteredConversations.length === 0 ? (
           <div className="p-8 text-center text-gray-500 text-sm">
             {searchQuery ? 'No contacts found.' : 'No messages or contacts yet.'}
@@ -124,15 +152,15 @@ export default function ChatSidebar() {
               className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${(conv.isGroup ? pathname === `/chat/group/${conv.id}` : pathname === `/chat/${conv.user.username}`) ? 'bg-white/10 border-white/10' : 'border-white/5 hover:bg-white/5 hover:border-white/10'}`}
             >
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
-                {conv.user.avatar ? (
+                {!conv.isBlocked && conv.user.avatar ? (
                   <img src={conv.user.avatar} alt={conv.user.username} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-white font-bold text-lg">{conv.user.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-white font-bold text-lg">{conv.isBlocked ? '@' : conv.user.name.charAt(0).toUpperCase()}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline mb-0.5">
-                  <h3 className="font-semibold text-white truncate pr-2">{conv.user.username}</h3>
+                  <h3 className="font-semibold text-white truncate pr-2">{conv.isGroup ? conv.user.username : (conv.isBlocked ? '@cinexium_user' : (conv.user.name || `@${conv.user.username}`))}</h3>
                   {!conv.isContactOnly && (
                     <span className="text-[10px] text-gray-500 flex-shrink-0 font-medium">
                       {new Date(conv.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -141,7 +169,21 @@ export default function ChatSidebar() {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-white font-semibold' : (conv.isContactOnly ? 'text-gray-500 italic' : 'text-gray-400')}`}>
-                    {conv.latestMessage?.startsWith('[GROUP_INVITE]:') ? 'Group Invite' : (conv.latestMessage || 'No messages yet')}
+                    {(() => {
+                      if (conv.latestMessage?.startsWith('[GROUP_INVITE]:')) return 'Group Invite';
+                      if (conv.latestMessage?.startsWith('[COLLECTION_SHARE]:')) {
+                        try {
+                          const meta = JSON.parse(conv.latestMessage.substring(19));
+                          if (meta.creatorUsername === 'Cinexium:movie') return 'Shared a Movie';
+                          if (meta.creatorUsername === 'Cinexium:tv') return 'Shared a Series';
+                          if (meta.creatorUsername === 'Cinexium') return 'Shared a Movie';
+                          return 'Shared a Collection';
+                        } catch {
+                          return 'Shared a Collection';
+                        }
+                      }
+                      return conv.latestMessage || 'No messages yet';
+                    })()}
                   </p>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {conv.isMuted && (
@@ -158,6 +200,7 @@ export default function ChatSidebar() {
             </Link>
           ))
         )}
+      </div>
       </div>
     </div>
   );

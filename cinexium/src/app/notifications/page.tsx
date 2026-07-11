@@ -138,13 +138,25 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0 pr-6">
                 <p className="text-sm text-gray-300">
                   <Link href={`/profile/${n.actor.username}`} className="font-semibold text-white hover:underline">
-                    {n.actor.username}
+                    @{n.actor.username}
                   </Link>
                   {' '}
                   {n.type === 'FOLLOW' && 'started following you.'}
                   {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                   {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
+                  {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
                 </p>
+
+                {n.type === 'COMMENT_REPLY' && n.referenceId && (
+                  <div className="mt-3">
+                    <Link
+                      href={`/${n.referenceType === 'tv' ? 'series' : 'movie'}/${n.referenceId}`}
+                      className="inline-block py-1.5 px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-bold"
+                    >
+                      View Reply
+                    </Link>
+                  </div>
+                )}
                 
                 {n.type === 'FOLLOW_REQUEST' && (
                   <div className="mt-3 flex gap-2">

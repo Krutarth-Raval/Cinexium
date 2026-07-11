@@ -8,7 +8,16 @@ export const BottomNav = () => {
   const pathname = usePathname();
   const { hasUnreadMessages } = useSocket();
 
-  if (pathname === '/login' || pathname === '/register' || pathname === '/verify-otp' || pathname?.startsWith('/chat/')) {
+  if (
+    pathname === '/login' || 
+    pathname === '/register' || 
+    pathname === '/verify-otp' || 
+    pathname?.startsWith('/chat/') ||
+    pathname === '/privacy' ||
+    pathname === '/terms' ||
+    pathname === '/guidelines' ||
+    pathname === '/contact'
+  ) {
     return null;
   }
 

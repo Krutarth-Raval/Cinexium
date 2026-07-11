@@ -32,12 +32,44 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Check membership
     const isMember = group.members.some(m => m.userId === user.id);
     
+    // Fetch blocks involving the current user
+    const blocks = await prisma.block.findMany({
+      where: {
+        OR: [
+          { blockerId: user.id },
+          { blockedId: user.id }
+        ]
+      }
+    });
+    
+    const blockedUserIds = new Set(
+      blocks.flatMap(b => [b.blockerId, b.blockedId]).filter(id => id !== user.id)
+    );
+
+    // Add isBlocked flag to members
+    const maskedMembers = group.members.map(m => ({
+      ...m,
+      user: {
+        ...m.user,
+        isBlocked: blockedUserIds.has(m.user.id)
+      }
+    }));
+
+    // Add isBlocked flag to message senders
+    const maskedMessages = group.messages.map(msg => ({
+      ...msg,
+      sender: {
+        ...msg.sender,
+        isBlocked: blockedUserIds.has(msg.sender.id)
+      }
+    }));
+
     if (!isMember) {
       // If not a member, return group info without messages
-      return NextResponse.json({ ...group, messages: [], isMember: false });
+      return NextResponse.json({ ...group, members: maskedMembers, messages: [], isMember: false });
     }
 
-    return NextResponse.json({ ...group, isMember: true });
+    return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessages, isMember: true });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

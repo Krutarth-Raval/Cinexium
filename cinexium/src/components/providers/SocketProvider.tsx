@@ -42,6 +42,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const userId = (session?.user as any)?.id;
     if (!userId) return;
 
+    // Check for initial unread messages
+    fetch('/api/chat/unread')
+      .then(res => res.json())
+      .then(data => {
+        if (data.hasUnread && !window.location.pathname.startsWith('/chat')) {
+          setHasUnreadMessages(true);
+        }
+      })
+      .catch(console.error);
+
     const pusher = getPusherClient();
     if (!pusher) return;
 

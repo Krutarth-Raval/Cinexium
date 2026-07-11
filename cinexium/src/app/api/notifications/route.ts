@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
     const enrichedNotifications = notifications.map(n => ({
       ...n,
       isFollowing: followingIds.has(n.actor.id),
-      isFollowRequested: pendingIds.has(n.actor.id)
+      isFollowRequested: pendingIds.has(n.actor.id),
+      isRead: user.appNotifications ? n.isRead : true // Force read if notifications disabled
     }));
 
     return NextResponse.json(enrichedNotifications);

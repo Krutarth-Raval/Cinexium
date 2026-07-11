@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useDebounce } from 'use-debounce';
 
 export const RegisterForm = () => {
   const router = useRouter();
@@ -15,6 +16,73 @@ export const RegisterForm = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [countriesList, setCountriesList] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<Array<{name: string, cca2: string}>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [debouncedCountry] = useDebounce(formData.country, 500);
+
+  React.useEffect(() => {
+    fetch('/countries.json')
+      .then(res => res.json())
+      .then(data => setCountriesList(data))
+      .catch(console.error);
+  }, []);
+
+  React.useEffect(() => {
+    if (!debouncedCountry || debouncedCountry.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const query = debouncedCountry.toLowerCase();
+    
+    const levenshtein = (a: string, b: string) => {
+      const matrix = [];
+      let i, j;
+      for (i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (i = 1; i <= b.length; i++) {
+        for (j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    };
+
+    const matches = countriesList.map(c => {
+       let bestScore = Infinity;
+       
+       const terms = [
+         c.name.common.toLowerCase(), 
+         c.name.official.toLowerCase(), 
+         ...(c.altSpellings || []).map((a: string) => a.toLowerCase())
+       ];
+       
+       for (const term of terms) {
+         if (term === query) { bestScore = 0; break; }
+         if (term.includes(query) || query.includes(term)) {
+           bestScore = Math.min(bestScore, Math.abs(term.length - query.length) * 0.5); // Favor substring matches
+         } else {
+           const dist = levenshtein(query, term);
+           bestScore = Math.min(bestScore, dist);
+         }
+       }
+       return { name: c.name.common, cca2: c.cca2, score: bestScore };
+    });
+    
+    matches.sort((a, b) => a.score - b.score);
+    const top = matches.filter(m => m.score <= 4).slice(0, 5).map(m => ({ name: m.name, cca2: m.cca2 }));
+    
+    if (top.length === 1 && top[0].name.toLowerCase() === query) {
+      setSuggestions([]);
+    } else {
+      setSuggestions(top);
+    }
+  }, [debouncedCountry, countriesList]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -55,7 +123,7 @@ export const RegisterForm = () => {
   };
 
   return (
-    <div className="w-full max-w-md p-8 bg-[#0f1115]/80 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl relative z-20">
+    <div className="w-full max-w-md p-8 bg-[#0f1115]/80 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl relative z-20 max-h-full overflow-y-auto scrollbar-hide">
       <div className="text-center mb-8">
         <Link href="/" className="inline-block mb-4">
           <span className="text-3xl font-bold text-primary-500 tracking-wider">CINEXIUM</span>
@@ -111,17 +179,54 @@ export const RegisterForm = () => {
           />
         </div>
 
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-300 mb-1">Country</label>
-          <input
-            type="text"
-            name="country"
-            required
-            value={formData.country}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-            placeholder="United States"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              name="country"
+              required
+              value={formData.country}
+              onChange={(e) => {
+                handleChange(e);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              className="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+              placeholder="United States"
+              autoComplete="off"
+            />
+            {(() => {
+              const selectedObj = countriesList.find(c => c.name.common.toLowerCase() === formData.country.toLowerCase());
+              return selectedObj?.cca2 ? (
+                <img 
+                  src={`https://flagcdn.com/w40/${selectedObj.cca2.toLowerCase()}.png`} 
+                  alt={selectedObj.name.common}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-8 rounded-sm drop-shadow-md pointer-events-none select-none"
+                />
+              ) : null;
+            })()}
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-[#1a1d24] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+              {suggestions.map((sug, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // prevent blur
+                    setFormData(prev => ({ ...prev, country: sug.name }));
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full flex items-center gap-3 text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                >
+                  <img src={`https://flagcdn.com/w40/${sug.cca2.toLowerCase()}.png`} alt="" className="w-6 rounded-sm drop-shadow-sm" />
+                  <span>{sug.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button

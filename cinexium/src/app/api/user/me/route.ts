@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import fs from 'fs';
-import path from 'path';
+import cloudinary from '@/lib/cloudinary';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -20,6 +19,9 @@ export async function GET() {
       email: true,
       bio: true,
       avatar: true,
+      isPrivate: true,
+      chatNotifications: true,
+      appNotifications: true,
     }
   });
 
@@ -42,17 +44,20 @@ export async function PUT(request: Request) {
     let avatarUrl = formData.get('avatarUrl') as string | null;
 
     if (avatarFile && avatarFile.size > 0) {
-      // Process file upload locally
       const buffer = Buffer.from(await avatarFile.arrayBuffer());
-      const filename = `${session.user.email.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}${path.extname(avatarFile.name)}`;
       
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
+      const uploadResult: any = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'cinexium/avatars' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(buffer);
+      });
       
-      fs.writeFileSync(path.join(uploadDir, filename), buffer);
-      avatarUrl = `/uploads/avatars/${filename}`;
+      avatarUrl = uploadResult.secure_url;
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
@@ -81,6 +86,36 @@ export async function PUT(request: Request) {
     return NextResponse.json({ user: updatedUser });
   } catch (error) {
     console.error('Settings update error:', error);
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const data = await request.json();
+    const updateData: any = {};
+    
+    if (typeof data.isPrivate === 'boolean') updateData.isPrivate = data.isPrivate;
+    if (typeof data.chatNotifications === 'boolean') updateData.chatNotifications = data.chatNotifications;
+    if (typeof data.appNotifications === 'boolean') updateData.appNotifications = data.appNotifications;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { email: session.user.email },
+      data: updateData,
+    });
+
+    return NextResponse.json({ user: updatedUser });
+  } catch (error) {
+    console.error('Settings patch error:', error);
     return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
 }

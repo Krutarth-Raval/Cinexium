@@ -54,7 +54,7 @@ export const RegionEdgePanel = () => {
     setTimeout(() => setIsOpen(false), 300);
   };
 
-  if (pathname?.startsWith('/chat') || pathname?.startsWith('/notifications')) {
+  if (pathname?.startsWith('/chat') || pathname?.startsWith('/notifications') || pathname?.startsWith('/profile') || pathname?.startsWith('/settings') || pathname?.startsWith('/collection')) {
     return null;
   }
 
@@ -84,7 +84,7 @@ export const RegionEdgePanel = () => {
       )}
       <div
         ref={panelRef}
-        className={`fixed right-0 top-36 z-[100] flex items-center transition-all duration-300 ease-out`}
+        className={`md:hidden fixed right-0 top-36 z-[100] flex items-center transition-all duration-300 ease-out`}
       >
         {/* Edge Handle */}
         {!isOpen && (

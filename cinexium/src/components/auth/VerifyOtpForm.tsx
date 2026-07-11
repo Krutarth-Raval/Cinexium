@@ -85,10 +85,10 @@ export const VerifyOtpForm = () => {
   if (!email) return null;
 
   return (
-    <div className="w-full max-w-md p-8 bg-[#0f1115]/80 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl relative z-20">
+    <div className="w-full max-w-md p-8 bg-[#0f1115]/80 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl relative z-20 max-h-full overflow-y-auto scrollbar-hide">
       <div className="text-center mb-8">
-        <Link href="/" className="inline-block mb-6">
-          <span className="text-3xl font-bold text-primary-500 tracking-wider">CINEXIUM</span>
+        <Link href="/" className="inline-block mb-6 flex justify-center">
+          <img src="/logo-mark.svg" alt="CINEXIUM" className="h-16 w-16" />
         </Link>
         <h2 className="text-2xl font-bold text-white mb-2">Verify Your Email</h2>
         <p className="text-gray-400 text-sm">We sent a 6-digit code to<br/><span className="text-white font-medium">{email}</span></p>
