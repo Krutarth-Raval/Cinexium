@@ -69,7 +69,7 @@ export const CollectionHeader = ({ collection, isOwner, hasLiked, hasSaved }: an
       {/* Background blur using thumbnail */}
       {thumbnailPreview && (
         <div className="absolute inset-0 opacity-[0.03] z-0 blur-3xl pointer-events-none">
-          <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
+          <img src={thumbnailPreview} alt="Collection thumbnail preview" className="w-full h-full object-cover" />
         </div>
       )}
 

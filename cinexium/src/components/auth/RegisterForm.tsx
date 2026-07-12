@@ -221,7 +221,7 @@ export const RegisterForm = () => {
                   }}
                   className="w-full flex items-center gap-3 text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
                 >
-                  <img src={`https://flagcdn.com/w40/${sug.cca2.toLowerCase()}.png`} alt="" className="w-6 rounded-sm drop-shadow-sm" />
+                  <img src={`https://flagcdn.com/w40/${sug.cca2.toLowerCase()}.png`} alt={`${sug.name} flag`} className="w-6 rounded-sm drop-shadow-sm" />
                   <span>{sug.name}</span>
                 </button>
               ))}

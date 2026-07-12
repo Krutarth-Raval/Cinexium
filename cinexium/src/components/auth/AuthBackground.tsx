@@ -20,7 +20,7 @@ export const AuthBackground = async () => {
           <div key={`auth-bg-${item.id}-${i}`} className="relative aspect-[2/3] rounded-md overflow-hidden bg-gray-900 shadow-xl">
             <img 
               src={item.posterUrl} 
-              alt="" 
+              alt={`Poster for ${item.title}`} 
               className="w-full h-full object-cover"
               loading="lazy"
             />

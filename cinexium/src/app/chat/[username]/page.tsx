@@ -750,7 +750,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
               {reactionModalData.reactions.map((r, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-600 overflow-hidden shrink-0">
-                    {r.user?.avatar ? <img src={r.user.avatar} alt="" className="w-full h-full object-cover" /> : null}
+                    {r.user?.avatar ? <img src={r.user.avatar} alt={`${r.user.name}'s avatar`} className="w-full h-full object-cover" /> : null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">{r.user?.name || 'Unknown'}</p>

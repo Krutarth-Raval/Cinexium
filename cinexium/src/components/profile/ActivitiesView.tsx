@@ -45,7 +45,7 @@ export const ActivitiesView = () => {
           className="flex items-center gap-4 p-3 bg-black/50 border border-white/5 rounded-xl hover:bg-black/70 transition-colors"
         >
           {like.collection.thumbnail ? (
-            <img src={like.collection.thumbnail} alt="" className="w-16 h-16 rounded-lg object-cover" />
+            <img src={like.collection.thumbnail} alt={`Cover for ${like.collection.name}`} className="w-16 h-16 rounded-lg object-cover" />
           ) : (
             <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center text-gray-500">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" /></svg>

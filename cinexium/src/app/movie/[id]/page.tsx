@@ -11,9 +11,38 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const details = await tmdb.getFullMediaDetails('movie', id);
   if (!details) return { title: 'Movie Not Found' };
+  
+  const title = `${details.title} - Cinexium`;
+  const description = details.overview || 'Explore details, ratings, and trailers for this movie on Cinexium.';
+  const image = details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : (details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : '/og-image.png');
+  const url = `https://cinexium.site/movie/${id}`;
+
   return {
-    title: `${details.title} - Cinexium`,
-    description: details.overview,
+    title,
+    description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title,
+      description,
+      url,
+      images: [
+        {
+          url: image,
+          width: 1280,
+          height: 720,
+          alt: title,
+        }
+      ],
+      type: 'video.movie',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    }
   };
 }
 

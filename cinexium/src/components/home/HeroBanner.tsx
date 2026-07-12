@@ -139,7 +139,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
             >
               <img
                 src={item.bannerUrl}
-                alt=""
+                alt="Decorative blurred background for banner"
                 className="w-full h-full object-cover blur-3xl scale-125 opacity-70"
               />
               <div className="absolute inset-0 bg-[#0f1115]/75" />

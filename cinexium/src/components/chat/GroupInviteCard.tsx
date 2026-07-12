@@ -60,7 +60,7 @@ export const GroupInviteCard = ({
           {meta.memberAvatars && meta.memberAvatars.length > 0 && (
             <div className="flex -space-x-2 px-4 pb-3">
               {meta.memberAvatars.map((av: string, i: number) => (
-                <img key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-[#1e2230] object-cover" src={av} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <img key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-[#1e2230] object-cover" src={av} alt="Group member avatar" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ))}
             </div>
           )}

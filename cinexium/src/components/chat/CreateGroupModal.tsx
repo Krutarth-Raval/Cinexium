@@ -190,7 +190,7 @@ export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: Cr
                     />
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 shrink-0 overflow-hidden shadow-sm">
-                        {f.follower.avatar ? <img src={f.follower.avatar} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-white font-bold">{f.follower.name.charAt(0).toUpperCase()}</div>}
+                        {f.follower.avatar ? <img src={f.follower.avatar} alt={`${f.follower.name}'s avatar`} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-white font-bold">{f.follower.name.charAt(0).toUpperCase()}</div>}
                       </div>
                       <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#111318] flex items-center justify-center transition-colors ${selectedIds.has(f.follower.id) ? 'bg-primary-500 text-white' : 'bg-gray-700 text-transparent group-hover:bg-gray-600'}`}>
                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
