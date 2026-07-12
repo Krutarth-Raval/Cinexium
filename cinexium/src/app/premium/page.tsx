@@ -194,7 +194,7 @@ export default function PremiumPage() {
               <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
               <p className="text-gray-400 text-sm mb-6">For casual movie lovers.</p>
               <div className="text-4xl font-black text-white mb-8">
-                {currencySymbol}0 <span className="text-lg text-gray-500 font-normal">/forever</span>
+                <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>{currencySymbol}</span>0 <span className="text-lg text-gray-500 font-normal">/forever</span>
               </div>
 
               <div className="flex-1">
@@ -233,7 +233,7 @@ export default function PremiumPage() {
               </h3>
               <p className="text-gray-400 text-sm mb-6">For the ultimate cinema tracking experience.</p>
               <div className="text-4xl font-black text-white mb-8">
-                {currencySymbol}{isYearly ? yearlyPrice : monthlyPrice} <span className="text-lg text-gray-400 font-normal">/{isYearly ? 'yr' : 'mo'}</span>
+                <span style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>{currencySymbol}</span>{isYearly ? yearlyPrice : monthlyPrice} <span className="text-lg text-gray-400 font-normal">/{isYearly ? 'yr' : 'mo'}</span>
               </div>
 
               <div className="flex-1 relative z-10">
