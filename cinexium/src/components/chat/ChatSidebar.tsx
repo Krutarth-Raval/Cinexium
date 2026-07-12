@@ -12,6 +12,7 @@ export default function ChatSidebar() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [groupModalMode, setGroupModalMode] = useState<'group' | 'community'>('group');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { isHiddenModeActive, setIsHiddenModeActive } = useHiddenChat();
@@ -74,11 +75,18 @@ export default function ChatSidebar() {
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-[#1a1d24] border border-white/10 rounded-xl shadow-2xl py-1 z-50">
                 <button
-                  onClick={() => { setIsGroupModalOpen(true); setIsDropdownOpen(false); }}
+                  onClick={() => { setGroupModalMode('group'); setIsGroupModalOpen(true); setIsDropdownOpen(false); }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   Create Group
+                </button>
+                <button
+                  onClick={() => { setGroupModalMode('community'); setIsGroupModalOpen(true); setIsDropdownOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                  Create Community
                 </button>
                 {!isHiddenModeActive ? (
                   <button
@@ -117,7 +125,7 @@ export default function ChatSidebar() {
         </div>
       </div>
 
-      <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} />
+      <CreateGroupModal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} mode={groupModalMode} />
       <PinEntryModal isOpen={isPinModalOpen} onClose={() => setIsPinModalOpen(false)} onSuccess={() => setIsPinModalOpen(false)} />
 
       {/* Desktop Search & List Bento Box */}
@@ -151,11 +159,22 @@ export default function ChatSidebar() {
               href={conv.isGroup ? `/chat/group/${conv.id}` : `/chat/${conv.user.username}`}
               className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${(conv.isGroup ? pathname === `/chat/group/${conv.id}` : pathname === `/chat/${conv.user.username}`) ? 'bg-white/10 border-white/10' : 'border-white/5 hover:bg-white/5 hover:border-white/10'}`}
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
-                {!conv.isBlocked && conv.user.avatar ? (
-                  <img src={conv.user.avatar} alt={conv.user.username} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-white font-bold text-lg">{conv.isBlocked ? '@' : conv.user.name.charAt(0).toUpperCase()}</span>
+              <div className="relative">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
+                  {!conv.isBlocked && conv.user.avatar ? (
+                    <img src={conv.user.avatar} alt={conv.user.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-bold text-lg">{conv.isBlocked ? '@' : conv.user.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                {conv.isGroup && (
+                  <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#15181e] ${conv.isCommunity ? 'bg-blue-500' : 'bg-gray-600'}`} title={conv.isCommunity ? 'Community' : 'Group'}>
+                    {conv.isCommunity ? (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                    ) : (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">

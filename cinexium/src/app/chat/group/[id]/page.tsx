@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -14,6 +14,8 @@ import ShareGroupModal from '@/components/chat/ShareGroupModal';
 export default function GroupChatRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get('invite');
   const { pusherClient } = useSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [group, setGroup] = useState<any>(null);
@@ -351,10 +353,38 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       const res = await fetch(`/api/chat/group/${group.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'join' })
+        body: JSON.stringify({ action: 'join', inviteCode })
       });
       if (res.ok) fetchGroup();
-      else setAlertConfig({ isOpen: true, message: 'Failed to join group' });
+      else {
+        const data = await res.json();
+        if (data.premiumRequired) {
+          setConfirmConfig({
+            isOpen: true,
+            title: 'Cinexium Pro Required',
+            message: data.error,
+            confirmText: 'Upgrade Now',
+            isDestructive: false,
+            onConfirm: () => router.push('/premium')
+          });
+        } else {
+          setAlertConfig({ isOpen: true, message: data.error || 'Failed to join group' });
+        }
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleRequestJoin = async () => {
+    try {
+      const res = await fetch(`/api/chat/community/${group.id}/request`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setAlertConfig({ isOpen: true, message: 'Join request sent to the admin.' });
+      } else {
+        const data = await res.json();
+        setAlertConfig({ isOpen: true, message: data.error || 'Failed to send request.' });
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -388,10 +418,20 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
               {group.avatar ? <img src={group.avatar} className="w-full h-full object-cover rounded-full" /> : <span className="text-4xl text-white font-bold">{group.name.charAt(0)}</span>}
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">{group.name}</h2>
-            <p className="text-gray-400 mb-8 text-center max-w-md">You are not a member of this group. Join to participate in the conversation and see previous messages.</p>
-            <button onClick={handleJoinGroup} className="bg-primary-600 hover:bg-primary-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg text-lg">
-              Join Group
-            </button>
+            <p className="text-gray-400 mb-8 text-center max-w-md">
+              {group.isCommunity 
+                ? 'You are not a member of this community. Join to participate and see previous messages.' 
+                : 'You are not a member of this group. Join to participate in the conversation and see previous messages.'}
+            </p>
+            {group.isCommunity && !group.isPublic && !inviteCode ? (
+              <button onClick={handleRequestJoin} className="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg text-lg border border-white/20">
+                Request to Join
+              </button>
+            ) : (
+              <button onClick={handleJoinGroup} className="bg-primary-600 hover:bg-primary-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg text-lg">
+                {group.isCommunity ? 'Join Community' : 'Join Group'}
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col h-full min-h-0 relative">
@@ -466,7 +506,14 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                             )}
                             
                             <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%] min-w-0`}>
-                              {!isMe && <span className="text-xs text-gray-500 mb-1 ml-1">{msg.sender?.isBlocked ? '@cinexium_user' : (msg.sender?.name || `@${msg.sender?.username}`)}</span>}
+                              {!isMe && (
+                                <div className="flex items-center gap-2 mb-1 ml-1">
+                                  <span className="text-xs text-gray-500">{msg.sender?.isBlocked ? '@cinexium_user' : (msg.sender?.name || `@${msg.sender?.username}`)}</span>
+                                  {msg.sender?.isPremium && (
+                                    <span className="text-[10px] font-bold text-fuchsia-400 bg-fuchsia-500/10 px-1.5 py-0.5 rounded border border-fuchsia-500/20 shadow-[0_0_8px_rgba(217,70,239,0.3)] tracking-wider">PRO</span>
+                                  )}
+                                </div>
+                              )}
                               
                               <div 
                                 className="flex group items-center gap-2 relative min-w-0"
@@ -593,55 +640,61 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
             </div>
 
             {/* Input */}
-            <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0">
-              <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
-                <div className="flex-1 relative">
-                  <textarea 
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendMessage(e);
-                      }
-                    }}
-                    placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
-                    className={`w-full max-h-32 min-h-[46px] bg-[#252a34] text-white text-sm rounded-[24px] px-5 py-3 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none border custom-scrollbar ${editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'}`}
-                    rows={1}
-                  />
-                </div>
+            {group.isCommunity && !isAdmin ? (
+              <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0 text-center text-gray-500 text-sm">
+                Only admins can send messages in this community.
+              </div>
+            ) : (
+              <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0">
+                <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
+                  <div className="flex-1 relative">
+                    <textarea 
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMessage(e);
+                        }
+                      }}
+                      placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
+                      className={`w-full max-h-32 min-h-[46px] bg-[#252a34] text-white text-sm rounded-[24px] px-5 py-3 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none border custom-scrollbar ${editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'}`}
+                      rows={1}
+                    />
+                  </div>
 
-                {editingMessageId ? (
-                  <button 
-                    type="button"
-                    onClick={() => { setEditingMessageId(null); setInput(''); }}
-                    className="h-[46px] w-[46px] rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white transition-colors shrink-0"
-                    title="Cancel Edit"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                ) : null}
-
-                <button 
-                  type="submit"
-                  disabled={!input.trim()}
-                  className="h-[46px] w-[46px] rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                >
                   {editingMessageId ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  ) : (
-                    <svg className="w-5 h-5 rotate-90 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-                  )}
-                </button>
-              </form>
-            </div>
+                    <button 
+                      type="button"
+                      onClick={() => { setEditingMessageId(null); setInput(''); }}
+                      className="h-[46px] w-[46px] rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white transition-colors shrink-0"
+                      title="Cancel Edit"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  ) : null}
+
+                  <button 
+                    type="submit"
+                    disabled={!input.trim()}
+                    className="h-[46px] w-[46px] rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    {editingMessageId ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    ) : (
+                      <svg className="w-5 h-5 rotate-90 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Right Side Panel: Group Info */}
       {isGroupInfoOpen && (
-        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l md:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
+        <div className="absolute xl:relative inset-y-0 right-0 z-50 xl:z-auto w-full sm:w-80 lg:w-96 border-l xl:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
           <div className="h-[73px] px-4 border-b border-white/10 flex justify-between items-center bg-[#1a1d24]">
             <h2 className="text-lg font-bold text-white">Group Info</h2>
             <button onClick={() => setIsGroupInfoOpen(false)} className="text-gray-400 hover:text-white transition-colors">
@@ -744,7 +797,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
 
             <div className="pt-6 mt-6 border-t border-white/10 flex flex-col gap-3">
                <button 
-                onClick={() => setIsShareModalOpen(true)}
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/chat/group/${group.id}${group.inviteCode ? `?invite=${group.inviteCode}` : ''}`);
+                  setAlertConfig({ isOpen: true, message: 'Link copied to clipboard!' });
+                }}
                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left border border-white/5"
               >
                 <div className="p-2 rounded-lg bg-white/5 text-gray-400">

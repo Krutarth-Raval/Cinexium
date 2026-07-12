@@ -6,9 +6,19 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q');
+  let q = searchParams.get('q');
   
   if (!q) {
+    return NextResponse.json({ movies: [], series: [], users: [], collections: [], groupChats: [] });
+  }
+
+  let filter = 'all';
+  if (q.toUpperCase().startsWith('M-')) { filter = 'movie'; q = q.substring(2); }
+  else if (q.toUpperCase().startsWith('TV-')) { filter = 'tv'; q = q.substring(3); }
+  else if (q.startsWith('@')) { filter = 'user'; q = q.substring(1); }
+  else if (q.toUpperCase().startsWith('C-')) { filter = 'community'; q = q.substring(2); }
+
+  if (!q.trim()) {
     return NextResponse.json({ movies: [], series: [], users: [], collections: [], groupChats: [] });
   }
 
@@ -20,9 +30,9 @@ export async function GET(req: Request) {
     }
 
     const [movies, series, users, collections, groupChats] = await Promise.all([
-      tmdb.searchMedia(q, 'movie'),
-      tmdb.searchMedia(q, 'tv'),
-      prisma.user.findMany({
+      (filter === 'all' || filter === 'movie') ? tmdb.searchMedia(q, 'movie') : Promise.resolve([]),
+      (filter === 'all' || filter === 'tv') ? tmdb.searchMedia(q, 'tv') : Promise.resolve([]),
+      (filter === 'all' || filter === 'user') ? prisma.user.findMany({
         where: { 
           OR: [
             { name: { contains: q, mode: 'insensitive' } }, 
@@ -30,23 +40,15 @@ export async function GET(req: Request) {
           ],
           ...(currentUser ? {
             AND: [
-              {
-                blockedBy: {
-                  none: { blockerId: currentUser.id }
-                }
-              },
-              {
-                blocking: {
-                  none: { blockedId: currentUser.id }
-                }
-              }
+              { blockedBy: { none: { blockerId: currentUser.id } } },
+              { blocking: { none: { blockedId: currentUser.id } } }
             ]
           } : {})
         },
         take: 20,
         select: { id: true, name: true, username: true, avatar: true }
-      }),
-      prisma.collection.findMany({
+      }) : Promise.resolve([]),
+      (filter === 'all') ? prisma.collection.findMany({
         where: { 
           name: { contains: q, mode: 'insensitive' }, 
           isPublic: true,
@@ -54,12 +56,12 @@ export async function GET(req: Request) {
         },
         take: 20,
         include: { user: { select: { username: true } }, items: { take: 4 } }
-      }),
-      prisma.groupChat.findMany({
-        where: { name: { contains: q, mode: 'insensitive' }, isPublic: true },
+      }) : Promise.resolve([]),
+      (filter === 'all' || filter === 'community') ? prisma.groupChat.findMany({
+        where: { name: { contains: q, mode: 'insensitive' }, isCommunity: true },
         take: 20,
         include: { owner: { select: { username: true } } }
-      })
+      }) : Promise.resolve([])
     ]);
 
     return NextResponse.json({
@@ -77,7 +79,7 @@ export async function GET(req: Request) {
         id: c.id, 
         title: c.name, 
         description: `By @${c.user.username} • ${c.items.length} items`, 
-        posterUrl: '', // Could generate a collage or use a placeholder
+        posterUrl: '', 
         type: 'collection',
         url: `/collection/${c.id}`
       })),
@@ -85,17 +87,16 @@ export async function GET(req: Request) {
         id: g.id, 
         title: g.name, 
         description: `By @${g.owner.username}`, 
-        posterUrl: '', // Could use a placeholder
+        posterUrl: '', 
         type: 'group',
-        url: `/chat/${g.id}`
+        url: `/chat/group/${g.id}` // Fixed 404 URL here
       }))
     });
   } catch (error) {
     console.error('Global search API error:', error);
-    // If Prisma is outdated in dev, return empty arrays to avoid crash
     return NextResponse.json({ 
-      movies: await tmdb.searchMedia(q, 'movie'), 
-      series: await tmdb.searchMedia(q, 'tv'), 
+      movies: (filter === 'all' || filter === 'movie') ? await tmdb.searchMedia(q, 'movie') : [], 
+      series: (filter === 'all' || filter === 'tv') ? await tmdb.searchMedia(q, 'tv') : [], 
       users: [], 
       collections: [], 
       groupChats: [] 

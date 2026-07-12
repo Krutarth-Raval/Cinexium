@@ -41,8 +41,22 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleRequest = async (notificationId: string, actorId: string, action: 'accept' | 'reject') => {
+  const handleRequest = async (notificationId: string, actorId: string, action: 'accept' | 'reject', type: string = 'FOLLOW_REQUEST', referenceId?: string) => {
     try {
+      if (type === 'COMMUNITY_JOIN_REQUEST') {
+        const endpoint = action === 'accept' ? 'accept' : 'reject';
+        const res = await fetch(`/api/chat/community/request/${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationId, actorId, communityId: referenceId })
+        });
+        if (res.ok) {
+           fetchNotifications();
+           router.refresh();
+        }
+        return;
+      }
+
       const res = await fetch(`/api/notifications/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,6 +159,7 @@ export default function NotificationsPage() {
                   {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                   {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
                   {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
+                  {n.type === 'COMMUNITY_JOIN_REQUEST' && 'requested to join your community.'}
                 </p>
 
                 {n.type === 'COMMENT_REPLY' && n.referenceId && (
@@ -158,16 +173,16 @@ export default function NotificationsPage() {
                   </div>
                 )}
                 
-                {n.type === 'FOLLOW_REQUEST' && (
+                {(n.type === 'FOLLOW_REQUEST' || n.type === 'COMMUNITY_JOIN_REQUEST') && (
                   <div className="mt-3 flex gap-2">
                     <button 
-                      onClick={() => handleRequest(n.id, n.actor.id, 'accept')}
+                      onClick={() => handleRequest(n.id, n.actor.id, 'accept', n.type, n.referenceId)}
                       className="flex-1 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-bold"
                     >
                       Accept
                     </button>
                     <button 
-                      onClick={() => handleRequest(n.id, n.actor.id, 'reject')}
+                      onClick={() => handleRequest(n.id, n.actor.id, 'reject', n.type, n.referenceId)}
                       className="flex-1 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-bold"
                     >
                       Reject

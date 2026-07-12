@@ -28,6 +28,12 @@ model User {
   appNotifications     Boolean   @default(true)
   lastSeen             DateTime?
 
+  // Premium Features
+  isPremium            Boolean   @default(false)
+  premiumType          String?   // e.g. "monthly", "yearly"
+  premiumUntil         DateTime?
+  themePreference      String    @default("default")
+
   // Hidden Chats
   chatPin              String?
   chatPinResetOtp      String?
@@ -73,6 +79,9 @@ model User {
   mediaCommentLikes     MediaCommentLike[]
   mediaLikes            MediaLike[]
   mediaShares           MediaShare[]
+  
+  // Communities
+  communityJoinRequests CommunityJoinRequest[]
 }
 
 model Favorite {
@@ -173,18 +182,35 @@ model CollectionSave {
 }
 
 model GroupChat {
-  id          String   @id @default(uuid())
-  name        String
-  avatar      String?  @default("")
-  description String?  @default("")
-  isPublic    Boolean  @default(true)
-  ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  avatar        String?  @default("")
+  description   String?  @default("")
+  isPublic      Boolean  @default(true)
+  isCommunity   Boolean  @default(false)
+  isPremiumOnly Boolean  @default(false)
+  inviteCode    String?  @unique
+  ownerId       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members     GroupMember[]
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members       GroupMember[]
   messages    GroupMessage[]
+  joinRequests CommunityJoinRequest[]
+}
+
+model CommunityJoinRequest {
+  id          String   @id @default(uuid())
+  communityId String
+  userId      String
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime @default(now())
+
+  community   GroupChat @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
 }
 
 model GroupMember {

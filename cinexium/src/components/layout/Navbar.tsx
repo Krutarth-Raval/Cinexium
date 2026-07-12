@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { NotificationBell } from './NotificationBell';
 import { RegionEdgePanel } from './RegionEdgePanel';
 import { useSocket } from '../providers/SocketProvider';
+import { Logo } from '../ui/Logo';
 
 export const Navbar = () => {
   const { data: session } = useSession();
@@ -26,9 +27,42 @@ export const Navbar = () => {
   useEffect(() => {
     if (session) {
       fetch('/api/user/me')
-        .then(res => res.json())
+        .then(async res => {
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Failed to fetch user: ${res.status} ${text}`);
+          }
+          return res.json();
+        })
         .then(data => {
-          if (data.user) setUserData(data.user);
+          if (data.user) {
+            setUserData(data.user);
+            
+            const applyTheme = (themePref: string, isPrem: boolean) => {
+              let themeToApply = 'theme-default';
+              if (isPrem) {
+                if (!themePref || themePref === 'default') {
+                  themeToApply = 'theme-neon-purple';
+                } else {
+                  themeToApply = `theme-${themePref}`;
+                }
+              }
+              document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
+              if (themeToApply !== 'theme-default') {
+                document.body.classList.add(themeToApply);
+              }
+            };
+            
+            applyTheme(data.user.themePreference, data.user.isPremium);
+
+            const handleThemeChange = (e: Event) => {
+              const customEvent = e as CustomEvent;
+              applyTheme(customEvent.detail, data.user.isPremium);
+            };
+
+            window.addEventListener('themeChanged', handleThemeChange);
+            return () => window.removeEventListener('themeChanged', handleThemeChange);
+          }
         })
         .catch(console.error);
     }
@@ -97,9 +131,9 @@ export const Navbar = () => {
       const avatarUrl = userData?.avatar;
 
       return (
-        <Link href="/profile" className={`flex items-center justify-center bg-gradient-to-br from-primary-500 to-red-800 text-white font-bold rounded-full transition-transform hover:scale-105 overflow-hidden border border-white/10 ${isMobile ? 'w-12 h-12 text-base' : 'w-12 h-12 text-lg'}`}>
+        <Link href="/profile" className={`flex items-center justify-center ${avatarUrl ? 'bg-[#1a1d24]' : 'bg-gradient-to-br from-primary-500 to-red-800'} text-white font-bold rounded-full transition-transform hover:scale-105 overflow-hidden border border-white/20 ${isMobile ? 'w-12 h-12 text-base' : 'w-12 h-12 text-lg'}`}>
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover bg-white/5" />
           ) : (
             initial
           )}
@@ -144,7 +178,7 @@ export const Navbar = () => {
           `}} />
         </div>
       )}
-      <div className={(pathname?.startsWith('/chat') || pathname?.startsWith('/notifications') || pathname?.startsWith('/profile') || pathname?.startsWith('/settings') || pathname?.startsWith('/collection')) ? 'hidden md:block' : ''}>
+      <div className={(pathname?.startsWith('/chat') || pathname?.startsWith('/notifications') || pathname?.startsWith('/profile') || pathname?.startsWith('/settings') || pathname?.startsWith('/collection') || pathname?.startsWith('/search')) ? 'hidden md:block' : ''}>
         <nav className={`fixed z-50 transition-all duration-500 ease-in-out inset-x-0 mx-auto ${scrolled
           ? 'top-0 w-full max-w-full bg-[#0f1115]/90 backdrop-blur-xl border-b border-white/10 rounded-none'
           : 'top-4 w-[calc(100%-2rem)] max-w-7xl bg-[#0f1115]/60 backdrop-blur-lg border border-white/10 rounded-[32px]'
@@ -153,10 +187,10 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link href="/" className="flex-shrink-0 flex items-center">
-                <img src="/logo-full.svg" alt="CINEXIUM" className="h-8 md:h-10 w-auto" />
+                <Logo className="h-8 md:h-10 w-auto transition-all" />
               </Link>
               <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-2">
+                <div className="ml-4 lg:ml-8 flex items-baseline space-x-1 lg:space-x-2">
                   {[
                     { name: 'Home', href: '/' },
                     { name: 'Movies', href: '/movies' },
@@ -193,9 +227,16 @@ export const Navbar = () => {
               </div>
             </div>
 
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
+              {(!userData || !userData.isPremium) && (
+                <Link href="/premium" className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-fuchsia-600 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-[0_0_10px_rgba(168,85,247,0.4)] hover:shadow-[0_0_15px_rgba(168,85,247,0.6)] transition-all hover:scale-105 mr-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  PRO
+                </Link>
+              )}
+
               {/* Desktop Region Selector */}
-              <div className="flex items-center space-x-1 bg-white/5 rounded-full p-1 border border-white/10">
+              <div className="hidden xl:flex items-center space-x-1 bg-white/5 rounded-full p-1 border border-white/10">
                 {regions.map((r) => (
                   <button
                     key={r.id}

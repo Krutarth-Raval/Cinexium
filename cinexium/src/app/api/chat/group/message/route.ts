@@ -24,6 +24,19 @@ export async function POST(req: NextRequest) {
     if (action === 'sendGroupMessage') {
       const { groupId, content } = data;
 
+      const group = await prisma.groupChat.findUnique({
+        where: { id: groupId },
+        include: { members: { where: { userId: user.id } } }
+      });
+
+      if (!group || group.members.length === 0) {
+        return NextResponse.json({ error: 'Not a member' }, { status: 403 });
+      }
+
+      if (group.isCommunity && group.members[0].role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Only admins can send messages in a community' }, { status: 403 });
+      }
+
       const message = await prisma.groupMessage.create({
         data: {
           groupId: groupId,

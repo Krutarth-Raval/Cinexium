@@ -24,6 +24,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    // Premium Enforcement
+    if (!user.isPremium) {
+      const collectionCount = await prisma.collection.count({
+        where: { userId: user.id }
+      });
+
+      if (collectionCount >= 3) {
+        return NextResponse.json({ 
+          error: 'Free users can only create up to 3 collections. Upgrade to Pro for unlimited collections!' 
+        }, { status: 403 });
+      }
+    }
+
     // Check unique constraint per user
     const existing = await prisma.collection.findUnique({
       where: {

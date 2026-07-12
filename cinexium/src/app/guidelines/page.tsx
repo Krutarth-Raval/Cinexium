@@ -18,7 +18,7 @@ export default function CommunityGuidelinesPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
           </button>
-          <h1 className="text-3xl font-bold text-white">Community Guidelines</h1>
+          <h1 className="text-2xl font-bold text-white">Community Guidelines</h1>
         </div>
 
         <div className="prose prose-invert prose-p:text-gray-400 prose-headings:text-white max-w-none">

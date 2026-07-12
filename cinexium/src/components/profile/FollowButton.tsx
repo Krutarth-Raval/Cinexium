@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 
 export const FollowButton = ({ 
@@ -15,10 +16,18 @@ export const FollowButton = ({
 }) => {
   const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const router = useRouter();
 
-
   const handleFollow = async () => {
+    if (status === 'ACCEPTED') {
+      setIsConfirmOpen(true);
+      return;
+    }
+    performFollow();
+  };
+
+  const performFollow = async () => {
     const previousStatus = status;
     const nextStatus = status === 'NONE' ? (isPrivate ? 'PENDING' : 'ACCEPTED') : 'NONE';
     
@@ -58,15 +67,29 @@ export const FollowButton = ({
 
   if (status === 'ACCEPTED') {
     return (
-      <button 
-        onClick={handleFollow}
-        disabled={loading}
-        className="px-6 py-1.5 bg-[#252a34] hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/50 text-white font-medium rounded-lg transition-all text-sm border border-white/10 flex items-center gap-2"
-        title="Unfollow"
-      >
-        Following
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-      </button>
+      <>
+        <button 
+          onClick={handleFollow}
+          disabled={loading}
+          className="px-6 py-1.5 bg-[#252a34] hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/50 text-white font-medium rounded-lg transition-all text-sm border border-white/10 flex items-center gap-2"
+          title="Unfollow"
+        >
+          Following
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        <ConfirmModal
+          isOpen={isConfirmOpen}
+          onClose={() => setIsConfirmOpen(false)}
+          onConfirm={() => {
+            setIsConfirmOpen(false);
+            performFollow();
+          }}
+          title="Unfollow User"
+          message={`Are you sure you want to unfollow @${username}?`}
+          confirmText="Unfollow"
+          isDestructive={true}
+        />
+      </>
     );
   }
 

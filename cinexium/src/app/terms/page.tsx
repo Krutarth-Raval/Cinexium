@@ -18,7 +18,7 @@ export default function TermsOfServicePage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
           </button>
-          <h1 className="text-3xl font-bold text-white">Terms of Service</h1>
+          <h1 className="text-2xl font-bold text-white">Terms of Service</h1>
         </div>
 
         <div className="prose prose-invert prose-p:text-gray-400 prose-headings:text-white max-w-none">
@@ -61,42 +61,47 @@ export default function TermsOfServicePage() {
             The Cinexium platform, including its original content, features, and functionality, are owned by Cinexium and are protected by international copyright and trademark laws.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">8. Service Availability</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">8. Premium Subscriptions & No Refunds</h2>
+          <p className="mb-6">
+            Cinexium offers optional premium subscriptions ("Cinexium Pro") for enhanced features. All purchases are strictly final. We have a strict <strong>NO REFUNDS</strong> policy. If you decide to delete your account, you will permanently lose access to your premium subscription and no partial or full refunds will be issued. Registering again with the same email will result in a new, free account.
+          </p>
+
+          <h2 className="text-xl font-semibold mt-8 mb-4">9. Service Availability</h2>
           <p className="mb-6">
             We do not guarantee that the service will always be safe, secure, or error-free. We may suspend or terminate the service at any time without notice.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">9. Account Suspension or Termination</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">10. Account Suspension or Termination</h2>
           <p className="mb-6">
             We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">10. Disclaimer of Warranties</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">11. Disclaimer of Warranties</h2>
           <p className="mb-6">
             The service is provided on an "AS IS" and "AS AVAILABLE" basis. Cinexium makes no representations or warranties of any kind, express or implied.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">11. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">12. Limitation of Liability</h2>
           <p className="mb-6">
             In no event shall Cinexium be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the service.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">12. Governing Law</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">13. Governing Law</h2>
           <p className="mb-6">
             These terms shall be governed by and construed in accordance with the laws of the jurisdiction in which Cinexium operates, without regard to its conflict of law provisions.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">13. Changes to the Terms</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">14. Changes to the Terms</h2>
           <p className="mb-6">
             We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will try to provide at least 30 days notice prior to any new terms taking effect.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">14. TMDB Disclaimer</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">15. TMDB Disclaimer</h2>
           <p className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
             This product uses the TMDB API but is not endorsed or certified by TMDB.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">15. Contact Information</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">16. Contact Information</h2>
           <p className="mb-6">
             If you have any questions about these Terms, please reach out via our <Link href="/contact" className="text-primary-500 hover:underline">Contact Us</Link> page or email us directly at <a href="mailto:cinexium@gmail.com" className="text-primary-500 hover:underline">cinexium@gmail.com</a>.
           </p>

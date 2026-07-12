@@ -84,7 +84,7 @@ export const RegionEdgePanel = () => {
       )}
       <div
         ref={panelRef}
-        className={`md:hidden fixed right-0 top-36 z-[100] flex items-center transition-all duration-300 ease-out`}
+        className={`xl:hidden fixed right-0 top-36 z-[100] flex items-center transition-all duration-300 ease-out`}
       >
         {/* Edge Handle */}
         {!isOpen && (

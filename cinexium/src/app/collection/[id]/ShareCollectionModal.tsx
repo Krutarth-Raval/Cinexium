@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const ShareCollectionModal = ({ 
   isOpen, 
@@ -29,8 +30,12 @@ export const ShareCollectionModal = ({
   const { data: session } = useSession();
   const currentUserId = (session?.user as any)?.id;
 
+  const [heightState, setHeightState] = useState<'half' | 'full'>('half');
+
   useEffect(() => {
     if (isOpen) {
+      setHeightState('half');
+      document.body.style.overflow = 'hidden';
       // Fetch recent chats & groups
       fetch('/api/chat')
         .then(res => res.json())
@@ -39,10 +44,26 @@ export const ShareCollectionModal = ({
         })
         .catch(console.error);
     } else {
+      document.body.style.overflow = '';
       setSentIds(new Set());
       setCopied(false);
     }
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
+
+  const handleDragEnd = (e: any, info: any) => {
+    if (heightState === 'half') {
+      if (info.offset.y < -50 || info.velocity.y < -200) {
+        setHeightState('full');
+      } else if (info.offset.y > 50 || info.velocity.y > 200) {
+        onClose();
+      }
+    } else {
+      if (info.offset.y > 50 || info.velocity.y > 200) {
+        setHeightState('half');
+      }
+    }
+  };
 
   const handleShare = (contact: any) => {
     if (!currentUserId || sentIds.has(contact.id)) return;
@@ -94,84 +115,133 @@ export const ShareCollectionModal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
-      <div 
-        className="bg-[#1a1d24] rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-white/10 flex flex-col scale-in-center"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-white">Share Collection</h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/5 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
+  const renderHeader = () => (
+    <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
+      <h3 className="text-xl font-bold text-white">Share Collection</h3>
+      <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  );
 
-        {contacts.length > 0 ? (
-          <div className="mb-6">
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Recent Chats</p>
-            <div className="flex overflow-x-auto gap-4 pb-2 custom-scrollbar hide-scrollbar">
-              {contacts.map(contact => {
-                const isSent = sentIds.has(contact.id);
-                const displayUser = contact.user;
-                return (
-                  <div 
-                    key={contact.id} 
-                    className={`flex flex-col items-center gap-2 shrink-0 w-16 cursor-pointer transition-all ${isSent ? 'opacity-60' : 'hover:scale-105 active:scale-95'}`}
-                    onClick={() => handleShare(contact)}
-                  >
-                    <div className="relative">
-                      <div className={`w-14 h-14 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm border-2 transition-colors ${isSent ? 'border-primary-500' : 'border-white/10'}`}>
-                        {displayUser?.avatar ? (
-                          <img src={displayUser.avatar} alt={displayUser.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
-                            {displayUser?.name?.charAt(0).toUpperCase() || '?'}
-                          </div>
-                        )}
+  const renderContent = () => (
+    <div className="p-6 overflow-y-auto">
+      <div className="mb-2">
+        <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Share To</p>
+        <div className="flex overflow-x-auto gap-4 pb-2 custom-scrollbar hide-scrollbar">
+          
+          {/* Contacts */}
+          {contacts.map(contact => {
+            const isSent = sentIds.has(contact.id);
+            const displayUser = contact.user;
+            return (
+              <div 
+                key={contact.id} 
+                className={`flex flex-col items-center gap-2 shrink-0 w-16 cursor-pointer transition-all ${isSent ? 'opacity-60' : 'hover:scale-105 active:scale-95'}`}
+                onClick={() => handleShare(contact)}
+              >
+                <div className="relative">
+                  <div className={`w-14 h-14 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm border-2 transition-colors ${isSent ? 'border-primary-500' : 'border-white/10'}`}>
+                    {displayUser?.avatar ? (
+                      <img src={displayUser.avatar} alt={displayUser.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
+                        {displayUser?.name?.charAt(0).toUpperCase() || '?'}
                       </div>
-                      {contact.isGroup && (
-                        <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-[#252a34] rounded-full border border-white/20 flex items-center justify-center" title="Group">
-                          <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                        </div>
-                      )}
-                      {isSent && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-500 rounded-full border-2 border-[#1a1d24] flex items-center justify-center">
-                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-white text-center truncate w-full px-1">{displayUser?.name?.split(' ')[0]}</p>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="mb-6 py-4 text-center text-gray-500 text-sm bg-white/5 rounded-xl">
-            No active chats available to share with.
-          </div>
-        )}
+                  {contact.isGroup && (
+                    <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-[#252a34] rounded-full border border-white/20 flex items-center justify-center" title="Group">
+                      <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    </div>
+                  )}
+                  {isSent && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-500 rounded-full border-2 border-[#1a1d24] flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-white text-center truncate w-full px-1">{displayUser?.name?.split(' ')[0]}</p>
+              </div>
+            );
+          })}
 
-        <div className="border-t border-white/10 pt-4">
-          <button 
+          {/* Copy Link Circle Button */}
+          <div 
+            className="flex flex-col items-center gap-2 shrink-0 w-16 cursor-pointer transition-all hover:scale-105 active:scale-95"
             onClick={handleCopyLink}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-colors border border-white/5"
           >
-            {copied ? (
-              <>
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                <span className="text-green-500">Copied!</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-                Copy Collection Link
-              </>
-            )}
-          </button>
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 shadow-sm border-2 transition-colors ${copied ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-[#2a2d36] border-white/10 text-white hover:bg-[#323642]'}`}>
+              {copied ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              )}
+            </div>
+            <p className={`text-xs text-center truncate w-full px-1 ${copied ? 'text-green-500' : 'text-white'}`}>
+              {copied ? 'Copied' : 'Copy Link'}
+            </p>
+          </div>
+          
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop (Shared) */}
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-[110]"
+            onClick={onClose}
+          />
+
+          {/* Mobile/Tablet Bottom Drawer */}
+          <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.1, bottom: 0.5 }}
+            onDragEnd={handleDragEnd}
+            initial={{ height: '0vh', y: 0 }}
+            animate={{ height: heightState === 'half' ? '50vh' : '95vh', y: 0 }}
+            exit={{ height: '0vh', y: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 left-0 right-0 bg-[#0f1115]/80 backdrop-blur-xl z-[120] lg:hidden rounded-t-[32px] border-t border-white/10 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+          >
+            {/* Drag Handle */}
+            <div className="w-full flex justify-center py-4 cursor-grab active:cursor-grabbing shrink-0">
+              <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+            </div>
+            
+            {renderHeader()}
+
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+              {renderContent()}
+            </div>
+          </motion.div>
+
+          {/* Desktop Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[120] hidden lg:flex items-center justify-center p-4 pointer-events-none"
+          >
+            <div 
+              className="bg-[#1a1d24] rounded-2xl w-full max-w-sm shadow-2xl border border-white/10 flex flex-col pointer-events-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {renderHeader()}
+              {renderContent()}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

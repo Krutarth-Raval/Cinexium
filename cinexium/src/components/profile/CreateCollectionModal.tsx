@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PremiumUpgradeBanner } from '@/components/ui/PremiumUpgradeBanner';
 
 export const CreateCollectionModal = ({ 
   isOpen: controlledIsOpen,
@@ -21,7 +22,31 @@ export const CreateCollectionModal = ({
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [canCreate, setCanCreate] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsChecking(true);
+      fetch('/api/collection/can-create')
+        .then(res => res.json())
+        .then(data => {
+          if (data.canCreate === false && data.reason === 'limit_reached') {
+            setCanCreate(false);
+          } else {
+            setCanCreate(true);
+          }
+        })
+        .catch(() => setCanCreate(true))
+        .finally(() => setIsChecking(false));
+    } else {
+      setCanCreate(null);
+      setName('');
+      setDescription('');
+      setError('');
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +105,26 @@ export const CreateCollectionModal = ({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#1a1d24] border border-white/10 rounded-2xl shadow-2xl p-6"
+              className={`relative w-full max-w-md bg-[#1a1d24] border border-white/10 rounded-2xl shadow-2xl ${canCreate === false ? 'p-0 border-0 bg-transparent' : 'p-6'}`}
             >
-              <h2 className="text-xl font-bold text-white mb-6">Create New Collection</h2>
-              
-              {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm">
-                  {error}
+              {isChecking ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
                 </div>
-              )}
+              ) : canCreate === false ? (
+                <PremiumUpgradeBanner 
+                  message="Free users can only create up to 3 collections. Upgrade to Pro for unlimited collections!"
+                  onCancel={() => setIsOpen(false)}
+                />
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold text-white mb-6">Create New Collection</h2>
+                  
+                  {error && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm">
+                      {error}
+                    </div>
+                  )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -147,6 +183,8 @@ export const CreateCollectionModal = ({
                   </button>
                 </div>
               </form>
+              </>
+            )}
             </motion.div>
           </div>
         )}

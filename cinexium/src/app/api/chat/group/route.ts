@@ -14,6 +14,8 @@ export async function POST(request: Request) {
     const name = formData.get('name') as string;
     const memberIdsStr = formData.get('memberIds') as string;
     const avatarFile = formData.get('avatar') as File | null;
+    const isCommunityStr = formData.get('isCommunity') as string;
+    const isPremiumOnlyStr = formData.get('isPremiumOnly') as string;
     
     if (!name || !memberIdsStr) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -50,11 +52,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Group needs at least 2 members' }, { status: 400 });
     }
 
+    const isCommunity = isCommunityStr === 'true';
+    const isPremiumOnly = isPremiumOnlyStr === 'true';
+
+    if (isCommunity) {
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (!dbUser?.isPremium) {
+        return NextResponse.json({ error: 'Only Pro users can create Communities.' }, { status: 403 });
+      }
+    }
+
+    const inviteCode = isCommunity ? Math.random().toString(36).substring(2, 10) + Date.now().toString(36) : null;
+
     const group = await prisma.groupChat.create({
       data: {
         name,
         avatar: avatarUrl,
         ownerId: user.id,
+        isCommunity,
+        isPremiumOnly,
+        inviteCode,
         members: {
           create: allMembers.map(id => ({
             userId: id as string,

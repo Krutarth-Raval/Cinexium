@@ -23,9 +23,15 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
   
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [qualities, setQualities] = useState<string[]>([]);
+  const [currentQuality, setCurrentQuality] = useState('auto');
   
   // For double tap indicators
   const [showSeekAnim, setShowSeekAnim] = useState<'left' | 'right' | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,7 +40,15 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
   const handlePlayerReady = (event: any) => {
     setPlayer(event.target);
     setDuration(event.target.getDuration());
-    event.target.setPlaybackQuality('highres'); // Try to force highest quality
+    event.target.setPlaybackQuality('hd1080');
+    
+    try {
+      const available = event.target.getAvailableQualityLevels();
+      if (available && available.length > 0) {
+        setQualities(available);
+      }
+    } catch (e) {}
+    
     event.target.playVideo();
     setIsPlaying(true);
   };
@@ -48,7 +62,7 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 1024);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -67,12 +81,14 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
     e?.stopPropagation();
     try {
       if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-        if (screen.orientation && (screen.orientation as any).lock) {
-          try {
-            await (screen.orientation as any).lock('landscape');
-          } catch (err) {
-            console.log('Orientation lock not supported', err);
+        if (containerRef.current) {
+          await containerRef.current.requestFullscreen();
+          if (screen.orientation && (screen.orientation as any).lock) {
+            try {
+              await (screen.orientation as any).lock('landscape');
+            } catch (err) {
+              console.log('Orientation lock not supported', err);
+            }
           }
         }
       } else {
@@ -82,6 +98,20 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
       }
     } catch (err) {
       console.error('Error attempting to enable fullscreen:', err);
+    }
+  };
+
+  const toggleFitMode = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setFitMode(prev => prev === 'cover' ? 'contain' : 'cover');
+  };
+
+  const changeQuality = (e: React.MouseEvent, quality: string) => {
+    e.stopPropagation();
+    if (player) {
+      player.setPlaybackQuality(quality);
+      setCurrentQuality(quality);
+      setShowQualityMenu(false);
     }
   };
 
@@ -185,9 +215,11 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
 
   return (
     <div 
+      ref={containerRef}
       className="absolute inset-0 bg-black z-10 flex flex-col justify-center overflow-hidden"
       onMouseMove={resetControlsTimeout}
       onTouchStart={resetControlsTimeout}
+      onClick={() => setShowQualityMenu(false)}
     >
       {/* YouTube Player */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -211,7 +243,10 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
           }}
           onReady={handlePlayerReady}
           onStateChange={handleStateChange}
-          className="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2" 
+          className={!isMobile && fitMode === 'cover' 
+            ? "absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2" 
+            : "absolute inset-0 w-full h-full"
+          }
           iframeClassName="w-full h-full"
         />
       </div>
@@ -271,16 +306,18 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
         
         {/* Bottom bar */}
         <div className="p-4 flex flex-col gap-2 pointer-events-auto bg-gradient-to-t from-black/90 to-transparent">
-          <div className="flex items-center gap-4">
-            <button onClick={togglePlay} className="text-white hover:text-primary-400">
-              {isPlaying ? (
-                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-              ) : (
-                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-              )}
-            </button>
+          <div className="flex items-center gap-3">
+            {!isMobile && (
+              <button onClick={togglePlay} className="text-white hover:text-primary-400">
+                {isPlaying ? (
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                ) : (
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                )}
+              </button>
+            )}
             
-            <span className="text-white text-xs font-medium w-10">{formatTime(progress)}</span>
+            <span className="text-white text-xs font-medium tabular-nums">{formatTime(progress)}</span>
             
             <div className="flex-1 relative flex items-center h-4 group/progress">
               {/* Track background */}
@@ -302,17 +339,75 @@ export const CustomTrailerPlayer = forwardRef<CustomTrailerPlayerRef, CustomTrai
               />
             </div>
             
-            <span className="text-white text-xs font-medium w-10">{formatTime(duration)}</span>
+            <span className="text-white text-xs font-medium tabular-nums">{formatTime(duration)}</span>
 
-            {isMobile ? (
-              <button onClick={toggleFullscreen} className="text-white hover:text-primary-400">
-                {isFullscreen ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20V15h-5M20 9V4h-5M9 4V9h-5M20 15v5h-5M4 9h5V4M20 15h-5v5" /></svg>
+            <div className="relative">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowQualityMenu(!showQualityMenu); }} 
+                className="text-white hover:bg-white/10 text-xs font-bold uppercase tracking-wider px-2 py-1 border border-white/30 rounded transition-colors"
+              >
+                {(() => {
+                  switch (currentQuality) {
+                    case 'highres': return '1080p+';
+                    case 'hd1080': return '1080p';
+                    case 'hd720': return '720p';
+                    case 'large': return '480p';
+                    case 'medium': return '360p';
+                    case 'small': return '240p';
+                    case 'tiny': return '144p';
+                    case 'auto': return 'Auto';
+                    default: return currentQuality;
+                  }
+                })()}
+              </button>
+              
+              {showQualityMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-24 bg-black/90 border border-white/10 rounded-lg overflow-hidden flex flex-col z-50">
+                  {(qualities.length > 0 ? qualities : ['hd1080', 'hd720', 'large', 'medium', 'auto']).map(q => (
+                    <button 
+                      key={q} 
+                      onClick={(e) => changeQuality(e, q)}
+                      className={`text-xs text-left px-3 py-2 hover:bg-white/10 ${currentQuality === q ? 'text-primary-500 font-bold' : 'text-white'}`}
+                    >
+                      {(() => {
+                        switch (q) {
+                          case 'highres': return '1080p+';
+                          case 'hd1080': return '1080p';
+                          case 'hd720': return '720p';
+                          case 'large': return '480p';
+                          case 'medium': return '360p';
+                          case 'small': return '240p';
+                          case 'tiny': return '144p';
+                          case 'auto': return 'Auto';
+                          default: return q;
+                        }
+                      })()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!isMobile && (
+              <button onClick={toggleFitMode} className="text-white hover:text-primary-400" title={fitMode === 'cover' ? "Contain" : "Cover"}>
+                {fitMode === 'cover' ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M19 7H5c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 8H5V9h14v6z"/></svg>
                 ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z"/></svg>
                 )}
               </button>
-            ) : (
+            )}
+
+            {isMobile && (
+              <button onClick={toggleFullscreen} className="text-white hover:text-primary-400" title="Rotate to Fullscreen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <rect x="4" y="6" width="6" height="12" rx="1"/>
+                  <rect x="14" y="12" width="10" height="6" rx="1"/>
+                </svg>
+              </button>
+            )}
+
+            {!isMobile && (
               <button onClick={toggleMute} className="text-white hover:text-primary-400">
                 {isMuted ? (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>

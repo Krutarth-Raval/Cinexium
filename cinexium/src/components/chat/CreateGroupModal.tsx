@@ -2,14 +2,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { PremiumUpgradeBanner } from '@/components/ui/PremiumUpgradeBanner';
 
-export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+interface CreateGroupModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  mode?: 'group' | 'community';
+}
+
+export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: CreateGroupModalProps) {
   const [name, setName] = useState('');
   const [followers, setFollowers] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isPremiumOnly, setIsPremiumOnly] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -22,12 +31,20 @@ export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean;
           if (Array.isArray(data)) setFollowers(data);
         })
         .catch(console.error);
+        
+      fetch('/api/user/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) setCurrentUser(data.user);
+        })
+        .catch(console.error);
     } else {
       // Reset state when closed
       setName('');
       setSelectedIds(new Set());
       setAvatarPreview(null);
       setAvatarFile(null);
+      setIsPremiumOnly(false);
     }
   }, [isOpen]);
 
@@ -58,6 +75,10 @@ export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean;
       if (avatarFile) {
         formData.append('avatar', avatarFile);
       }
+      if (mode === 'community') {
+        formData.append('isCommunity', 'true');
+        formData.append('isPremiumOnly', isPremiumOnly.toString());
+      }
 
       const res = await fetch('/api/chat/group', {
         method: 'POST',
@@ -87,15 +108,24 @@ export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean;
         
         {/* Header */}
         <div className="px-6 py-5 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white tracking-wide">New Group</h2>
+          <h2 className="text-xl font-bold text-white tracking-wide">{mode === 'community' ? 'Create Community' : 'New Group'}</h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
         
-        <div className="px-6 pb-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
-          
-          {/* Avatar and Name Input */}
+        {mode === 'community' && currentUser && !currentUser.isPremium ? (
+          <div className="p-6">
+             <PremiumUpgradeBanner 
+                message="Creating Communities is an exclusive feature for Pro members. Upgrade now to create your own community!"
+                onCancel={onClose}
+              />
+          </div>
+        ) : (
+          <>
+            <div className="px-6 pb-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+              
+              {/* Avatar and Name Input */}
           <div className="flex gap-4 items-center">
             <div 
               onClick={() => fileInputRef.current?.click()}
@@ -118,13 +148,26 @@ export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean;
                 type="text" 
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Group Name"
+                placeholder={mode === 'community' ? 'Community Name' : 'Group Name'}
                 className="w-full bg-transparent text-white text-lg border-b-2 border-white/10 focus:border-primary-500 py-2 px-1 outline-none transition-colors placeholder:text-gray-600 font-medium"
               />
+              </div>
             </div>
-          </div>
 
-          {/* Member Selection */}
+            {mode === 'community' && (
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Pro-Only Community</h3>
+                  <p className="text-xs text-gray-400 mt-1">Only Cinexium Pro users will be able to join</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={isPremiumOnly} onChange={e => setIsPremiumOnly(e.target.checked)} />
+                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 shadow-inner"></div>
+                </label>
+              </div>
+            )}
+
+            {/* Member Selection */}
           <div>
             <div className="flex justify-between items-baseline mb-3">
               <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">Add Members</h3>
@@ -181,10 +224,12 @@ export default function CreateGroupModal({ isOpen, onClose }: { isOpen: boolean;
               </svg>
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            )}
-            <span>{loading ? 'Creating...' : 'Create'}</span>
-          </button>
-        </div>
+              )}
+              <span>{loading ? 'Creating...' : 'Create'}</span>
+            </button>
+          </div>
+          </>
+        )}
       </div>
     </div>
   );

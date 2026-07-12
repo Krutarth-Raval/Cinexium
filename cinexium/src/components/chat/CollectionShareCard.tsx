@@ -24,7 +24,7 @@ export const CollectionShareCard = ({
           {/* Banner area */}
           <div className="flex-1 min-h-0 w-full relative bg-black/50">
             {meta.collectionThumbnail ? (
-              <img src={meta.collectionThumbnail} alt={meta.collectionName} className="w-full h-full object-cover" />
+              <img src={meta.collectionThumbnail} alt={meta.collectionName} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">

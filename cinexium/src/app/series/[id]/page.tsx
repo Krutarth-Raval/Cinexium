@@ -1,7 +1,11 @@
 import { tmdb } from '@/lib/tmdb';
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
 import { MovieHero } from '@/app/movie/[id]/MovieHero';
 import { TvBentoGrid } from './TvBentoGrid';
+import { cookies } from 'next/headers';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,6 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function TvDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const region = cookieStore.get('cinexium_region')?.value || 'hollywood';
   const details = await tmdb.getFullMediaDetails('tv', id);
   
   if (!details) {
@@ -38,7 +44,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         trailerKey={trailer?.key}
       />
       
-      <TvBentoGrid details={details} />
+      <TvBentoGrid details={details} region={region} />
     </div>
   );
 }

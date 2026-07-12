@@ -18,6 +18,25 @@ export default function AccountSettingsPage() {
   const [deleteOtp, setDeleteOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [isThemeSelectionOpen, setIsThemeSelectionOpen] = useState(false);
+  const [themeToConfirm, setThemeToConfirm] = useState<any>(null);
+
+  const getActiveThemeId = () => {
+    if (!user) return 'default';
+    if (user.isPremium && (!user.themePreference || user.themePreference === 'default')) {
+      return 'neon-purple';
+    }
+    return user.themePreference || 'default';
+  };
+
+  const themes = [
+    { id: 'default', name: 'Default', colorClass: 'bg-[#e50914]' }, // For Free Users
+    { id: 'neon-purple', name: 'Neon Purple', colorClass: 'bg-purple-500' },
+    { id: 'red', name: 'Classic Red', colorClass: 'bg-[#e50914]' }, // For Premium Users wanting red
+    { id: 'emerald', name: 'Emerald', colorClass: 'bg-emerald-500' },
+    { id: 'sapphire', name: 'Sapphire', colorClass: 'bg-blue-500' },
+    { id: 'amber', name: 'Amber', colorClass: 'bg-amber-500' },
+  ];
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -125,19 +144,56 @@ export default function AccountSettingsPage() {
           </div>
         </div>
 
-        {/* Your Account Section */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Your Account</h2>
+        {/* Premium Upgrade Banner */}
+        <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+          <Link href="/premium" className="block relative bg-gradient-to-r from-purple-600/20 to-fuchsia-600/20 hover:from-purple-600/30 hover:to-fuchsia-600/30 border border-purple-500/30 rounded-2xl p-6 transition-all group overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 blur-[30px] rounded-full" />
+            <div className="flex items-center justify-between relative z-10">
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                  {user?.isPremium ? 'Cinexium Pro' : 'Upgrade to PRO'}
+                  <span className="bg-gradient-to-r from-purple-500 to-fuchsia-500 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(168,85,247,0.4)]">Premium</span>
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  {user?.isPremium ? `Active - ${user.premiumType ? user.premiumType.charAt(0).toUpperCase() + user.premiumType.slice(1) : 'Monthly'} Plan` : 'Unlock unlimited collections, custom badges, and exclusive features.'}
+                </p>
+              </div>
+              <svg className="w-5 h-5 text-purple-400 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+        </section>
+
+        <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Your Account</h2>
           <div className="bg-[#1a1d24] rounded-2xl shadow-xl border border-white/5 overflow-hidden flex flex-col">
             
             {/* Privacy Toggle inline */}
             {user && (
-              <div className="flex items-center justify-between p-4 border-b border-white/5">
-                <span className="text-white font-medium">Account Privacy</span>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <PrivacyToggle initialIsPrivate={user.isPrivate} />
+              <>
+                <div 
+                  className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer group"
+                  onClick={() => setIsThemeSelectionOpen(true)}
+                >
+                  <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Theme Preference</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-gray-400 text-sm">
+                      {themes.find(t => t.id === getActiveThemeId())?.name || 'Default'}
+                      <div className={`w-4 h-4 rounded-full ${themes.find(t => t.id === getActiveThemeId())?.colorClass || 'bg-[#e50914]'}`} />
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
+                <div className="flex items-center justify-between p-4 border-b border-white/5">
+                  <span className="text-white font-medium">Account Privacy</span>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <PrivacyToggle initialIsPrivate={user.isPrivate} />
+                  </div>
+                </div>
+              </>
             )}
 
             <Link href="/settings/blocked" className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors group">
@@ -185,7 +241,7 @@ export default function AccountSettingsPage() {
               )}
             </div>
           </div>
-        </div>
+        </section>
 
         {/* About & Legal Section */}
         <div>
@@ -200,7 +256,97 @@ export default function AccountSettingsPage() {
           </div>
         </div>
 
+        {/* Powered by TMDB (Mobile Only) */}
+        <div className="flex md:hidden items-center justify-center gap-2 pt-4 pb-2 text-gray-500 text-sm">
+          <span>Powered by</span>
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors font-bold text-primary-500">
+            TMDB
+          </a>
+        </div>
+
       </div>
+
+      {/* Theme Selection Modal */}
+      {isThemeSelectionOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#1a1d24] rounded-3xl border border-white/10 w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <h2 className="text-xl font-bold text-white">Select Theme</h2>
+              <button onClick={() => setIsThemeSelectionOpen(false)} className="text-gray-400 hover:text-white p-2">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-4 flex flex-col gap-2">
+              {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
+                const isLocked = !user?.isPremium && theme.id !== 'default';
+                const isSelected = getActiveThemeId() === theme.id;
+                
+                return (
+                  <div 
+                    key={theme.id}
+                    onClick={() => {
+                      if (isLocked) {
+                        router.push('/premium');
+                        return;
+                      }
+                      if (!isSelected) {
+                        setThemeToConfirm(theme);
+                      }
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-xl border ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'} transition-colors cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full ${theme.colorClass} shadow-lg flex items-center justify-center`}>
+                        {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
+                    </div>
+                    {isLocked && (
+                      <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {themeToConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#1a1d24] rounded-3xl border border-white/10 w-full max-w-sm overflow-hidden flex flex-col shadow-2xl p-6 text-center">
+             <div className={`w-16 h-16 rounded-full ${themeToConfirm.colorClass} shadow-lg mx-auto mb-4 flex items-center justify-center`}>
+                <svg className="w-8 h-8 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+             </div>
+             <h3 className="text-xl font-bold text-white mb-2">Change Theme</h3>
+             <p className="text-gray-400 text-sm mb-8">Are you sure you want to change your theme to <strong>{themeToConfirm.name}</strong>?</p>
+             <div className="flex gap-4">
+                <button onClick={() => setThemeToConfirm(null)} className="flex-1 py-3 bg-[#252a34] text-white rounded-xl font-medium hover:bg-[#2c323f]">Cancel</button>
+                <button onClick={async () => {
+                  const newTheme = themeToConfirm.id;
+                  setThemeToConfirm(null);
+                  setIsThemeSelectionOpen(false);
+                  
+                  // Optimistic update
+                  setUser({ ...user, themePreference: newTheme });
+                  window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
+
+                  // Save to API
+                  try {
+                    await fetch('/api/user/theme', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ themePreference: newTheme })
+                    });
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }} className={`flex-1 py-3 ${themeToConfirm.colorClass} text-white rounded-xl font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:brightness-110`}>Yes, Change</button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

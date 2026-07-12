@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q');
   const type = searchParams.get('type') || 'movie'; // 'movie', 'series', 'user', 'multi'
+  const region = searchParams.get('region') || '';
 
   if (!q) {
     return NextResponse.json({ results: [] });
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
         const tmdbResults = await tmdb.discoverByGenre(genreId, tmdbType);
         results = [...results, ...tmdbResults];
       } else {
-        const tmdbResults = await tmdb.searchMedia(q, tmdbType);
+        const tmdbResults = await tmdb.searchMedia(q, tmdbType, region);
         results = [...results, ...tmdbResults];
       }
     }

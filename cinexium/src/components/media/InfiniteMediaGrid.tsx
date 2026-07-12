@@ -97,7 +97,7 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
       setSearchLoading(true);
       setDidYouMean(null);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(submittedQuery)}&type=${type}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(submittedQuery)}&type=${type}&region=${region}`);
         const data = await res.json();
         
         if (data.didYouMean) {

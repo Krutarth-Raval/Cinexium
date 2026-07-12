@@ -82,7 +82,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ title, items }) =>
         >
         {items.map((item, index) => (
           <Link 
-            key={item.id} 
+            key={`${item.id}-${item.type}-${index}`} 
             href={`/${item.type === 'movie' ? 'movie' : 'series'}/${item.id}`}
             className="snap-start flex-none w-[140px] sm:w-[180px] md:w-[200px] lg:w-[220px] group cursor-pointer relative"
           >
@@ -91,7 +91,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ title, items }) =>
               <div 
                 className="absolute top-2 left-2 z-10 text-2xl sm:text-3xl md:text-5xl font-black drop-shadow-md select-none"
                 style={{ 
-                  WebkitTextStroke: '1.5px #E50914', 
+                  WebkitTextStroke: '1.5px var(--color-primary-500)', 
                   color: 'transparent'
                 }}
               >

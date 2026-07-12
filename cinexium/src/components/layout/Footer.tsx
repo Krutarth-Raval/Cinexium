@@ -1,29 +1,8 @@
-'use client';
-
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 export const Footer = () => {
-  const pathname = usePathname();
-  
-  // Bottom nav is hidden on these routes, so on mobile we can show the footer
-  const isBottomNavVisible = !(
-    pathname === '/login' || 
-    pathname === '/register' || 
-    pathname === '/verify-otp' || 
-    pathname?.startsWith('/chat/') ||
-    pathname === '/privacy' ||
-    pathname === '/terms' ||
-    pathname === '/guidelines' ||
-    pathname === '/contact'
-  );
-
-  // If BottomNav is visible (on mobile), hide Footer on mobile using hidden md:flex
-  // If BottomNav is NOT visible, we can show Footer everywhere using flex
-  const displayClass = isBottomNavVisible ? 'hidden md:flex' : 'flex';
-
   return (
-    <footer className={`${displayClass} w-full py-6 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-[#0f1115] text-gray-400 text-sm items-center justify-between flex-col md:flex-row gap-4 mt-auto`}>
+    <footer className="hidden lg:flex w-full py-6 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-[#0f1115] text-gray-400 text-sm items-center justify-between flex-col md:flex-row gap-4 mt-auto">
       <div className="flex items-center gap-6">
         <span>&copy; {new Date().getFullYear()} Cinexium.</span>
         <div className="flex items-center gap-4">

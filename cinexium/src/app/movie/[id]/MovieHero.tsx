@@ -7,6 +7,7 @@ import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
 import { ShareCollectionModal } from '@/app/collection/[id]/ShareCollectionModal';
 import { MediaCommentsDrawer } from '@/components/media/MediaCommentsDrawer';
 import { MediaLikesDrawer } from '@/components/media/MediaLikesDrawer';
+import { trackHistoryAction } from '@/app/actions/history';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -56,6 +57,12 @@ export const MovieHero = ({
     fetchStats();
   }, [mediaId, mediaType]);
 
+  useEffect(() => {
+    if (mediaId && mediaType) {
+      trackHistoryAction(mediaId, mediaType).catch(console.error);
+    }
+  }, [mediaId, mediaType]);
+
   const handleToggleLike = async () => {
     const previousLiked = isLiked;
     const previousCount = likesCount;
@@ -76,8 +83,59 @@ export const MovieHero = ({
 
   const bannerUrl = backdropPath ? `https://image.tmdb.org/t/p/original${backdropPath}` : (posterPath ? `https://image.tmdb.org/t/p/original${posterPath}` : '');
 
+  // Fallback to the first sentence of the overview if no tagline is provided by TMDB
+  const displayTagline = tagline || (overview ? (overview.split('. ')[0] + (overview.includes('. ') ? '.' : '')) : '');
+
+  const InteractionIcons = ({ containerClass, itemClass }: { containerClass: string, itemClass: string }) => (
+    <div className={containerClass}>
+      {/* Like */}
+      <div className={itemClass}>
+        <button onClick={handleToggleLike} className={`transition-transform drop-shadow-md hover:scale-110 active:scale-95 ${isLiked ? 'text-primary-500' : 'text-white hover:text-white/80'}`}>
+          <svg className="w-6 h-6 md:w-7 md:h-7" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+        </button>
+        <button onClick={() => setIsLikesDrawerOpen(true)} className="text-white text-[10px] md:text-sm font-bold drop-shadow-md hover:underline leading-none">
+          {Intl.NumberFormat('en-US', { notation: 'compact' }).format(likesCount)}
+        </button>
+      </div>
+
+      {/* Comment */}
+      <div className={itemClass}>
+        <button onClick={() => setIsCommentsDrawerOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
+          <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+        </button>
+        <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
+          {Intl.NumberFormat('en-US', { notation: 'compact' }).format(commentsCount)}
+        </span>
+      </div>
+
+      {/* Share */}
+      <div className={itemClass}>
+        <button onClick={() => setIsShareModalOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
+          <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+        </button>
+        <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
+          {Intl.NumberFormat('en-US', { notation: 'compact' }).format(sharesCount)}
+        </span>
+      </div>
+
+      {/* Save */}
+      <div className={itemClass}>
+        <button onClick={() => setIsSaveModalOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
+          {isSaved ? (
+            <svg className="w-6 h-6 md:w-7 md:h-7" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+          ) : (
+            <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+          )}
+        </button>
+        <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
+          {Intl.NumberFormat('en-US', { notation: 'compact' }).format(savesCount)}
+        </span>
+      </div>
+    </div>
+  );
+
   const ActionButtons = ({ isMobile = false }) => (
-    <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+    <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-6'} flex-wrap lg:gap-0`}>
       {trailerKey && (
         <button
           onClick={() => {
@@ -87,7 +145,7 @@ export const MovieHero = ({
               setIsPlayingTrailer(true);
             }
           }}
-          className={`flex items-center justify-center gap-2 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-lg ${isMobile ? 'flex-1 py-3' : 'px-8 py-3.5'}`}
+          className={`flex items-center justify-center gap-2 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0`}
         >
           {isPlayingTrailer && isTrailerPlaying ? (
             <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
@@ -97,6 +155,20 @@ export const MovieHero = ({
           <span>{isPlayingTrailer && isTrailerPlaying ? 'Playing' : 'Play Trailer'}</span>
         </button>
       )}
+      
+      {/* Hidden on desktop since desktop uses the floating icons */}
+      <div className="lg:hidden w-full md:w-auto">
+        <InteractionIcons 
+          containerClass={isMobile 
+            ? "flex items-center justify-between gap-2 w-full mt-1" 
+            : "flex items-center gap-6 md:gap-8 ml-0 md:ml-4"
+          }
+          itemClass={isMobile
+            ? "flex flex-col items-center justify-center gap-1 group bg-[#1a1d24] rounded-xl py-2 flex-1 border border-white/5 shadow-xl"
+            : "flex flex-col items-center gap-1 group"
+          }
+        />
+      </div>
     </div>
   );
 
@@ -140,60 +212,22 @@ export const MovieHero = ({
           {/* Gradients only on desktop to blend text */}
           <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/60 to-transparent pointer-events-none" />
           <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-[#0f1115] via-[#0f1115]/40 to-transparent pointer-events-none" />
-
-          {/* Floating Action Buttons (Reel Style) */}
+          
+          {/* Floating Action Buttons (Reel Style) - ONLY DESKTOP (lg) */}
           {!isPlayingTrailer && (
-            <div className="absolute right-2 bottom-3 md:right-12 md:bottom-12 z-30 flex flex-col gap-3 md:gap-6 items-center">
-              {/* Like */}
-              <div className="flex flex-col items-center gap-0.5 md:gap-1 group">
-                <button onClick={handleToggleLike} className={`transition-transform drop-shadow-md hover:scale-110 active:scale-95 ${isLiked ? 'text-primary-500' : 'text-white hover:text-white/80'}`}>
-                  <svg className="w-6 h-6 md:w-8 md:h-8" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                </button>
-                <button onClick={() => setIsLikesDrawerOpen(true)} className="text-white text-[10px] md:text-sm font-bold drop-shadow-md hover:underline leading-none">
-                  {Intl.NumberFormat('en-US', { notation: 'compact' }).format(likesCount)}
-                </button>
-              </div>
-  
-              {/* Comment */}
-              <div className="flex flex-col items-center gap-0.5 md:gap-1 group">
-                <button onClick={() => setIsCommentsDrawerOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
-                  <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                </button>
-                <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
-                  {Intl.NumberFormat('en-US', { notation: 'compact' }).format(commentsCount)}
-                </span>
-              </div>
-  
-              {/* Share */}
-              <div className="flex flex-col items-center gap-0.5 md:gap-1 group">
-                <button onClick={() => setIsShareModalOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
-                  <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                </button>
-                <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
-                  {Intl.NumberFormat('en-US', { notation: 'compact' }).format(sharesCount)}
-                </span>
-              </div>
-  
-              {/* Save */}
-              <div className="flex flex-col items-center gap-0.5 md:gap-1 group">
-                <button onClick={() => setIsSaveModalOpen(true)} className="text-white transition-transform drop-shadow-md hover:scale-110 active:scale-95 hover:text-white/80">
-                  {isSaved ? (
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                  ) : (
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                  )}
-                </button>
-                <span className="text-white text-[10px] md:text-sm font-bold drop-shadow-md leading-none">
-                  {Intl.NumberFormat('en-US', { notation: 'compact' }).format(savesCount)}
-                </span>
-              </div>
+            <div className="hidden lg:flex absolute right-12 bottom-12 z-30 flex-col gap-6 items-center">
+              <InteractionIcons 
+                containerClass="flex flex-col gap-6 items-center"
+                itemClass="flex flex-col items-center gap-1 group"
+              />
             </div>
           )}
+
         </div>
       </div>
 
       <div className="md:hidden px-4 py-4 flex flex-col gap-4">
-        {tagline && <p className="text-sm font-medium text-gray-300 italic">{tagline}</p>}
+        {displayTagline && <p className="text-sm font-medium text-gray-300 italic line-clamp-2">{displayTagline}</p>}
 
         <ActionButtons isMobile={true} />
       </div>
@@ -204,7 +238,7 @@ export const MovieHero = ({
       >
         <div className="pointer-events-auto max-w-4xl">
           <h1 className="text-6xl font-black text-white mb-2 tracking-tight">{title}</h1>
-          {tagline && <p className="text-2xl font-medium text-gray-300 italic mb-4">{tagline}</p>}
+          {displayTagline && <p className="text-2xl font-medium text-gray-300 italic mb-4 line-clamp-2">{displayTagline}</p>}
           <ActionButtons />
         </div>
       </div>

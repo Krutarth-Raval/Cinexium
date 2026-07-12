@@ -117,6 +117,7 @@ export async function GET(req: NextRequest) {
       return {
         id: group.id,
         isGroup: true,
+        isCommunity: group.isCommunity,
         user: { id: group.id, username: group.name, name: group.name, avatar: group.avatar }, // map group details to 'user' for sidebar generic rendering
         isMuted: false, // Groups don't have individual mute yet in this schema
         latestMessage: previewText,
@@ -148,6 +149,7 @@ export async function GET(req: NextRequest) {
           id: `contact-${f.following.id}`,
           isGroup: false,
           user: f.following,
+          isBlocked: false,
           isMuted: false,
           latestMessage: 'Start a conversation',
           updatedAt: new Date(0), // Push to bottom if sorting by date

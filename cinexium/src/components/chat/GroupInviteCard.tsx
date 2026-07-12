@@ -45,7 +45,7 @@ export const GroupInviteCard = ({
           <div className="flex items-center gap-3 p-4 pb-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-red-800 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-white/10">
               {meta.groupAvatar ? (
-                <img src={meta.groupAvatar} alt={meta.groupName} className="w-full h-full object-cover" />
+                <img src={meta.groupAvatar} alt={meta.groupName} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ) : (
                 <span className="text-white font-bold text-lg">{meta.groupName?.charAt(0).toUpperCase()}</span>
               )}
@@ -60,7 +60,7 @@ export const GroupInviteCard = ({
           {meta.memberAvatars && meta.memberAvatars.length > 0 && (
             <div className="flex -space-x-2 px-4 pb-3">
               {meta.memberAvatars.map((av: string, i: number) => (
-                <img key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-[#1e2230] object-cover" src={av} alt="" />
+                <img key={i} className="inline-block h-7 w-7 rounded-full ring-2 ring-[#1e2230] object-cover" src={av} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ))}
             </div>
           )}

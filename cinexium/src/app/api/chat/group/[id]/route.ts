@@ -14,12 +14,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       where: { id },
       include: {
         members: {
-          include: { user: { select: { id: true, username: true, name: true, avatar: true } } },
+          include: { user: { select: { id: true, username: true, name: true, avatar: true, isPremium: true } } },
           orderBy: { role: 'asc' }
         },
         messages: {
           include: { 
-            sender: { select: { id: true, username: true, name: true, avatar: true } },
+            sender: { select: { id: true, username: true, name: true, avatar: true, isPremium: true } },
             reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } }
           },
           orderBy: { createdAt: 'asc' }
@@ -97,6 +97,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Allow users to join if they use the 'join' action
     if (action === 'join') {
       if (member) return NextResponse.json({ error: 'Already a member' }, { status: 400 });
+      
+      const { inviteCode } = body;
+      
+      // If community is premium-only, check if user is premium
+      if (group.isPremiumOnly) {
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+        if (!dbUser?.isPremium) {
+          return NextResponse.json({ error: 'This is a Cinexium Pro exclusive community. Upgrade to Pro to join!', premiumRequired: true }, { status: 403 });
+        }
+      }
+
+      if (group.isCommunity && group.isPublic) {
+        // Public communities can be joined directly
+      } else if (group.inviteCode && group.inviteCode === inviteCode) {
+        // Valid invite code
+      } else {
+         return NextResponse.json({ error: 'Invalid invite code or community is private. Please request to join.' }, { status: 403 });
+      }
+
       await prisma.groupMember.create({
         data: { groupId: id, userId: user.id, role: 'MEMBER' }
       });

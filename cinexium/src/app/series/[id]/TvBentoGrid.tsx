@@ -7,18 +7,20 @@ import { OverviewDrawer } from '@/components/media/OverviewDrawer';
 import { GalleryDrawer } from '@/components/media/GalleryDrawer';
 import { SeasonsDrawer } from '@/components/media/SeasonsDrawer';
 import { EpisodeDrawer } from '@/components/media/EpisodeDrawer';
+import { CompanyDrawer } from '@/components/media/CompanyDrawer';
 
-export const TvBentoGrid = ({ details }: { details: any }) => {
+export const TvBentoGrid = ({ details, region }: { details: any, region?: string }) => {
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(1);
   const [selectedEpisode, setSelectedEpisode] = useState<any | null>(null);
   const [seasonData, setSeasonData] = useState<any>(null);
   const [isSeasonsDrawerOpen, setIsSeasonsDrawerOpen] = useState(false);
   const [selectedCastId, setSelectedCastId] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const overviewRef = useRef<HTMLParagraphElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
-  
+
   // Scroll states for recommendations
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -38,6 +40,16 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
   const castScrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeftCast, setCanScrollLeftCast] = useState(false);
   const [canScrollRightCast, setCanScrollRightCast] = useState(true);
+
+  // Scroll states for creators
+  const creatorsScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeftCreators, setCanScrollLeftCreators] = useState(false);
+  const [canScrollRightCreators, setCanScrollRightCreators] = useState(true);
+
+  // Scroll states for production companies
+  const productionScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeftProduction, setCanScrollLeftProduction] = useState(false);
+  const [canScrollRightProduction, setCanScrollRightProduction] = useState(true);
 
   // Scroll states for episodes
   const episodesScrollRef = useRef<HTMLDivElement>(null);
@@ -98,7 +110,35 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
     checkCastScroll();
     window.addEventListener('resize', checkCastScroll);
     return () => window.removeEventListener('resize', checkCastScroll);
-  }, [details.credits?.cast]);
+  }, [seasonData?.credits?.cast, details.credits?.cast]);
+
+  const checkCreatorsScroll = () => {
+    if (creatorsScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = creatorsScrollRef.current;
+      setCanScrollLeftCreators(scrollLeft > 0);
+      setCanScrollRightCreators(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  };
+
+  useEffect(() => {
+    checkCreatorsScroll();
+    window.addEventListener('resize', checkCreatorsScroll);
+    return () => window.removeEventListener('resize', checkCreatorsScroll);
+  }, [details.created_by, details.credits?.crew]);
+
+  const checkProductionScroll = () => {
+    if (productionScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = productionScrollRef.current;
+      setCanScrollLeftProduction(scrollLeft > 0);
+      setCanScrollRightProduction(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  };
+
+  useEffect(() => {
+    checkProductionScroll();
+    window.addEventListener('resize', checkProductionScroll);
+    return () => window.removeEventListener('resize', checkProductionScroll);
+  }, [details.production_companies]);
 
   const checkEpisodesScroll = () => {
     if (episodesScrollRef.current) {
@@ -178,25 +218,49 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
 
   const scrollLeftCast = () => {
     if (castScrollRef.current) {
-      castScrollRef.current.scrollBy({ left: -window.innerWidth / 1.5, behavior: 'smooth' });
+      castScrollRef.current.scrollBy({ left: -620, behavior: 'smooth' });
     }
   };
 
   const scrollRightCast = () => {
     if (castScrollRef.current) {
-      castScrollRef.current.scrollBy({ left: window.innerWidth / 1.5, behavior: 'smooth' });
+      castScrollRef.current.scrollBy({ left: 620, behavior: 'smooth' });
+    }
+  };
+
+  const scrollLeftCreators = () => {
+    if (creatorsScrollRef.current) {
+      creatorsScrollRef.current.scrollBy({ left: -496, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRightCreators = () => {
+    if (creatorsScrollRef.current) {
+      creatorsScrollRef.current.scrollBy({ left: 496, behavior: 'smooth' });
+    }
+  };
+
+  const scrollLeftProduction = () => {
+    if (productionScrollRef.current) {
+      productionScrollRef.current.scrollBy({ left: -248, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRightProduction = () => {
+    if (productionScrollRef.current) {
+      productionScrollRef.current.scrollBy({ left: 248, behavior: 'smooth' });
     }
   };
 
   const scrollLeftEpisodes = () => {
     if (episodesScrollRef.current) {
-      episodesScrollRef.current.scrollBy({ left: -window.innerWidth / 1.5, behavior: 'smooth' });
+      episodesScrollRef.current.scrollBy({ left: -972, behavior: 'smooth' });
     }
   };
 
   const scrollRightEpisodes = () => {
     if (episodesScrollRef.current) {
-      episodesScrollRef.current.scrollBy({ left: window.innerWidth / 1.5, behavior: 'smooth' });
+      episodesScrollRef.current.scrollBy({ left: 972, behavior: 'smooth' });
     }
   };
 
@@ -205,10 +269,43 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
   };
 
+  const filterByRegion = (items: any[]) => {
+    if (!items || !region) return items || [];
+    return items.filter((item: any) => {
+      const isAnime = item.genre_ids?.includes(16);
+      if (region === 'bollywood') {
+        return item.original_language === 'hi';
+      } else if (region === 'anime') {
+        return item.original_language === 'ja' && isAnime;
+      } else if (region === 'hollywood') {
+        return item.original_language === 'en' && !isAnime;
+      }
+      return true;
+    });
+  };
+
   const cast = seasonData?.credits?.cast?.slice(0, 20) || details.credits?.cast?.slice(0, 20) || [];
-  const recommendations = details.recommendations?.results?.slice(0, 20) || [];
-  const similarSeries = details.similar?.results?.slice(0, 20) || [];
-  
+  const recommendations = filterByRegion(details.recommendations?.results).slice(0, 20);
+  const similarSeries = filterByRegion(details.similar?.results).slice(0, 20);
+
+  // Creators (Created By, Executive Producers, Writers)
+  const createdBy = details.created_by || [];
+  const execProducers = details.credits?.crew?.filter((c: any) => c.job === 'Executive Producer') || [];
+  const writers = details.credits?.crew?.filter((c: any) => c.job === 'Writer' || c.job === 'Screenplay') || [];
+  const creators = [...createdBy.map((c: any) => ({ ...c, job: 'Creator' })), ...execProducers, ...writers].reduce((acc: any[], current: any) => {
+    const x = acc.find((item: any) => item.id === current.id);
+    if (!x) {
+      return acc.concat([{ ...current }]);
+    } else {
+      if (!x.job.includes(current.job)) {
+        x.job = x.job + ', ' + current.job;
+      }
+      return acc;
+    }
+  }, []).slice(0, 6);
+
+  const productionCompanies = details.production_companies?.slice(0, 6) || [];
+
   // Calculate duration formatting
   const runtime = details.episode_run_time?.[0] || details.last_episode_to_air?.runtime || 0;
   const runtimeHours = Math.floor(runtime / 60);
@@ -239,7 +336,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
   const watchProviders = details['watch/providers']?.results;
   let providerLink = '';
   let providers: any[] = [];
-  
+
   if (watchProviders) {
     const region = watchProviders['IN'] || watchProviders['US'] || Object.values(watchProviders)[0];
     if (region) {
@@ -257,19 +354,19 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
 
   return (
     <>
-      <div className="w-full pt-8 md:pt-16 pb-12 text-white">
-        
+      <div className="w-full pt-4 md:pt-16 pb-4 text-white">
+
         {/* Centered Main Content Area */}
         <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Left Column: Genres, Overview, Ratings, Watch Providers */}
           <div className="lg:col-span-2 flex flex-col">
             <div className="bg-[#1a1d24] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col gap-6 h-full">
-              
+
               {/* Genres */}
-              <div className="flex flex-wrap gap-3">
+              <div className="flex sm:flex-wrap overflow-x-auto gap-3 pb-1 sm:pb-0 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {details.genres?.map((g: any) => (
-                  <span key={g.id} className="px-5 py-2 bg-[#252a34] border border-white/5 text-gray-300 rounded-full text-sm font-semibold hover:bg-white/10 hover:text-white transition-all cursor-pointer shadow-sm">
+                  <span key={g.id} className="whitespace-nowrap px-5 py-2 bg-[#252a34] border border-white/5 text-gray-300 rounded-full text-sm font-semibold hover:bg-white/10 hover:text-white transition-all cursor-pointer shadow-sm">
                     {g.name}
                   </span>
                 ))}
@@ -278,7 +375,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               {/* Overview */}
               {details.overview && (
                 <div className="relative group">
-                  <p 
+                  <p
                     ref={overviewRef}
                     className="text-gray-300 text-base md:text-lg leading-relaxed font-medium line-clamp-4 md:line-clamp-3"
                   >
@@ -289,7 +386,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                       <div className="w-16 h-full bg-gradient-to-r from-transparent to-[#1a1d24]" />
                       <div className="bg-[#1a1d24] flex items-center pt-1 pb-[2px] pl-1 pr-1">
                         <span className="text-gray-300 text-base md:text-lg font-medium leading-none">...&nbsp;</span>
-                        <button 
+                        <button
                           onClick={() => setIsOverviewOpen(true)}
                           className="text-primary-500 font-bold text-sm md:text-base hover:text-primary-400 transition-colors uppercase tracking-wider"
                         >
@@ -300,14 +397,14 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                   )}
                 </div>
               )}
-              
+
               {/* Where to Watch */}
               <div>
                 <h3 className="text-gray-400 font-medium text-sm mb-4 uppercase tracking-wider">Available On</h3>
                 {providers.length > 0 ? (
                   <div className="relative group/providers">
                     {canScrollLeftProviders && (
-                      <button 
+                      <button
                         onClick={scrollLeftProviders}
                         className="hidden md:flex absolute left-0 top-0 bottom-6 z-20 w-10 bg-gradient-to-r from-[#1a1d24] via-[#1a1d24]/80 to-transparent opacity-0 group-hover/providers:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
                         aria-label="Scroll providers left"
@@ -318,7 +415,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                       </button>
                     )}
                     {canScrollRightProviders && (
-                      <button 
+                      <button
                         onClick={scrollRightProviders}
                         className="hidden md:flex absolute right-0 top-0 bottom-6 z-20 w-10 bg-gradient-to-l from-[#1a1d24] via-[#1a1d24]/80 to-transparent opacity-0 group-hover/providers:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500"
                         aria-label="Scroll providers right"
@@ -328,15 +425,15 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                         </svg>
                       </button>
                     )}
-                    <div 
+                    <div
                       ref={providersScrollRef}
                       onScroll={checkProvidersScroll}
                       className="flex gap-6 overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth pb-2"
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                       {providers.map(provider => (
-                        <a 
-                          key={provider.provider_id} 
+                        <a
+                          key={provider.provider_id}
                           href={providerLink}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -344,8 +441,8 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                           title={provider.provider_name}
                         >
                           <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all shadow-lg bg-[#252a34]">
-                            <img 
-                              src={`https://image.tmdb.org/t/p/original${provider.logo_path}`} 
+                            <img
+                              src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
                               alt={provider.provider_name}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             />
@@ -371,12 +468,12 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                   </div>
                 )}
               </div>
-              
+
               {/* Ratings and Actions */}
               <div className="flex flex-wrap gap-6 items-center mt-auto pt-6 border-t border-white/5 w-full">
                 <div>
                   <div className="flex items-center gap-2">
-                    <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
                     <span className="text-2xl font-bold">{details.vote_average?.toFixed(1)}<span className="text-sm text-gray-500 font-medium">/10</span></span>
                   </div>
                   <p className="text-sm text-gray-500 mt-1 font-medium">{details.vote_count?.toLocaleString()} votes</p>
@@ -384,7 +481,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                 <div className="w-px h-10 bg-white/10 hidden sm:block"></div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <svg className="w-6 h-6 text-primary-500" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                    <svg className="w-6 h-6 text-primary-500" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" /></svg>
                     <span className="text-2xl font-bold">{details.popularity?.toFixed(0)}</span>
                   </div>
                   <p className="text-sm text-gray-500 mt-1 font-medium">Popularity</p>
@@ -392,7 +489,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
 
                 <div className="flex items-center gap-3 ml-auto shrink-0">
                   {details.homepage && (
-                    <a 
+                    <a
                       href={details.homepage}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -403,7 +500,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                       <span className="hidden lg:inline text-sm font-semibold">Website</span>
                     </a>
                   )}
-                  <button 
+                  <button
                     onClick={() => setIsGalleryOpen(true)}
                     className="w-10 h-10 lg:w-auto lg:h-auto lg:px-4 lg:py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-full transition-colors flex items-center justify-center lg:gap-2 shadow-lg shadow-primary-500/20"
                     title="Gallery"
@@ -424,7 +521,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                 <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Series Info
               </h3>
-              
+
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-y-5 gap-x-4 relative z-10">
                 <div className="border-l-2 border-white/10 pl-3">
                   <h4 className="text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-1">Status</h4>
@@ -453,7 +550,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               </div>
             </div>
           </div>
-          
+
         </div>
 
         {/* Episodes Section */}
@@ -473,7 +570,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
             <div className="relative group/episodes">
               {/* Scroll Buttons */}
               {canScrollLeftEpisodes && (
-                <button 
+                <button
                   onClick={scrollLeftEpisodes}
                   className="hidden lg:flex absolute left-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/episodes:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
                   aria-label="Scroll left"
@@ -485,7 +582,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               )}
 
               {canScrollRightEpisodes && (
-                <button 
+                <button
                   onClick={scrollRightEpisodes}
                   className="hidden lg:flex absolute right-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/episodes:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
                   aria-label="Scroll right"
@@ -496,59 +593,178 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                 </button>
               )}
 
-              <div 
+              <div
                 ref={episodesScrollRef}
                 onScroll={checkEpisodesScroll}
                 className="flex gap-4 overflow-x-auto custom-scrollbar pb-6 snap-x scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {seasonData.episodes.map((ep: any) => (
-                <div 
-                  key={ep.id} 
-                  onClick={() => setSelectedEpisode(ep)}
-                  className="min-w-[280px] max-w-[280px] md:min-w-[320px] md:max-w-[320px] flex flex-col gap-3 group snap-start bg-[#1a1d24] rounded-2xl overflow-hidden border border-white/5 shadow-lg cursor-pointer hover:border-primary-500/50 transition-colors"
-                >
-                  <div className="w-full aspect-video bg-[#252a34] relative overflow-hidden">
-                    {ep.still_path ? (
-                      <img src={`https://image.tmdb.org/t/p/w500${ep.still_path}`} alt={ep.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <div
+                    key={ep.id}
+                    onClick={() => setSelectedEpisode(ep)}
+                    className="min-w-[280px] max-w-[280px] md:min-w-[320px] md:max-w-[320px] flex flex-col gap-3 group snap-start bg-[#1a1d24] rounded-2xl overflow-hidden border border-white/5 shadow-lg cursor-pointer hover:border-primary-500/50 transition-colors"
+                  >
+                    <div className="w-full aspect-video bg-[#252a34] relative overflow-hidden">
+                      {ep.still_path ? (
+                        <img src={`https://image.tmdb.org/t/p/w500${ep.still_path}`} alt={ep.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
+                        <svg className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /></svg>
+                        {ep.vote_average?.toFixed(1) || '0.0'}
                       </div>
-                    )}
-                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
-                      <svg className="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                      {ep.vote_average?.toFixed(1) || '0.0'}
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-xs font-bold text-white shadow-lg">
+                        Ep {ep.episode_number}
+                      </div>
                     </div>
-                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md text-xs font-bold text-white shadow-lg">
-                      Ep {ep.episode_number}
+                    <div className="p-4 pt-1 flex-1 flex flex-col justify-between">
+                      <h4 className="font-bold text-white mb-2 line-clamp-2 text-sm leading-snug group-hover:text-primary-400 transition-colors" title={ep.name}>{ep.name}</h4>
+                      <p className="text-xs text-gray-500 font-semibold flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {ep.runtime ? `${ep.runtime} min` : 'TBA'}
+                      </p>
                     </div>
                   </div>
-                  <div className="p-4 pt-1 flex-1 flex flex-col justify-between">
-                    <h4 className="font-bold text-white mb-2 line-clamp-2 text-sm leading-snug group-hover:text-primary-400 transition-colors" title={ep.name}>{ep.name}</h4>
-                    <p className="text-xs text-gray-500 font-semibold flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      {ep.runtime ? `${ep.runtime} min` : 'TBA'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
           </div>
         )}
 
+        {/* Creators & Production Desktop Layout */}
+        {(creators.length > 0 || productionCompanies.length > 0) && (
+          <div className="max-w-7xl mx-auto px-4 md:px-12 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            {/* Left Column: Creators (All Devices) */}
+            {creators.length > 0 && (
+              <div className="lg:col-span-2 flex flex-col">
+                <h3 className="text-2xl font-bold flex items-center gap-2 mb-6 shrink-0">Creators</h3>
+
+                <div className="relative group/creators flex-1">
+                  {canScrollLeftCreators && (
+                    <button
+                      onClick={scrollLeftCreators}
+                      className="hidden lg:flex absolute left-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/creators:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
+                      aria-label="Scroll left"
+                    >
+                      <svg className="w-10 h-10 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  )}
+                  {canScrollRightCreators && (
+                    <button
+                      onClick={scrollRightCreators}
+                      className="hidden lg:flex absolute right-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/creators:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
+                      aria-label="Scroll right"
+                    >
+                      <svg className="w-10 h-10 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  )}
+
+                  <div
+                    ref={creatorsScrollRef}
+                    onScroll={checkCreatorsScroll}
+                    className="flex gap-6 overflow-x-auto custom-scrollbar pb-6 snap-x snap-mandatory scroll-smooth"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {creators.map((creator: any) => (
+                      <button
+                        key={creator.id}
+                        onClick={() => setSelectedCastId(creator.id.toString())}
+                        className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-center shrink-0"
+                      >
+                        <div className="w-[100px] h-[100px] bg-[#252a34] rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg shrink-0">
+                          {creator.profile_path ? (
+                            <img src={`https://image.tmdb.org/t/p/w185${creator.profile_path}`} alt={creator.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-600">
+                              <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary-400 transition-colors">{creator.name}</p>
+                          <p className="text-xs text-primary-500 font-semibold line-clamp-2 leading-snug mt-1">{creator.job}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Right Column: Production Companies (Desktop Only) */}
+            <div className="hidden lg:flex flex-col lg:col-span-1">
+              <h3 className="text-2xl font-bold flex items-center gap-2 mb-6 shrink-0">Production</h3>
+
+              <div className="relative group/production flex-1">
+                {canScrollLeftProduction && (
+                  <button
+                    onClick={scrollLeftProduction}
+                    className="hidden lg:flex absolute left-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/production:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
+                    aria-label="Scroll left"
+                  >
+                    <svg className="w-10 h-10 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                )}
+                {canScrollRightProduction && (
+                  <button
+                    onClick={scrollRightProduction}
+                    className="hidden lg:flex absolute right-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/production:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
+                    aria-label="Scroll right"
+                  >
+                    <svg className="w-10 h-10 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                )}
+
+                <div
+                  ref={productionScrollRef}
+                  onScroll={checkProductionScroll}
+                  className="flex gap-6 overflow-x-auto custom-scrollbar pb-6 snap-x snap-mandatory scroll-smooth"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {productionCompanies.map((company: any) => (
+                    <button
+                      key={company.id}
+                      onClick={() => setSelectedCompanyId(company.id.toString())}
+                      className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-center shrink-0"
+                    >
+                      <div className="w-[96px] h-[96px] bg-white rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg p-3 flex items-center justify-center shrink-0">
+                        {company.logo_path ? (
+                          <img src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} alt={company.name} className="max-w-full max-h-full object-contain" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold text-sm">{company.name.charAt(0)}</div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary-400 transition-colors text-gray-300">{company.name}</p>
+                        {company.origin_country && (
+                          <p className="text-xs text-primary-500 font-semibold line-clamp-1 leading-snug mt-1">{company.origin_country}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
         {/* Top Cast Section */}
         {cast.length > 0 && (
-          <div className="max-w-7xl mx-auto px-4 md:px-12 mt-16">
+          <div className="max-w-7xl mx-auto px-4 md:px-12 mt-8">
             <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
               Top Cast
             </h3>
-            
+
             <div className="relative group/cast">
               {/* Scroll Buttons */}
               {canScrollLeftCast && (
-                <button 
+                <button
                   onClick={scrollLeftCast}
                   className="hidden lg:flex absolute left-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/cast:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
                   aria-label="Scroll left"
@@ -560,7 +776,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               )}
 
               {canScrollRightCast && (
-                <button 
+                <button
                   onClick={scrollRightCast}
                   className="hidden lg:flex absolute right-0 top-0 bottom-6 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/cast:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
                   aria-label="Scroll right"
@@ -571,52 +787,82 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                 </button>
               )}
 
-              <div 
+              <div
                 ref={castScrollRef}
                 onScroll={checkCastScroll}
                 className="flex gap-6 overflow-x-auto custom-scrollbar pb-6 snap-x scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-              {cast.map((actor: any) => (
-                <button 
-                  key={actor.id} 
-                  onClick={() => setSelectedCastId(actor.id.toString())}
-                  className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-left"
+                {cast.map((actor: any) => (
+                  <button
+                    key={actor.id}
+                    onClick={() => setSelectedCastId(actor.id.toString())}
+                    className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-left"
+                  >
+                    <div className="w-[100px] h-[100px] bg-[#1a1d24] rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg shrink-0">
+                      {actor.profile_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`}
+                          alt={actor.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-600 bg-[#252a34]">
+                          <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center w-full">
+                      <p className="font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary-400 transition-colors">{actor.name}</p>
+                      <p className="text-xs text-gray-500 line-clamp-2 leading-snug mt-1">{actor.character}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Production Companies */}
+        {productionCompanies.length > 0 && (
+          <div className="lg:hidden max-w-7xl mx-auto px-4 md:px-12 mt-8 flex flex-col gap-6">
+            <h3 className="text-2xl font-bold flex items-center gap-2">Production</h3>
+            <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-6 snap-x snap-mandatory scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {productionCompanies.map((company: any) => (
+                <button
+                  key={company.id}
+                  onClick={() => setSelectedCompanyId(company.id.toString())}
+                  className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-center shrink-0"
                 >
-                  <div className="w-[100px] h-[100px] bg-[#1a1d24] rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg shrink-0">
-                    {actor.profile_path ? (
-                      <img 
-                        src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`} 
-                        alt={actor.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
+                  <div className="w-[100px] h-[100px] bg-white rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg p-3 flex items-center justify-center shrink-0">
+                    {company.logo_path ? (
+                      <img src={`https://image.tmdb.org/t/p/w185${company.logo_path}`} alt={company.name} className="max-w-full max-h-full object-contain" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-600 bg-[#252a34]">
-                        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                      </div>
+                      <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold text-sm">{company.name.charAt(0)}</div>
                     )}
                   </div>
-                  <div className="text-center w-full">
-                    <p className="font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary-400 transition-colors">{actor.name}</p>
-                    <p className="text-xs text-gray-500 line-clamp-2 leading-snug mt-1">{actor.character}</p>
+                  <div>
+                    <p className="font-bold text-sm leading-tight line-clamp-1 group-hover:text-primary-400 transition-colors text-gray-300">{company.name}</p>
+                    {company.origin_country && (
+                      <p className="text-xs text-primary-500 font-semibold line-clamp-1 leading-snug mt-1">{company.origin_country}</p>
+                    )}
                   </div>
                 </button>
               ))}
-              </div>
             </div>
           </div>
         )}
 
         {/* Similar Series Section (Full Width) */}
         {similarSeries.length > 0 && (
-          <section className="mt-16 pl-4 sm:pl-6 md:pl-12">
+          <section className="mt-8 pl-4 sm:pl-6 md:pl-12">
             <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
               Similar TV Shows
             </h3>
-            
+
             <div className="relative group/similar">
               {canScrollLeftSimilar && (
-                <button 
+                <button
                   onClick={scrollLeftSimilar}
                   className="hidden lg:flex absolute left-0 top-0 bottom-8 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/similar:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
                   aria-label="Scroll left"
@@ -628,7 +874,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               )}
 
               {canScrollRightSimilar && (
-                <button 
+                <button
                   onClick={scrollRightSimilar}
                   className="hidden lg:flex absolute right-0 top-0 bottom-8 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/similar:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
                   aria-label="Scroll right"
@@ -639,32 +885,32 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                 </button>
               )}
 
-              <div 
+              <div
                 ref={similarScrollRef}
                 onScroll={checkSimilarScroll}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pr-4 sm:pr-6 md:pr-12 no-scrollbar scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {similarSeries.map((series: any, index: number) => (
-                  <Link 
-                    key={series.id} 
+                  <Link
+                    key={series.id}
                     href={`/series/${series.id}`}
                     className="snap-start flex-none w-[140px] sm:w-[180px] md:w-[200px] lg:w-[220px] group cursor-pointer relative"
                   >
                     <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-2 bg-[#1a1d24]">
                       {/* Rank Number Overlay */}
-                      <div 
+                      <div
                         className="absolute top-2 left-2 z-10 text-2xl sm:text-3xl md:text-5xl font-black drop-shadow-md select-none"
-                        style={{ 
-                          WebkitTextStroke: '1.5px #E50914', 
+                        style={{
+                          WebkitTextStroke: '1.5px var(--color-primary-500)',
                           color: 'transparent'
                         }}
                       >
                         {index + 1}
                       </div>
                       {series.poster_path ? (
-                        <img 
-                          src={`https://image.tmdb.org/t/p/w342${series.poster_path}`} 
+                        <img
+                          src={`https://image.tmdb.org/t/p/w342${series.poster_path}`}
                           alt={series.name || series.title}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
@@ -674,14 +920,14 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                           <span className="font-bold text-sm text-gray-500">{series.name || series.title}</span>
                         </div>
                       )}
-                      
+
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
                         <span className="text-white text-xs sm:text-sm font-semibold truncate block w-full text-center">
                           View Details
                         </span>
                       </div>
                     </div>
-                    
+
                     <h3 className="text-gray-200 text-sm sm:text-base font-medium truncate group-hover:text-primary-500 transition-colors">
                       {series.name || series.title}
                     </h3>
@@ -694,15 +940,15 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
 
         {/* Recommendations Section (Full Width) */}
         {recommendations.length > 0 && (
-          <section className="mt-16 pb-12 pl-4 sm:pl-6 md:pl-12">
+          <section className="mt-8 pl-4 sm:pl-6 md:pl-12">
             <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
               You might also like
             </h3>
-            
+
             <div className="relative group/carousel">
               {/* Scroll Buttons */}
               {canScrollLeft && (
-                <button 
+                <button
                   onClick={scrollLeft}
                   className="hidden lg:flex absolute left-0 top-0 bottom-8 z-20 w-14 bg-gradient-to-r from-[#0f1115] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 items-center justify-start hover:text-primary-500"
                   aria-label="Scroll left"
@@ -714,7 +960,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               )}
 
               {canScrollRight && (
-                <button 
+                <button
                   onClick={scrollRight}
                   className="hidden lg:flex absolute right-0 top-0 bottom-8 z-20 w-14 bg-gradient-to-l from-[#0f1115] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 items-center justify-end hover:text-primary-500 pr-2"
                   aria-label="Scroll right"
@@ -726,32 +972,32 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
               )}
 
               {/* Scroll Container */}
-              <div 
+              <div
                 ref={scrollRef}
                 onScroll={checkScroll}
                 className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pr-4 sm:pr-6 md:pr-12 no-scrollbar scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 {recommendations.map((rec: any, index: number) => (
-                  <Link 
-                    key={rec.id} 
+                  <Link
+                    key={rec.id}
                     href={`/series/${rec.id}`}
                     className="snap-start flex-none w-[140px] sm:w-[180px] md:w-[200px] lg:w-[220px] group cursor-pointer relative"
                   >
                     <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-2 bg-[#1a1d24]">
                       {/* Rank Number Overlay */}
-                      <div 
+                      <div
                         className="absolute top-2 left-2 z-10 text-2xl sm:text-3xl md:text-5xl font-black drop-shadow-md select-none"
-                        style={{ 
-                          WebkitTextStroke: '1.5px #E50914', 
+                        style={{
+                          WebkitTextStroke: '1.5px var(--color-primary-500)',
                           color: 'transparent'
                         }}
                       >
                         {index + 1}
                       </div>
                       {rec.poster_path ? (
-                        <img 
-                          src={`https://image.tmdb.org/t/p/w342${rec.poster_path}`} 
+                        <img
+                          src={`https://image.tmdb.org/t/p/w342${rec.poster_path}`}
                           alt={rec.name || rec.title}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
@@ -761,7 +1007,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                           <span className="font-bold text-sm text-gray-500">{rec.name || rec.title}</span>
                         </div>
                       )}
-                      
+
                       {/* Hover overlay gradient */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
                         <span className="text-white text-xs sm:text-sm font-semibold truncate block w-full text-center">
@@ -769,7 +1015,7 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
                         </span>
                       </div>
                     </div>
-                    
+
                     <h3 className="text-gray-200 text-sm sm:text-base font-medium truncate group-hover:text-primary-500 transition-colors">
                       {rec.name || rec.title}
                     </h3>
@@ -779,8 +1025,17 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
             </div>
           </section>
         )}
+        {/* Back to Top Button */}
+        <div className="flex justify-center mt-4 pb-2">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="text-primary-500 font-bold hover:text-primary-400 transition-colors"
+          >
+            Back to top
+          </button>
+        </div>
       </div>
-      
+
       {/* Drawers */}
       <SeasonsDrawer
         isOpen={isSeasonsDrawerOpen}
@@ -789,24 +1044,29 @@ export const TvBentoGrid = ({ details }: { details: any }) => {
         selectedSeasonNumber={selectedSeasonNumber}
         onSelectSeason={(seasonNumber) => setSelectedSeasonNumber(seasonNumber)}
       />
-      <CastDrawer 
-        isOpen={!!selectedCastId} 
-        onClose={() => setSelectedCastId(null)} 
-        castId={selectedCastId} 
+      <CastDrawer
+        isOpen={!!selectedCastId}
+        onClose={() => setSelectedCastId(null)}
+        castId={selectedCastId}
       />
-      <OverviewDrawer 
+      <OverviewDrawer
         isOpen={isOverviewOpen}
         onClose={() => setIsOverviewOpen(false)}
-        title={details.title}
+        title="Overview"
         overview={details.overview}
       />
-      <GalleryDrawer 
+      <CompanyDrawer
+        isOpen={!!selectedCompanyId}
+        onClose={() => setSelectedCompanyId(null)}
+        companyId={selectedCompanyId}
+      />
+      <GalleryDrawer
         isOpen={isGalleryOpen}
         onClose={() => setIsGalleryOpen(false)}
         mediaId={details.id.toString()}
         mediaType="tv"
       />
-      <EpisodeDrawer 
+      <EpisodeDrawer
         isOpen={!!selectedEpisode}
         onClose={() => setSelectedEpisode(null)}
         episode={selectedEpisode}

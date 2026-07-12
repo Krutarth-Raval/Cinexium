@@ -22,6 +22,8 @@ export async function GET() {
       isPrivate: true,
       chatNotifications: true,
       appNotifications: true,
+      isPremium: true,
+      themePreference: true,
     }
   });
 

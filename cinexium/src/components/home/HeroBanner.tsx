@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/Button';
 import { CustomTrailerPlayer } from '@/components/media/CustomTrailerPlayer';
 import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
+import { OverviewDrawer } from '@/components/media/OverviewDrawer';
 
 export interface MediaItem {
   id: string;
@@ -15,6 +16,8 @@ export interface MediaItem {
   type: 'movie' | 'series';
   trailerKey?: string;
   releaseDate?: string | null;
+  originalLanguage?: string;
+  genres?: any[];
 }
 
 interface HeroBannerProps {
@@ -28,6 +31,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
 
   // Auto-scroll logic
   useEffect(() => {
@@ -91,17 +95,16 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         onClick={handleBannerClick}
       >
         {/* Top Image Section (Mobile: relative aspect-video, Desktop: absolute inset-0) */}
-        <div className="relative sm:absolute sm:inset-0 w-full aspect-[4/3] sm:aspect-auto sm:h-full min-h-[250px] overflow-hidden">
+        <div className="relative sm:absolute sm:inset-0 w-full aspect-video sm:aspect-auto sm:h-full min-h-[250px] overflow-hidden">
           {items.map((item, index) => (
             <div
               key={item.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === currentIndex ? 'opacity-100' : 'opacity-0'
-              } ${isPlayingTrailer && index === currentIndex ? 'z-20 bg-black' : ''}`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'
+                } ${isPlayingTrailer && index === currentIndex ? 'z-20 bg-black' : ''}`}
             >
               {isPlayingTrailer && index === currentIndex && item.trailerKey ? (
-                <div className="absolute inset-0 z-30 bg-black">
-                  <CustomTrailerPlayer 
+                <div className="absolute inset-0 z-30 bg-black" onClick={(e) => e.stopPropagation()}>
+                  <CustomTrailerPlayer
                     videoId={item.trailerKey}
                     onClose={() => setIsPlayingTrailer(false)}
                     onPlayingChange={setIsTrailerPlaying}
@@ -125,26 +128,25 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         </div>
 
         {/* Content Section (Mobile: bottom block, Desktop: absolute bottom overlay) */}
-        <div className={`relative sm:absolute sm:inset-0 sm:pointer-events-none flex flex-col justify-between sm:justify-end p-5 sm:p-6 lg:p-10 z-10 min-h-[160px] sm:min-h-0 bg-[#16181d] sm:bg-transparent border-t border-white/5 sm:border-none overflow-hidden transition-opacity duration-500 ${isPlayingTrailer ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          
+        <div className={`relative sm:absolute sm:inset-0 sm:pointer-events-none flex flex-col justify-between sm:justify-end p-5 sm:p-6 lg:p-10 z-10 min-h-[160px] sm:min-h-0 bg-[#16181d] sm:bg-transparent border-t border-white/5 sm:border-none overflow-hidden transition-opacity duration-500 ${isPlayingTrailer ? 'sm:opacity-0 sm:pointer-events-none' : 'opacity-100'}`}>
+
           {/* Ambient Blurred Background (Mobile Only) */}
           {items.map((item, index) => (
             <div
               key={`bg-${item.id}`}
-              className={`sm:hidden absolute inset-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
-                index === currentIndex ? 'opacity-100' : 'opacity-0'
-              }`}
+              className={`sm:hidden absolute inset-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${index === currentIndex ? 'opacity-100' : 'opacity-0'
+                }`}
             >
               <img
                 src={item.bannerUrl}
                 alt=""
                 className="w-full h-full object-cover blur-3xl scale-125 opacity-70"
               />
-              <div className="absolute inset-0 bg-[#0f1115]/75" /> 
+              <div className="absolute inset-0 bg-[#0f1115]/75" />
             </div>
           ))}
 
-          <div 
+          <div
             className="relative z-10 animate-fade-in-up w-full max-w-4xl sm:pointer-events-auto flex flex-col h-full justify-between sm:justify-end"
             style={{ animation: 'fadeInUp 0.8s ease-out forwards' }}
           >
@@ -152,17 +154,44 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1.5 sm:mb-2 drop-shadow-lg leading-tight line-clamp-1 sm:line-clamp-none">
                 {currentItem.title}
               </h1>
-              {/* Strict height container to prevent card fluctuation, line-clamp inside */}
-              <div className="h-[66px] sm:h-auto mb-4 sm:mb-4 overflow-hidden">
-                <p className="text-gray-300 text-sm md:text-lg line-clamp-3 drop-shadow-md leading-[22px] sm:leading-relaxed">
-                  {currentItem.description}
+              {/* Desktop description (Manual Truncation inline) */}
+              <div className="hidden sm:block mb-4 h-[84px] relative">
+                <p className="text-gray-300 text-lg drop-shadow-md leading-[28px] inline">
+                  {currentItem.description.length > 220 
+                    ? `${currentItem.description.substring(0, 220).trim()}...` 
+                    : currentItem.description}
                 </p>
+                {currentItem.description.length > 220 && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsOverviewOpen(true); }}
+                    className="text-primary-500 font-bold text-[15px] hover:text-primary-400 transition-colors inline ml-2"
+                  >
+                    Read More
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile description (Manual Truncation inline) */}
+              <div className="sm:hidden mb-4 min-h-[66px]">
+                <p className="text-gray-300 text-sm drop-shadow-md leading-[22px] inline">
+                  {currentItem.description.length > 115 
+                    ? `${currentItem.description.substring(0, 115).trim()}...` 
+                    : currentItem.description}
+                </p>
+                {currentItem.description.length > 115 && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsOverviewOpen(true); }}
+                    className="text-primary-500 font-bold text-[13px] hover:text-primary-400 transition-colors inline ml-1.5"
+                  >
+                    Read More
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="flex flex-row items-center gap-2 sm:gap-4 mt-auto sm:mt-0">
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 className="gap-2 justify-center !rounded-full !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -178,8 +207,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 </svg>
                 <span className="hidden sm:inline">Watch Trailer</span>
               </Button>
-              <Button 
-                variant="glass" 
+              <Button
+                variant="glass"
                 className="gap-2 text-white justify-center !rounded-full border-white/20 hover:bg-white/10 !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -193,7 +222,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               </Button>
 
               {/* Mobile Carousel Indicators (Hidden on desktop) */}
-              <div 
+              <div
                 className="flex sm:hidden ml-auto gap-1.5 px-1 sm:pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -204,9 +233,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                       e.stopPropagation();
                       setCurrentIndex(index);
                     }}
-                    className={`transition-all duration-300 rounded-full ${
-                      index === currentIndex ? 'w-4 h-1.5 bg-primary-500' : 'w-1.5 h-1.5 bg-white/20 hover:bg-white/50'
-                    }`}
+                    className={`transition-all duration-300 rounded-full ${index === currentIndex ? 'w-4 h-1.5 bg-primary-500' : 'w-1.5 h-1.5 bg-white/20 hover:bg-white/50'
+                      }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
                 ))}
@@ -216,7 +244,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         </div>
 
         {/* Desktop Carousel Indicators (Hidden on mobile) */}
-        <div 
+        <div
           className="hidden sm:flex absolute bottom-6 right-6 lg:bottom-10 lg:right-10 z-10 gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 sm:pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
@@ -227,15 +255,15 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 e.stopPropagation();
                 setCurrentIndex(index);
               }}
-              className={`transition-all duration-300 rounded-full ${
-                index === currentIndex ? 'w-6 h-2 bg-primary-500' : 'w-2 h-2 bg-white/40 hover:bg-white/80'
-              }`}
+              className={`transition-all duration-300 rounded-full ${index === currentIndex ? 'w-6 h-2 bg-primary-500' : 'w-2 h-2 bg-white/40 hover:bg-white/80'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
-        
-        <style dangerouslySetInnerHTML={{__html: `
+
+        <style dangerouslySetInnerHTML={{
+          __html: `
           @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -243,11 +271,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         `}} />
       </div>
 
-      <SaveMediaModal 
+      <SaveMediaModal
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         mediaId={currentItem.id}
         mediaType={currentItem.type}
+      />
+      <OverviewDrawer
+        isOpen={isOverviewOpen}
+        onClose={() => setIsOverviewOpen(false)}
+        title={currentItem.title}
+        overview={currentItem.description}
       />
     </div>
   );

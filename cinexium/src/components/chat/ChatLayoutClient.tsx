@@ -19,7 +19,7 @@ export default function ChatLayoutClient({ children }: { children: React.ReactNo
         
         {/* Main Chat Area */}
         <div 
-          className={`flex-1 relative h-full min-h-0 ${!isChatWindowOpen ? 'hidden md:flex' : 'flex'} flex-col`}
+          className={`flex-1 relative min-w-0 h-full ${!isChatWindowOpen ? 'hidden md:flex' : 'flex'} flex-col`}
         >
           {children}
         </div>

@@ -17,7 +17,7 @@ export async function POST(
 
     const userId = (session.user as any).id;
     const body = await req.json();
-    const mediaType = body.mediaType || 'movie'; // fallback
+    const mediaType = body.mediaType || body.type || 'movie'; // fallback
 
     const existingLike = await prisma.mediaLike.findUnique({
       where: {

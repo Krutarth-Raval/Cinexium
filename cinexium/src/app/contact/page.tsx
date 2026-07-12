@@ -29,22 +29,19 @@ export default function ContactUsPage() {
       
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
-        {/* Top Navigation */}
-        <div className="flex items-center gap-4 mb-12">
+        {/* Top Bar with Back Arrow */}
+        <div className="flex items-center gap-4 mb-10 border-b border-white/10 pb-6">
           <button onClick={() => router.back()} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
           </button>
-          <span className="text-sm font-semibold tracking-wider uppercase text-gray-400">Back</span>
+          <h1 className="text-2xl font-bold text-white">Contact Us</h1>
         </div>
 
-        {/* Header */}
-        <div className="text-center mb-12 space-y-4">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-            Contact Us
-          </h1>
-          <p className="text-lg text-gray-400 max-w-xl mx-auto">
+        {/* Description */}
+        <div className="mb-10 text-left">
+          <p className="text-lg text-gray-400">
             Have questions, feedback, or need support? Send us a message and we'll respond as soon as possible.
           </p>
         </div>

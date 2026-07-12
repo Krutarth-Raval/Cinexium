@@ -104,6 +104,32 @@ export const tmdb = {
     }
   },
 
+  getGlobalTop20: async (): Promise<MediaItem[]> => {
+    if (!TMDB_API_KEY) return [];
+    try {
+      const url = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=en-US`;
+      const response = await fetch(url, { next: { revalidate: 3600 } });
+      if (!response.ok) throw new Error(`Failed to fetch global top 20`);
+      
+      const data = await response.json();
+      
+      return (data.results || [])
+        .filter((item: any) => item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv'))
+        .map((item: any) => ({
+          id: item.id.toString(),
+          title: item.title || item.name || item.original_title || item.original_name,
+          description: item.overview,
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+          type: item.media_type === 'movie' ? 'movie' : 'series',
+        }))
+        .slice(0, 20);
+    } catch (error) {
+      console.error(`Error in getGlobalTop20:`, error);
+      return [];
+    }
+  },
+
   getMovies: (category: Category, region: string) => fetchMediaList('movie', category, region),
   getSeries: (category: Category, region: string) => fetchMediaList('tv', category, region),
   
@@ -160,9 +186,11 @@ export const tmdb = {
         title: item.title || item.name || item.original_title || item.original_name,
         description: item.overview,
         bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
-        posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+        posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '',
         type: type === 'movie' ? 'movie' : 'series',
         releaseDate: item.release_date || item.first_air_date || item.primary_release_date || null,
+        originalLanguage: item.original_language,
+        genres: item.genres,
       };
     } catch {
       return null;
@@ -186,14 +214,30 @@ export const tmdb = {
   },
 
   // Search media
-  searchMedia: async (query: string, type: 'movie' | 'tv' | 'multi'): Promise<MediaItem[]> => {
+  searchMedia: async (query: string, type: 'movie' | 'tv' | 'multi', region?: string): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY || !query) return [];
     try {
       const response = await fetch(`${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`);
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       
-      return (data.results || [])
+      let tmdbResults = data.results || [];
+      
+      if (region) {
+        tmdbResults = tmdbResults.filter((item: any) => {
+          const isAnime = item.genre_ids?.includes(16);
+          if (region === 'bollywood') {
+            return item.original_language === 'hi';
+          } else if (region === 'anime') {
+            return item.original_language === 'ja' && isAnime;
+          } else if (region === 'hollywood') {
+            return item.original_language === 'en' && !isAnime;
+          }
+          return true;
+        });
+      }
+      
+      return tmdbResults
         .filter((item: any) => item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv' || type !== 'multi')) // Require poster, and filter to movie/tv if multi
         .map((item: any) => ({
           id: item.id.toString(),

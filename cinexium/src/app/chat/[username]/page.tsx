@@ -606,7 +606,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
       {/* Right Side Panel: Chat Info */}
       {isInfoOpen && (
-        <div className="absolute md:relative inset-y-0 right-0 z-50 md:z-auto w-full md:w-80 lg:w-96 border-l md:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
+        <div className="absolute xl:relative inset-y-0 right-0 z-50 xl:z-auto w-full sm:w-80 lg:w-96 border-l xl:border-l-0 border-white/10 md:border md:rounded-2xl md:shadow-2xl bg-[#15181e] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right duration-200">
           <div className="h-[73px] px-4 border-b border-white/10 flex justify-between items-center bg-[#1a1d24]">
             <h2 className="text-lg font-bold text-white">Chat Info</h2>
             <button onClick={() => setIsInfoOpen(false)} className="text-gray-400 hover:text-white transition-colors">
