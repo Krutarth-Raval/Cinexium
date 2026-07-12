@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import cloudinary from '@/lib/cloudinary';
 
+import { headers } from 'next/headers';
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -24,11 +26,21 @@ export async function GET() {
       appNotifications: true,
       isPremium: true,
       themePreference: true,
+      country: true,
     }
   });
 
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  return NextResponse.json({ user });
+
+  const headersList = await headers();
+  const ipCountry = headersList.get('x-vercel-ip-country');
+
+  return NextResponse.json({ 
+    user: {
+      ...user,
+      country: user.country || ipCountry || 'US'
+    }
+  });
 }
 
 export async function PUT(request: Request) {
