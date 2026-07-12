@@ -10,6 +10,8 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 
 const getCountryCode = (countryName: string) => {
+  if (!countryName) return 'US';
+  if (countryName.length === 2) return countryName.toUpperCase();
   const map: Record<string, string> = {
     'united states': 'US', 'usa': 'US', 'india': 'IN', 'united kingdom': 'GB', 'uk': 'GB',
     'canada': 'CA', 'australia': 'AU', 'germany': 'DE', 'france': 'FR', 'japan': 'JP',
@@ -44,8 +46,8 @@ export default async function Home() {
     try {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { country: true, isPremium: true } });
       if (user?.country) {
-        userCountry = user.country;
         countryCode = getCountryCode(user.country);
+        userCountry = getCountryName(countryCode);
       }
       if (user?.isPremium) {
         isPremium = true;
