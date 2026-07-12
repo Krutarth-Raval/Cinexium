@@ -7,14 +7,27 @@ export function useLongPress(
 ) {
   const timeout = useRef<NodeJS.Timeout | null>(null);
   const target = useRef<EventTarget | null>(null);
+  const isLongPressActive = useRef(false);
+  const touchEventFired = useRef(false);
 
   const start = useCallback(
     (event: any) => {
+      // Prevent duplicate ghost events
+      if (event.type === 'touchstart') {
+        touchEventFired.current = true;
+      }
+      if (event.type === 'mousedown' && touchEventFired.current) {
+        return;
+      }
+
+      isLongPressActive.current = false;
       if (shouldPreventDefault && event.target) {
         event.target.addEventListener('touchend', preventDefault, { passive: false });
         target.current = event.target;
       }
       timeout.current = setTimeout(() => {
+        isLongPressActive.current = true;
+        timeout.current = null;
         onLongPress(event);
       }, delay);
     },
@@ -23,18 +36,30 @@ export function useLongPress(
 
   const clear = useCallback(
     (event: any, shouldTriggerClick = true) => {
+      if (event.type === 'mouseup' && touchEventFired.current) {
+        return;
+      }
+
       if (timeout.current) {
         clearTimeout(timeout.current);
-        if (shouldTriggerClick) {
-          onClick(event);
-        }
+        timeout.current = null;
       }
+      
       if (shouldPreventDefault && target.current) {
         target.current.removeEventListener('touchend', preventDefault);
       }
     },
-    [shouldPreventDefault, onClick]
+    [shouldPreventDefault]
   );
+
+  const handleClick = useCallback((e: any) => {
+    if (isLongPressActive.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onClick(e);
+  }, [onClick]);
 
   return {
     onMouseDown: (e: any) => start(e),
@@ -42,7 +67,8 @@ export function useLongPress(
     onMouseUp: (e: any) => clear(e),
     onMouseLeave: (e: any) => clear(e, false),
     onTouchEnd: (e: any) => clear(e),
-    onTouchCancel: (e: any) => clear(e, false)
+    onTouchCancel: (e: any) => clear(e, false),
+    onClick: handleClick
   };
 }
 

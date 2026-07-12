@@ -151,6 +151,7 @@ model CollectionItem {
   mediaId      String
   mediaType    String   // "movie" or "tv"
   addedAt      DateTime @default(now())
+  pinnedAt     DateTime?
 
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
@@ -162,6 +163,7 @@ model CollectionLike {
   userId       String
   collectionId String
   createdAt    DateTime @default(now())
+  pinnedAt     DateTime?
 
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { tmdb } from '@/lib/tmdb';
 import { CollectionActions } from './CollectionActions';
 import { CollectionMobileHeader } from '@/components/collection/CollectionMobileHeader';
+import { CollectionItemsGrid } from '@/components/collection/CollectionItemsGrid';
 
 function formatTimeAgo(date: Date) {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -67,7 +68,9 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
     if (!details) return null;
     return {
       ...details,
-      addedAt: item.addedAt
+      addedAt: item.addedAt,
+      collectionItemId: item.id,
+      pinnedAt: item.pinnedAt
     };
   });
   
@@ -212,36 +215,11 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
 
       {/* Grid */}
       {mediaItems.length > 0 ? (
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-          {mediaItems.map((item: any) => (
-            <Link href={`/${item.type}/${item.id}`} key={`${item.type}-${item.id}`} className="group cursor-pointer flex flex-col gap-2">
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg border border-white/5 transition-transform duration-300 group-hover:scale-105 group-hover:border-primary-500/50 bg-[#1a1d24]">
-                <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute top-2 right-2">
-                  {item.type === 'series' && (
-                    <span className="px-1.5 py-0.5 border border-gray-400 bg-black/60 text-gray-300 text-[10px] rounded uppercase tracking-wider backdrop-blur-sm">Series</span>
-                  )}
-                  {item.type === 'movie' && (
-                    <span className="px-1.5 py-0.5 border border-gray-400 bg-black/60 text-gray-300 text-[10px] rounded uppercase tracking-wider backdrop-blur-sm">Movie</span>
-                  )}
-                </div>
-              </div>
-              <div className="w-full px-1">
-                <p className="text-gray-300 font-semibold text-[11px] md:text-sm truncate group-hover:text-primary-500 transition-colors">
-                  {item.title}
-                </p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-gray-400 text-[10px] border border-gray-700 rounded px-1">
-                    {item.releaseDate ? item.releaseDate.split('-')[0] : 'N/A'}
-                  </p>
-                  <p className="text-gray-500 text-[10px] ml-auto">
-                    {item.addedAt ? formatTimeAgo(item.addedAt) : ''}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <CollectionItemsGrid 
+          initialItems={mediaItems} 
+          collectionId={collection.id} 
+          isOwner={isOwner} 
+        />
       ) : (
         <div className="text-center text-gray-500 mt-20">
           <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,7 @@
 import { cookies, headers } from 'next/headers';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { MediaCarousel } from '@/components/home/MediaCarousel';
+import { ClientHistoryCarousel } from '@/components/home/ClientHistoryCarousel';
 import { tmdb } from '@/lib/tmdb';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
@@ -86,7 +87,7 @@ export default async function Home() {
     tmdb.getSeries('popular', region),
     tmdb.getMovies('top_rated', region),
     tmdb.getSeries('top_rated', region),
-    userId ? getUserHistory(userId) : Promise.resolve([]),
+    userId ? getUserHistory(userId, 10) : Promise.resolve({ items: [], nextCursor: null }),
     tmdb.getTrendingByCountry(countryCode, region),
     tmdb.getGlobalTop20()
   ]);
@@ -109,8 +110,8 @@ export default async function Home() {
         {globalTop20.length > 0 && (
           <MediaCarousel title="Global Top 20" items={globalTop20} />
         )}
-        {session && userHistory.length > 0 && (
-          <MediaCarousel title="Recently Viewed" items={userHistory} />
+        {session && userHistory.items.length > 0 && (
+          <ClientHistoryCarousel title="Recently Viewed" initialItems={userHistory.items} initialNextCursor={userHistory.nextCursor} />
         )}
       </div>
       
