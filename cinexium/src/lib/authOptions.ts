@@ -2,7 +2,6 @@ import { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import { prisma } from "@/lib/prisma"
-import { headers } from "next/headers"
 
 export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -107,21 +106,12 @@ export const authOptions: AuthOptions = {
             finalUsername = `${baseUsername}${counter}`;
             counter++;
           }
-          
-          let detectedCountry = "US";
-          try {
-            const reqHeaders = await headers();
-            detectedCountry = reqHeaders.get("x-vercel-ip-country") || "US";
-          } catch (e) {
-            console.error("Could not fetch headers for country detection", e);
-          }
 
           const newUser = await prisma.user.create({
             data: {
               email: token.email,
               name: token.name || 'User',
               username: finalUsername,
-              country: detectedCountry,
               verified: true
             }
           })
