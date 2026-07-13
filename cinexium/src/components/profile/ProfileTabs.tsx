@@ -55,7 +55,7 @@ function CollectionCard({ collection, isSelectMode, isSelected, onToggle, onLong
 
       <div className={`absolute inset-0 transition-colors pointer-events-none ${isSelectMode && isSelected ? 'bg-primary-500/20' : isSelectMode ? 'bg-black/40 hover:bg-black/20' : ''}`}></div>
 
-      {(isSelectMode || true) && (
+      {(isSelectMode || showPin) && (
         <div 
           onClick={(e) => {
             if (!isSelectMode) {
@@ -209,7 +209,7 @@ export const ProfileTabs = ({
                       setSelectedIds(new Set([collection.id]));
                     }
                   }}
-                  showPin={activeTab === 'my'}
+                  showPin={activeTab === 'my' && canPin}
                 />
               ))}
             </div>
