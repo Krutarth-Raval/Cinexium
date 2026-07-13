@@ -21,14 +21,16 @@ export const UsernameDisplay = ({
     <div className={`flex items-center gap-1.5 min-w-0 ${className}`}>
       {showPrivacyIcon && (
         isPrivate ? (
-          <svg className={`text-gray-400 flex-shrink-0 ${iconSize}`} viewBox="0 0 20 20" fill="currentColor">
+          <svg className={`text-gray-400 flex-shrink-0 ${iconSize}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <title>Private Account</title>
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
         ) : (
-          <svg className={`text-gray-400 flex-shrink-0 ${iconSize}`} viewBox="0 0 20 20" fill="currentColor">
+          <svg className={`text-gray-400 flex-shrink-0 ${iconSize}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <title>Public Account</title>
-            <path fillRule="evenodd" clipRule="evenodd" d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H9V7a1 1 0 012 0v2h2V7a3 3 0 00-3-3z" />
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
           </svg>
         )
       )}
