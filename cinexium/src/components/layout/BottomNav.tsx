@@ -73,7 +73,7 @@ export const BottomNav = () => {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0f1115]/95 backdrop-blur-xl border-t border-white/10 z-50 pb-safe">
+    <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0f1115]/95 backdrop-blur-xl border-t border-white/10 z-50 pb-safe transform-gpu">
       <div className="flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
