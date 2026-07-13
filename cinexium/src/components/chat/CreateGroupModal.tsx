@@ -48,6 +48,22 @@ export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: Cr
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isPremiumOnly) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        let changed = false;
+        followers.forEach(f => {
+          if (!f.follower.isPremium && next.has(f.follower.id)) {
+            next.delete(f.follower.id);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+  }, [isPremiumOnly, followers]);
+
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
@@ -179,8 +195,12 @@ export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: Cr
                 <p className="text-gray-400 text-sm">No contacts available to add.</p>
               </div>
             ) : (
+              <>
+              {isPremiumOnly && followers.some(f => !f.follower.isPremium) && (
+                <p className="text-xs text-primary-400 mb-2">Non-Pro contacts have been hidden.</p>
+              )}
               <div className="space-y-1 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                {followers.map(f => (
+                {followers.filter(f => !isPremiumOnly || f.follower.isPremium).map(f => (
                   <label key={f.follower.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent group">
                     <input 
                       type="checkbox" 
@@ -203,6 +223,7 @@ export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: Cr
                   </label>
                 ))}
               </div>
+              </>
             )}
           </div>
         </div>

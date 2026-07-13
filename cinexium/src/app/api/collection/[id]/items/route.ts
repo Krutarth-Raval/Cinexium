@@ -24,6 +24,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { collectionId: id, mediaId }
     });
 
+    if (!existing) {
+      // Check limits before adding
+      if (!user.isPremium) {
+        const count = await prisma.collectionItem.count({ where: { collectionId: id } });
+        if (count >= 20) {
+          return NextResponse.json({ error: 'Free tier limit reached: Maximum 20 items per collection.', premiumRequired: true }, { status: 403 });
+        }
+      }
+    }
+
     if (existing) {
       // Remove it
       await prisma.collectionItem.delete({ where: { id: existing.id } });

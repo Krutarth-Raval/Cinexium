@@ -62,6 +62,15 @@ export async function POST(request: Request) {
       }
     }
 
+    if (isPremiumOnly) {
+      const premiumUsers = await prisma.user.findMany({
+        where: { id: { in: memberIds }, isPremium: true }
+      });
+      if (premiumUsers.length !== memberIds.length) {
+         return NextResponse.json({ error: 'All added members must be Pro users to join a premium-only community.' }, { status: 400 });
+      }
+    }
+
     const inviteCode = isCommunity ? Math.random().toString(36).substring(2, 10) + Date.now().toString(36) : null;
 
     const group = await prisma.groupChat.create({

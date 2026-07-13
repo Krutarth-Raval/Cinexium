@@ -134,6 +134,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json(updated);
     } 
     
+    if (action === 'updateMessagePermission') {
+      const { messagePermission } = body;
+      const updated = await prisma.groupChat.update({
+        where: { id },
+        data: { messagePermission }
+      });
+      return NextResponse.json(updated);
+    }
+
     if (action === 'removeMember') {
       if (memberId === user.id) return NextResponse.json({ error: 'Cannot remove self' }, { status: 400 });
       await prisma.groupMember.delete({
@@ -152,6 +161,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (action === 'addMember') {
       const idsToAdd = Array.isArray(memberId) ? memberId : [memberId];
+      
+      if (group.isPremiumOnly) {
+        const premiumUsers = await prisma.user.findMany({
+          where: { id: { in: idsToAdd }, isPremium: true }
+        });
+        if (premiumUsers.length !== idsToAdd.length) {
+          return NextResponse.json({ error: 'All added members must be Pro users to join a premium-only community.' }, { status: 400 });
+        }
+      }
+
       const existingMembers = await prisma.groupMember.findMany({ where: { groupId: id } });
       const existingIds = existingMembers.map(m => m.userId);
       const newIds = idsToAdd.filter((newId: string) => !existingIds.includes(newId));

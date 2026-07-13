@@ -33,8 +33,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Not a member' }, { status: 403 });
       }
 
-      if (group.isCommunity && group.members[0].role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Only admins can send messages in a community' }, { status: 403 });
+      if (group.isCommunity) {
+        const role = group.members[0].role;
+        const permission = group.messagePermission || 'ALL';
+        
+        if (permission === 'ADMIN_ONLY' && role !== 'ADMIN') {
+          return NextResponse.json({ error: 'Only admins can send messages in this community' }, { status: 403 });
+        }
+        
+        if (permission === 'PREMIUM_ONLY' && role !== 'ADMIN' && !user.isPremium) {
+          return NextResponse.json({ error: 'Only Pro users and admins can send messages in this community' }, { status: 403 });
+        }
       }
 
       const message = await prisma.groupMessage.create({

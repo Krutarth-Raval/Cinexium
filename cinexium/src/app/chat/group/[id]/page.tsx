@@ -10,6 +10,7 @@ import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
 import { MediaShareCard } from '@/components/chat/MediaShareCard';
 import AddMemberModal from '@/components/chat/AddMemberModal';
 import ShareGroupModal from '@/components/chat/ShareGroupModal';
+import { CommunityBadge } from '@/components/chat/CommunityBadge';
 
 export default function GroupChatRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -50,6 +51,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
+  const [isPermissionDropdownOpen, setIsPermissionDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -95,7 +97,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     if (group && currentUser) {
-      const myMember = group.members.find((m: any) => m.userId === currentUser.id);
+      const myMember = group.members?.find((m: any) => m.userId === currentUser.id);
       setIsAdmin(myMember?.role === 'ADMIN');
       setIsHidden(myMember?.isHidden || false);
     }
@@ -251,6 +253,20 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
         setAvatarPreview(null);
       }
     } catch (e) { console.error(e); } finally { setIsSavingInfo(false); }
+  };
+
+  const handleUpdateMessagePermission = async (permission: string) => {
+    try {
+      const res = await fetch(`/api/chat/group/${group.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateMessagePermission', messagePermission: permission })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGroup(updated);
+      }
+    } catch (e) { console.error(e); }
   };
 
   const handleMemberAction = (targetUserId: string, action: string) => {
@@ -417,7 +433,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-red-800 mb-6 flex items-center justify-center shadow-xl">
               {group.avatar ? <img src={group.avatar} className="w-full h-full object-cover rounded-full" /> : <span className="text-4xl text-white font-bold">{group.name.charAt(0)}</span>}
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">{group.name}</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-3xl font-bold text-white">{group.name}</h2>
+              {group.isPremiumOnly && <CommunityBadge iconSize="w-8 h-8" />}
+            </div>
             <p className="text-gray-400 mb-8 text-center max-w-md">
               {group.isCommunity 
                 ? 'You are not a member of this community. Join to participate and see previous messages.' 
@@ -454,8 +473,11 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       <span className="text-white font-bold">{group.name.charAt(0).toUpperCase()}</span>
                     )}
                   </div>
-                  <div>
-                    <p className="text-white font-medium">{group.name}</p>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-white font-medium truncate">{group.name}</p>
+                      {group.isPremiumOnly && <CommunityBadge iconSize="w-4 h-4" />}
+                    </div>
                     <p className="text-xs text-gray-400">{group.members.length} members</p>
                   </div>
                 </div>
@@ -640,9 +662,12 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
             </div>
 
             {/* Input */}
-            {group.isCommunity && !isAdmin ? (
+            {group.isCommunity && !isAdmin && (
+              (group.messagePermission === 'ADMIN_ONLY') || 
+              (group.messagePermission === 'PREMIUM_ONLY' && !currentUser.isPremium)
+            ) ? (
               <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0 text-center text-gray-500 text-sm">
-                Only admins can send messages in this community.
+                {group.messagePermission === 'PREMIUM_ONLY' ? 'Only Pro members and admins can send messages.' : 'Only admins can send messages in this community.'}
               </div>
             ) : (
               <div className="p-4 bg-[#1a1d24] border-t border-white/10 shrink-0">
@@ -736,9 +761,53 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       {isSavingInfo ? 'Saving...' : 'Save Changes'}
                     </button>
                   )}
+                  {group.isCommunity && (
+                    <div className="mt-4 w-full text-left relative">
+                      <label className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2 block">Who can message</label>
+                      <button 
+                        onClick={() => setIsPermissionDropdownOpen(!isPermissionDropdownOpen)}
+                        className="w-full bg-[#1a1d24] border border-white/10 text-white text-sm rounded-lg p-3 flex items-center justify-between focus:ring-1 focus:ring-primary-500 focus:outline-none hover:bg-white/5 transition-colors"
+                      >
+                        <span>
+                          {group.messagePermission === 'ADMIN_ONLY' ? 'Admins Only' : 
+                           group.messagePermission === 'PREMIUM_ONLY' ? 'Pro Members & Admins' : 'All Members'}
+                        </span>
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isPermissionDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                      
+                      {isPermissionDropdownOpen && (
+                        <div className="absolute z-50 w-full mt-2 bg-[#1a1d24] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1">
+                          <button 
+                            onClick={() => { handleUpdateMessagePermission('ALL'); setIsPermissionDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-colors ${group.messagePermission === 'ALL' || !group.messagePermission ? 'bg-primary-500/10 text-primary-500' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                          >
+                            <span>All Members</span>
+                            {(group.messagePermission === 'ALL' || !group.messagePermission) && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                          </button>
+                          <button 
+                            onClick={() => { handleUpdateMessagePermission('ADMIN_ONLY'); setIsPermissionDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-colors ${group.messagePermission === 'ADMIN_ONLY' ? 'bg-primary-500/10 text-primary-500' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                          >
+                            <span>Admins Only</span>
+                            {group.messagePermission === 'ADMIN_ONLY' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                          </button>
+                          <button 
+                            onClick={() => { handleUpdateMessagePermission('PREMIUM_ONLY'); setIsPermissionDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-colors ${group.messagePermission === 'PREMIUM_ONLY' ? 'bg-primary-500/10 text-primary-500' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                          >
+                            <span>Pro Members & Admins</span>
+                            {group.messagePermission === 'PREMIUM_ONLY' && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <h3 className="text-2xl font-bold text-white text-center">{group.name}</h3>
+                <div className="flex items-center gap-2 justify-center">
+                  <h3 className="text-2xl font-bold text-white text-center">{group.name}</h3>
+                  {group.isPremiumOnly && <CommunityBadge iconSize="w-6 h-6" />}
+                </div>
               )}
             </div>
 
@@ -753,7 +822,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                 )}
               </div>
               <div className="space-y-2">
-                {group.members.map((m: any) => (
+                {group.members?.map((m: any) => (
                   <div key={m.id} className="flex items-center justify-between group p-2 hover:bg-white/5 rounded-xl transition-colors border border-transparent">
                     <Link href={`/profile/${m.user.username}`} className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
@@ -876,6 +945,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
         groupId={group?.id}
+        isPremiumOnly={group?.isPremiumOnly}
         onMembersAdded={fetchGroup}
       />
 

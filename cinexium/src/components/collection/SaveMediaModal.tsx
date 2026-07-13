@@ -90,6 +90,13 @@ export const SaveMediaModal = ({
         }
         
         router.refresh();
+      } else {
+        const err = await res.json();
+        if (err.premiumRequired) {
+          if (window.confirm("Maximum capacity reached. Upgrade to Pro to save unlimited items per collection.\n\nClick OK to upgrade.")) {
+            router.push('/premium');
+          }
+        }
       }
     } catch (e) {
       console.error(e);

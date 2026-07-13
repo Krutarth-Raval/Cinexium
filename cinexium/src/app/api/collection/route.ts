@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
         where: { userId: user.id }
       });
 
-      if (collectionCount >= 3) {
+      if (collectionCount >= 2) {
         return NextResponse.json({ 
-          error: 'Free users can only create up to 3 collections. Upgrade to Pro for unlimited collections!' 
+          error: 'Free users can only create up to 2 collections. Upgrade to Pro for unlimited collections!' 
         }, { status: 403 });
       }
     }

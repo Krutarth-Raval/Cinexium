@@ -76,12 +76,16 @@ export const CollectionActions = ({
 
     try {
       const res = await fetch(`/api/collection/${collectionId}/save`, { method: 'POST' });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error saving collection');
+      }
       router.refresh();
-    } catch {
+    } catch (error: any) {
       // Revert on error
       setIsSaved(previousState);
       setSaveCount(previousCount);
+      alert(error.message);
     } finally {
       setLoading(false);
     }

@@ -7,11 +7,13 @@ export default function AddMemberModal({
   isOpen, 
   onClose, 
   groupId,
+  isPremiumOnly,
   onMembersAdded 
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   groupId: string;
+  isPremiumOnly?: boolean;
   onMembersAdded: () => void;
 }) {
   const [followers, setFollowers] = useState<any[]>([]);
@@ -87,8 +89,9 @@ export default function AddMemberModal({
   };
 
   const filteredFollowers = followers.filter(f => 
-    (f.name || '').toLowerCase().includes(search.toLowerCase()) || 
-    (f.username || '').toLowerCase().includes(search.toLowerCase())
+    (!isPremiumOnly || f.isPremium) &&
+    ((f.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (f.username || '').toLowerCase().includes(search.toLowerCase()))
   );
 
   const renderContent = () => (
@@ -102,6 +105,10 @@ export default function AddMemberModal({
           className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
         />
       </div>
+
+      {isPremiumOnly && followers.some(f => !f.isPremium) && (
+        <p className="px-6 text-xs text-primary-400 mb-2">Non-Pro contacts have been hidden.</p>
+      )}
 
       <div className="flex-1 overflow-y-auto min-h-[200px] mb-4 space-y-2 px-6 custom-scrollbar">
         {filteredFollowers.map(f => (

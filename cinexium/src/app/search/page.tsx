@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { CollectionQuickActions } from '@/components/collection/CollectionQuickActions';
 import { SearchHistoryDrawer, renderHistoryText } from '@/components/ui/SearchHistoryDrawer';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { UsernameDisplay } from '@/components/profile/UsernameDisplay';
+import { CommunityBadge } from '@/components/chat/CommunityBadge';
 
 // ---------------- Helper for Spellcheck ----------------
 const getLevenshteinDistance = (a: string, b: string): number => {
@@ -36,6 +38,9 @@ interface SearchResultItem {
   posterUrl: string;
   type: string;
   url?: string;
+  isPremium?: boolean;
+  username?: string;
+  isPremiumOnly?: boolean;
 }
 
 interface SearchData {
@@ -486,8 +491,20 @@ const ResultRow = ({ title, items }: { title: string, items: SearchResultItem[] 
                   </div>
                 </div>
                 
-                <h3 className={`text-gray-200 font-medium truncate group-hover:text-primary-500 transition-colors w-full ${isCircular ? 'text-xs sm:text-sm text-center' : 'text-sm sm:text-base'}`}>
-                  {item.type === 'user' ? item.description : item.title}
+                <h3 className={`text-gray-200 font-medium group-hover:text-primary-500 transition-colors w-full flex items-center gap-1 ${isCircular ? 'text-xs sm:text-sm justify-center' : 'text-sm sm:text-base'}`}>
+                  {item.type === 'user' ? (
+                    <UsernameDisplay 
+                      username={item.username || item.description.replace('@', '')} 
+                      isPremium={item.isPremium} 
+                      iconSize="w-3.5 h-3.5"
+                      className="max-w-full justify-center"
+                    />
+                  ) : item.type === 'group' && item.isPremiumOnly ? (
+                    <div className="flex items-center gap-1 min-w-0 max-w-full justify-center">
+                      <span className="truncate min-w-0">{item.title}</span>
+                      <CommunityBadge iconSize="w-3.5 h-3.5" />
+                    </div>
+                  ) : item.title}
                 </h3>
               </Link>
             );

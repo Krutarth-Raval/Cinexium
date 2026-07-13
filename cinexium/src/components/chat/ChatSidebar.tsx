@@ -7,6 +7,7 @@ import { useSocket } from '@/components/providers/SocketProvider';
 import CreateGroupModal from './CreateGroupModal';
 import PinEntryModal from './PinEntryModal';
 import { useHiddenChat } from '@/components/providers/HiddenChatProvider';
+import { CommunityBadge } from './CommunityBadge';
 
 export default function ChatSidebar() {
   const [conversations, setConversations] = useState<any[]>([]);
@@ -178,8 +179,11 @@ export default function ChatSidebar() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <h3 className="font-semibold text-white truncate pr-2">{conv.isGroup ? conv.user.username : (conv.isBlocked ? '@cinexium_user' : (conv.user.name || `@${conv.user.username}`))}</h3>
+                <div className="flex justify-between items-center mb-0.5 min-w-0">
+                  <h3 className="font-semibold text-white flex items-center gap-1 min-w-0 pr-2">
+                    <span className="truncate">{conv.isGroup ? conv.user.username : (conv.isBlocked ? '@cinexium_user' : (conv.user.name || `@${conv.user.username}`))}</span>
+                    {conv.isGroup && conv.isPremiumOnly && <CommunityBadge iconSize="w-3.5 h-3.5" />}
+                  </h3>
                   {!conv.isContactOnly && (
                     <span className="text-[10px] text-gray-500 flex-shrink-0 font-medium">
                       {new Date(conv.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}

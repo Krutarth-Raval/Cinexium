@@ -118,6 +118,7 @@ export async function GET(req: NextRequest) {
         id: group.id,
         isGroup: true,
         isCommunity: group.isCommunity,
+        isPremiumOnly: group.isPremiumOnly,
         user: { id: group.id, username: group.name, name: group.name, avatar: group.avatar }, // map group details to 'user' for sidebar generic rendering
         isMuted: false, // Groups don't have individual mute yet in this schema
         latestMessage: previewText,

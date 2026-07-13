@@ -46,7 +46,7 @@ export async function GET(req: Request) {
           } : {})
         },
         take: 20,
-        select: { id: true, name: true, username: true, avatar: true }
+        select: { id: true, name: true, username: true, avatar: true, isPremium: true }
       }) : Promise.resolve([]),
       (filter === 'all') ? prisma.collection.findMany({
         where: { 
@@ -73,7 +73,9 @@ export async function GET(req: Request) {
         description: `@${u.username}`, 
         posterUrl: u.avatar || '', 
         type: 'user',
-        url: `/profile/${u.username}`
+        url: `/profile/${u.username}`,
+        isPremium: u.isPremium,
+        username: u.username
       })),
       collections: collections.map(c => ({ 
         id: c.id, 

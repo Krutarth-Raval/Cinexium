@@ -20,6 +20,8 @@ export const RegisterForm = () => {
   const [suggestions, setSuggestions] = useState<Array<{name: string, cca2: string}>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [debouncedCountry] = useDebounce(formData.country, 500);
+  const [debouncedUsername] = useDebounce(formData.username, 500);
+  const [usernameStatus, setUsernameStatus] = useState<{checking: boolean, available: boolean | null, suggestion?: string}>({ checking: false, available: null });
 
   React.useEffect(() => {
     fetch('/countries.json')
@@ -84,6 +86,30 @@ export const RegisterForm = () => {
     }
   }, [debouncedCountry, countriesList]);
 
+  React.useEffect(() => {
+    if (!debouncedUsername) {
+      setUsernameStatus({ checking: false, available: null });
+      return;
+    }
+
+    const checkUsername = async () => {
+      setUsernameStatus(prev => ({ ...prev, checking: true }));
+      try {
+        const res = await fetch(`/api/user/check-username?username=${encodeURIComponent(debouncedUsername)}`);
+        const data = await res.json();
+        setUsernameStatus({
+          checking: false,
+          available: data.available,
+          suggestion: data.suggestion
+        });
+      } catch (err) {
+        setUsernameStatus({ checking: false, available: null });
+      }
+    };
+
+    checkUsername();
+  }, [debouncedUsername]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -91,6 +117,12 @@ export const RegisterForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (usernameStatus.available === false) {
+      setError('Please choose an available username.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -160,9 +192,25 @@ export const RegisterForm = () => {
               required
               value={formData.username}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+              className={`w-full px-4 py-3 bg-white/5 border rounded-xl placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
+                usernameStatus.available === false 
+                  ? 'border-red-500 text-red-500 focus:ring-red-500' 
+                  : 'border-white/10 text-white focus:ring-primary-500'
+              }`}
               placeholder="johndoe"
             />
+            {usernameStatus.available === false && (
+              <p className="mt-1 text-xs text-red-500">
+                Already taken. Try:{' '}
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, username: usernameStatus.suggestion! }))}
+                  className="font-bold underline hover:text-red-400"
+                >
+                  {usernameStatus.suggestion}
+                </button>
+              </p>
+            )}
           </div>
         </div>
 

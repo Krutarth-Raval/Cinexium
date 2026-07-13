@@ -209,7 +209,7 @@ export default function PremiumPage() {
                   </li>
                   <li className="flex items-center gap-3">
                     <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    Up to 3 Custom Collections
+                    Create & save up to 2 Custom Collections
                   </li>
                 </ul>
               </div>
@@ -254,13 +254,13 @@ export default function PremiumPage() {
                     <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.4)]">
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                     </div>
-                    Exclusive neon purple Pro badge
+                    Exclusive Pro badge matching your theme
                   </li>
                   <li className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.4)]">
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                     </div>
-                    Pay-to-use premium chat rooms
+                    Create and manage Pro-exclusive Communities
                   </li>
                 </ul>
               </div>

@@ -277,7 +277,7 @@ function CollectionGridItem({ item, isSelectMode, isSelected, onToggle, onLongPr
         {...handlers}
         className="group relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg border border-white/5 transition-transform duration-300 hover:border-primary-500/50 bg-[#1a1d24] cursor-pointer select-none"
       >
-        <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
+        <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" draggable={false} />
         
         {item.pinnedAt && !isSelectMode && (
           <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-md px-1.5 py-1 rounded text-[10px] font-medium text-white flex items-center gap-1 border border-white/10 shadow-lg">

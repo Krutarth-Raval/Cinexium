@@ -28,6 +28,7 @@ export async function GET() {
             name: true,
             username: true,
             avatar: true,
+            isPremium: true,
           }
         }
       }

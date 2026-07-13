@@ -132,6 +132,7 @@ model Collection {
   name        String
   description String?  @default("")
   isPublic    Boolean  @default(true)
+  isPinned    Boolean  @default(false)
   thumbnail   String?
   userId      String
   createdAt   DateTime @default(now())
@@ -191,6 +192,7 @@ model GroupChat {
   isPublic      Boolean  @default(true)
   isCommunity   Boolean  @default(false)
   isPremiumOnly Boolean  @default(false)
+  messagePermission String @default("ALL") // "ALL", "ADMIN_ONLY", "PREMIUM_ONLY"
   inviteCode    String?  @unique
   ownerId       String
   createdAt     DateTime @default(now())

@@ -92,3 +92,49 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const collection = await prisma.collection.findUnique({
+      where: { id }
+    });
+
+    if (!collection || collection.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found or Forbidden' }, { status: 403 });
+    }
+
+    const { action } = await req.json();
+
+    if (action === 'pin' || action === 'unpin') {
+      if (!user.isPremium) {
+        return NextResponse.json({ error: 'Pro membership required to pin collections.', premiumRequired: true }, { status: 403 });
+      }
+
+      const updated = await prisma.collection.update({
+        where: { id },
+        data: { isPinned: action === 'pin' }
+      });
+
+      return NextResponse.json({ success: true, isPinned: updated.isPinned });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Error patching collection:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

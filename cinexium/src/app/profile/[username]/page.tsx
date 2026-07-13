@@ -9,6 +9,7 @@ import { CreateCollectionModal } from '@/components/profile/CreateCollectionModa
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { FollowsModal } from '@/components/profile/FollowsModal';
 import { Suspense } from 'react';
+import { UsernameDisplay } from '@/components/profile/UsernameDisplay';
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -100,7 +101,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           <Link href="/" className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </Link>
-          <h1 className="text-lg font-bold text-white">@{user.username}</h1>
+          <h1 className="text-lg font-bold text-white m-0 p-0 flex">
+            <UsernameDisplay 
+              username={user.username} 
+              isPremium={user.isPremium} 
+              isPrivate={user.isPrivate}
+              showPrivacyIcon={true}
+              iconSize="w-4 h-4"
+            />
+          </h1>
         </div>
         {isOwnProfile ? (
           <Link href="/settings/account" className="p-2 -mr-2 text-gray-400 hover:text-white transition-colors" title="Account Settings">
@@ -161,7 +170,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           <div className="hidden md:flex flex-col self-center w-full">
             {/* Desktop Header */}
             <div className="flex items-center gap-4 mb-4">
-              <h1 className="text-2xl font-bold text-white">@{user.username}</h1>
+              <h1 className="text-2xl font-bold text-white m-0 p-0 flex">
+                <UsernameDisplay 
+                  username={user.username} 
+                  isPremium={user.isPremium} 
+                  isPrivate={user.isPrivate}
+                  showPrivacyIcon={true}
+                  iconSize="w-5 h-5"
+                />
+              </h1>
             </div>
             
             {/* Stats (Desktop only) */}

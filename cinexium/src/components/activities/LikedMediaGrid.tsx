@@ -214,6 +214,7 @@ function MediaGridItem({ item, isSelectMode, isSelected, onToggle, onLongPress }
           src={item.details.posterUrl} 
           alt={item.details.title} 
           className={`w-full h-full object-cover transition-transform duration-300 ${isSelected ? 'scale-105' : 'group-hover:scale-105'}`}
+          draggable={false}
         />
       ) : (
         <div className="w-full h-full bg-white/5 flex items-center justify-center">

@@ -192,6 +192,7 @@ function CollectionGridItem({ item, isSelectMode, isSelected, onToggle, onLongPr
           src={collection.thumbnail}
           alt={collection.name}
           className={`w-full h-full object-cover transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}
+          draggable={false}
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#252a34] to-[#1a1d24]">

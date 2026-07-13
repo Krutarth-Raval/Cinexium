@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useDebounce } from 'use-debounce';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -22,6 +23,9 @@ export default function SettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const [debouncedUsername] = useDebounce(formData.username, 500);
+  const [usernameStatus, setUsernameStatus] = useState<{checking: boolean, available: boolean | null, suggestion?: string}>({ checking: false, available: null });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -62,11 +66,47 @@ export default function SettingsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!debouncedUsername || !user) {
+      setUsernameStatus({ checking: false, available: null });
+      return;
+    }
+
+    // Don't check if the username hasn't changed from their current one
+    if (debouncedUsername.toLowerCase() === user.username.toLowerCase()) {
+      setUsernameStatus({ checking: false, available: null });
+      return;
+    }
+
+    const checkUsername = async () => {
+      setUsernameStatus(prev => ({ ...prev, checking: true }));
+      try {
+        const res = await fetch(`/api/user/check-username?username=${encodeURIComponent(debouncedUsername)}`);
+        const data = await res.json();
+        setUsernameStatus({
+          checking: false,
+          available: data.available,
+          suggestion: data.suggestion
+        });
+      } catch (err) {
+        setUsernameStatus({ checking: false, available: null });
+      }
+    };
+
+    checkUsername();
+  }, [debouncedUsername, user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
     setSuccess('');
+
+    if (usernameStatus.available === false) {
+      setError('Please choose an available username.');
+      return;
+    }
+
+    setSaving(true);
 
     try {
       const data = new FormData();
@@ -83,7 +123,11 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
+        const updatedUser = await res.json();
         setSuccess('Profile updated successfully!');
+        // Update user state so the back button points to the new username
+        setUser(updatedUser.user);
+        setUsernameStatus({ checking: false, available: null });
         router.refresh();
       } else {
         const errData = await res.json();
@@ -103,7 +147,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen pt-4 md:pt-24 pb-12 px-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5" aria-label="Go back">
+        <button onClick={() => router.push(user?.username ? `/profile/${user.username}` : '/')} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5" aria-label="Go back">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <h1 className="text-xl md:text-3xl font-bold text-white">Edit Profile</h1>
@@ -139,7 +183,30 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Username</label>
-              <input type="text" name="username" value={formData.username} onChange={handleChange} className="w-full bg-[#0f1115] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500 transition-colors" required />
+              <input 
+                type="text" 
+                name="username" 
+                value={formData.username} 
+                onChange={handleChange} 
+                className={`w-full bg-[#0f1115] border rounded-xl px-4 py-3 transition-colors focus:outline-none focus:ring-2 ${
+                  usernameStatus.available === false 
+                    ? 'border-red-500 text-red-500 focus:ring-red-500' 
+                    : 'border-white/10 text-white focus:border-primary-500'
+                }`} 
+                required 
+              />
+              {usernameStatus.available === false && (
+                <p className="mt-1 text-xs text-red-500">
+                  Already taken. Try:{' '}
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, username: usernameStatus.suggestion! }))}
+                    className="font-bold underline hover:text-red-400"
+                  >
+                    {usernameStatus.suggestion}
+                  </button>
+                </p>
+              )}
             </div>
           </div>
 

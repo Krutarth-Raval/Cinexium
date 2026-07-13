@@ -35,6 +35,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
       return NextResponse.json({ success: true, saved: false });
     } else {
+      // Check premium limit for saving
+      if (!user.isPremium) {
+        const saveCount = await prisma.collectionSave.count({
+          where: { userId: user.id }
+        });
+        if (saveCount >= 2) {
+          return NextResponse.json({ 
+            error: 'Free users can only save up to 2 collections. Upgrade to Pro for unlimited saves!' 
+          }, { status: 403 });
+        }
+      }
+
       // Save
       await prisma.collectionSave.create({
         data: {
