@@ -46,9 +46,20 @@ function CollectionCard({ collection, isSelectMode, isSelected, onToggle, onLong
 
       {showPin && collection.isPinned && (
         <div className="absolute top-2 left-2 z-10 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-lg border border-white/20">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-white">
-            <path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75v5.59l1.95-2.1a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0L6.2 7.26a.75.75 0 111.1-1.02l1.95 2.1V2.75A.75.75 0 0110 2z" clipRule="evenodd" />
-            <path d="M5.273 4.5a1.25 1.25 0 00-1.205.918l-1.523 5.52c-.006.024-.01.048-.015.072v.011l-.01.136c-.005.061-.005.127-.005.243 0 1.257.9 2.302 2.107 2.463l.117.012 3.193.308A4.244 4.244 0 0010 15.5a4.244 4.244 0 001.966-.481l3.31.32.069.006c1.173.09 2.155-.918 2.155-2.106 0-.116 0-.182-.005-.243l-.01-.136a.782.782 0 00-.015-.072l-1.523-5.52a1.25 1.25 0 00-1.205-.918H5.273z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 text-white rotate-[-25deg]"
+          >
+            <path d="M12 17v5" />
+            <path d="M9 3h6l-1 5 3 3v1H7v-1l3-3-1-5Z" />
           </svg>
         </div>
       )}

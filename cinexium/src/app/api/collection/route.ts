@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COLLECTION_DESCRIPTION_LENGTH, MAX_COLLECTION_NAME_LENGTH, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,9 +22,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { name, description, isPublic } = await req.json();
+    const rateLimit = applyRateLimit({
+      key: `collection-create:${user.id}:${getClientIp(req)}`,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many collection creation attempts. Please try again later.' }, { status: 429 });
+    }
 
-    if (!name || typeof name !== 'string') {
+    const body = await req.json();
+    const name = normalizeText(body.name, MAX_COLLECTION_NAME_LENGTH);
+    const description = normalizeText(body.description, MAX_COLLECTION_DESCRIPTION_LENGTH);
+    const isPublic = typeof body.isPublic === 'boolean' ? body.isPublic : true;
+
+    if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
@@ -54,20 +70,20 @@ export async function POST(req: NextRequest) {
     const collection = await prisma.collection.create({
       data: {
         name,
-        description: description || '',
-        isPublic: isPublic !== undefined ? isPublic : true,
+        description,
+        isPublic,
         userId: user.id
       }
     });
 
     return NextResponse.json({ success: true, collection });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating collection:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -93,7 +109,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(collections);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching collections:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

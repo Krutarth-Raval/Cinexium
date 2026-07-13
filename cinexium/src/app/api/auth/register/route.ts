@@ -2,13 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { isValidEmail, isValidPassword, isValidUsername } from '@/lib/validators';
+import { applyRateLimit, enforceSameOrigin, getClientIp, normalizeIdentifier, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { name, username, email, password } = body;
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
 
-    // Validate data
+    const clientIp = getClientIp(req);
+    const rateLimit = applyRateLimit({
+      key: `register:${clientIp}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ message: 'Too many registration attempts. Please try again later.' }, { status: 429 });
+    }
+
+    const body = await req.json();
+    const name = normalizeText(body.name, 80);
+    const username = normalizeIdentifier(body.username, 24);
+    const email = normalizeIdentifier(body.email, 254);
+    const password = normalizeText(body.password, 128);
+
     if (!name || !username || !email || !password) {
       return NextResponse.json({ message: 'All fields are required' }, { status: 400 });
     }
@@ -26,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     if (!isValidPassword(password)) {
       return NextResponse.json(
-        { message: 'Password must be at least 8 characters long' },
+        { message: 'Password must be 8-128 characters long and include uppercase, lowercase, and a number' },
         { status: 400 }
       );
     }
@@ -68,9 +84,8 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('Registration Error:', error);
-    return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
-

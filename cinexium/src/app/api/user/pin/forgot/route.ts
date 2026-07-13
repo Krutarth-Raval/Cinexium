@@ -2,22 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import nodemailer from 'nodemailer';
+import { applyRateLimit, enforceSameOrigin, generateOtp, getClientIp } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+    const rateLimit = applyRateLimit({
+      key: `pin-forgot:${user.id}:${getClientIp(req)}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many PIN reset attempts. Please try again later.' }, { status: 429 });
+    }
+
     if (!user.chatPin) {
       return NextResponse.json({ error: 'PIN not set' }, { status: 400 });
     }
 
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtp();
     
     // Expires in 10 minutes
     const expires = new Date();
@@ -52,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Forgot PIN Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

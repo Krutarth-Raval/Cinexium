@@ -1,9 +1,13 @@
 import nodemailer from 'nodemailer';
 
 const getTransporter = () => {
-  const emailUser = process.env.EMAIL_USER || 'cinexiumapp@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || 'tjbj sgsj wpyj izdf';
-  
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
+    return null;
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -14,10 +18,15 @@ const getTransporter = () => {
 };
 
 export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
-  const emailUser = process.env.EMAIL_USER || 'cinexiumapp@gmail.com';
-  
+  const emailUser = process.env.EMAIL_USER;
+
   try {
     const transporter = getTransporter();
+    if (!transporter || !emailUser) {
+      console.warn('Email transport is not configured.');
+      return false;
+    }
+
     const mailOptions = {
       from: `"Cinexium" <${emailUser}>`,
       to,
@@ -32,7 +41,7 @@ export const sendEmail = async (to: string, subject: string, htmlContent: string
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email sent successfully to ${to}: ${info.messageId}`);
+    console.log(`Email sent successfully: ${info.messageId}`);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);
@@ -51,7 +60,7 @@ export const sendOTP = async (to: string, otp: string) => {
   `;
   
   const success = await sendEmail(to, 'Your Cinexium OTP Code', htmlContent);
-  if (!success) {
+  if (!success && process.env.NODE_ENV !== 'production') {
     console.log(`[DEVELOPMENT] OTP for ${to} is: ${otp}`);
   }
   return success;

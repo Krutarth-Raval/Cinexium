@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import prisma from '@/lib/prisma';
+import { enforceSameOrigin, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const user = session.user as any;
+    const user = session.user as { id: string };
 
     const group = await prisma.groupChat.findUnique({
       where: { id },
@@ -70,20 +71,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessages, isMember: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const user = session.user as any;
+    const user = session.user as { id: string };
 
     const body = await req.json();
-    const { action, name, memberId, role } = body;
+    const action = normalizeText(body.action, 32);
+    const name = normalizeText(body.name, MAX_GROUP_NAME_LENGTH);
+    const memberId = body.memberId;
+    const role = normalizeText(body.role, 16);
 
     const group = await prisma.groupChat.findUnique({
       where: { id },
@@ -98,9 +105,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (action === 'join') {
       if (member) return NextResponse.json({ error: 'Already a member' }, { status: 400 });
       
-      const { inviteCode } = body;
+      const inviteCode = normalizeText(body.inviteCode, 64);
       
-      // If community is premium-only, check if user is premium
       if (group.isPremiumOnly) {
         const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
         if (!dbUser?.isPremium) {
@@ -127,6 +133,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     if (action === 'updateInfo') {
+      if (!name) {
+        return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+      }
       const updated = await prisma.groupChat.update({
         where: { id },
         data: { name }
@@ -135,7 +144,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } 
     
     if (action === 'updateMessagePermission') {
-      const { messagePermission } = body;
+      const messagePermission = normalizeText(body.messagePermission, 16);
+      if (!['ALL', 'ADMIN_ONLY', 'PREMIUM_ONLY'].includes(messagePermission)) {
+        return NextResponse.json({ error: 'Invalid message permission' }, { status: 400 });
+      }
       const updated = await prisma.groupChat.update({
         where: { id },
         data: { messagePermission }
@@ -144,6 +156,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     if (action === 'removeMember') {
+      if (typeof memberId !== 'string' || !memberId) {
+        return NextResponse.json({ error: 'Invalid member' }, { status: 400 });
+      }
       if (memberId === user.id) return NextResponse.json({ error: 'Cannot remove self' }, { status: 400 });
       await prisma.groupMember.delete({
         where: { groupId_userId: { groupId: id, userId: memberId } }
@@ -152,6 +167,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     if (action === 'setRole') {
+      if (typeof memberId !== 'string' || !memberId || !['ADMIN', 'MEMBER'].includes(role)) {
+        return NextResponse.json({ error: 'Invalid role update' }, { status: 400 });
+      }
       await prisma.groupMember.update({
         where: { groupId_userId: { groupId: id, userId: memberId } },
         data: { role }
@@ -161,19 +179,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (action === 'addMember') {
       const idsToAdd = Array.isArray(memberId) ? memberId : [memberId];
+      const normalizedIds = idsToAdd.filter((newId: unknown): newId is string => typeof newId === 'string' && newId.length <= 64);
+      if (normalizedIds.length === 0) {
+        return NextResponse.json({ error: 'No valid members provided' }, { status: 400 });
+      }
       
       if (group.isPremiumOnly) {
         const premiumUsers = await prisma.user.findMany({
-          where: { id: { in: idsToAdd }, isPremium: true }
+          where: { id: { in: normalizedIds }, isPremium: true }
         });
-        if (premiumUsers.length !== idsToAdd.length) {
+        if (premiumUsers.length !== normalizedIds.length) {
           return NextResponse.json({ error: 'All added members must be Pro users to join a premium-only community.' }, { status: 400 });
         }
       }
 
       const existingMembers = await prisma.groupMember.findMany({ where: { groupId: id } });
       const existingIds = existingMembers.map(m => m.userId);
-      const newIds = idsToAdd.filter((newId: string) => !existingIds.includes(newId));
+      const newIds = normalizedIds.filter((newId: string) => !existingIds.includes(newId));
       if (newIds.length > 0) {
         await prisma.groupMember.createMany({
           data: newIds.map((newId: string) => ({ groupId: id, userId: newId, role: 'MEMBER' }))
@@ -183,17 +205,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const user = session.user as any;
+    const user = session.user as { id: string };
 
     const group = await prisma.groupChat.findUnique({
       where: { id },

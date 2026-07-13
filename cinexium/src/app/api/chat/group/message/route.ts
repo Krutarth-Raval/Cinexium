@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { pusherServer } from '@/lib/pusher';
+import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -18,11 +19,28 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
+    const rateLimit = applyRateLimit({
+      key: `group-message:${user.id}:${getClientIp(req)}`,
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'You are sending messages too quickly.' }, { status: 429 });
+    }
+
     const data = await req.json();
     const { action } = data;
 
     if (action === 'sendGroupMessage') {
-      const { groupId, content } = data;
+      const groupId = normalizeText(data.groupId, 64);
+      const content = normalizeText(data.content, MAX_MESSAGE_LENGTH);
+
+      if (!groupId || !content) {
+        return NextResponse.json({ error: 'Group and content are required' }, { status: 400 });
+      }
 
       const group = await prisma.groupChat.findUnique({
         where: { id: groupId },
@@ -61,7 +79,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'editGroupMessage') {
-      const { messageId, groupId, content } = data;
+      const messageId = normalizeText(data.messageId, 64);
+      const groupId = normalizeText(data.groupId, 64);
+      const content = normalizeText(data.content, MAX_MESSAGE_LENGTH);
+      if (!messageId || !groupId || !content) {
+        return NextResponse.json({ error: 'Message, group, and content are required' }, { status: 400 });
+      }
+
+      const existingMessage = await prisma.groupMessage.findUnique({
+        where: { id: messageId },
+      });
+
+      if (!existingMessage || existingMessage.groupId !== groupId) {
+        return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+      }
+
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } }
+      });
+
+      if (!membership || existingMessage.senderId !== user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       const message = await prisma.groupMessage.update({
         where: { id: messageId },
@@ -75,7 +114,27 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'deleteGroupMessage') {
-      const { messageId, groupId } = data;
+      const messageId = normalizeText(data.messageId, 64);
+      const groupId = normalizeText(data.groupId, 64);
+      if (!messageId || !groupId) {
+        return NextResponse.json({ error: 'Message and group are required' }, { status: 400 });
+      }
+
+      const existingMessage = await prisma.groupMessage.findUnique({
+        where: { id: messageId },
+      });
+
+      if (!existingMessage || existingMessage.groupId !== groupId) {
+        return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+      }
+
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } }
+      });
+
+      if (!membership || existingMessage.senderId !== user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       const message = await prisma.groupMessage.update({
         where: { id: messageId },
@@ -90,7 +149,20 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'reactGroupMessage') {
-      const { messageId, groupId, reaction } = data;
+      const messageId = normalizeText(data.messageId, 64);
+      const groupId = normalizeText(data.groupId, 64);
+      const reaction = normalizeText(data.reaction, 16);
+      if (!messageId || !groupId || !reaction) {
+        return NextResponse.json({ error: 'Message, group, and reaction are required' }, { status: 400 });
+      }
+
+      const membership = await prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId: user.id } }
+      });
+
+      if (!membership) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
 
       await prisma.groupMessageReaction.upsert({
         where: { messageId_userId: { messageId: messageId, userId: user.id } },

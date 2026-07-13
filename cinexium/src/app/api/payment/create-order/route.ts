@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { prisma } from '@/lib/prisma';
+import { enforceSameOrigin, isValidPlan } from '@/lib/security';
 
 const cashfree = new Cashfree(
   process.env.NODE_ENV === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX,
@@ -12,14 +13,20 @@ const cashfree = new Cashfree(
 
 export async function POST(req: Request) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id;
+    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { plan } = await req.json(); // 'monthly' or 'yearly'
+    const { plan } = await req.json();
+    if (!isValidPlan(plan)) {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -69,10 +76,10 @@ export async function POST(req: Request) {
     
     return NextResponse.json({
       ...response.data,
-      notes: { userId, plan } // Pass notes to frontend so it can send them to verify endpoint
+      notes: { userId, plan }
     });
-  } catch (error: any) {
-    console.error('Create Order Error:', error.response?.data || error.message || error);
+  } catch (error) {
+    console.error('Create Order Error:', error);
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
   }
 }

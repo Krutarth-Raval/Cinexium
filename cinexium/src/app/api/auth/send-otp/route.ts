@@ -1,25 +1,42 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendOTP } from '@/lib/email';
-import crypto from 'crypto';
+import { applyRateLimit, enforceSameOrigin, generateOtp, getClientIp, normalizeIdentifier } from '@/lib/security';
+import { isValidEmail, isValidUsername } from '@/lib/validators';
 
 export async function POST(req: Request) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
+    const clientIp = getClientIp(req);
+    const rateLimit = applyRateLimit({
+      key: `send-otp:${clientIp}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many OTP requests. Please try again later.' }, { status: 429 });
+    }
+
     const { identifier, action, email, username } = await req.json();
 
-    let targetEmail = email;
+    const normalizedAction = typeof action === 'string' ? action : '';
+    const normalizedIdentifier = normalizeIdentifier(identifier, 254);
+    const normalizedEmail = normalizeIdentifier(email, 254);
+    const normalizedUsername = normalizeIdentifier(username, 24);
+    let targetEmail = normalizedEmail;
 
-    if (action === 'login') {
-      if (!identifier) {
+    if (normalizedAction === 'login') {
+      if (!normalizedIdentifier) {
         return NextResponse.json({ error: 'Username or email is required' }, { status: 400 });
       }
       
-      // Find user by email or username
       const user = await prisma.user.findFirst({
         where: {
           OR: [
-            { email: identifier },
-            { username: identifier }
+            { email: normalizedIdentifier },
+            { username: normalizedIdentifier }
           ]
         }
       });
@@ -29,17 +46,20 @@ export async function POST(req: Request) {
       }
       
       targetEmail = user.email;
-    } else if (action === 'signup') {
-      if (!email || !username) {
+    } else if (normalizedAction === 'signup') {
+      if (!normalizedEmail || !normalizedUsername) {
         return NextResponse.json({ error: 'Email and username are required' }, { status: 400 });
       }
-      
-      // Check if user already exists
+
+      if (!isValidEmail(normalizedEmail) || !isValidUsername(normalizedUsername)) {
+        return NextResponse.json({ error: 'Invalid signup details' }, { status: 400 });
+      }
+
       const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
-            { email },
-            { username }
+            { email: normalizedEmail },
+            { username: normalizedUsername }
           ]
         }
       });
@@ -51,8 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtp();
     
     // Set expiration to 10 minutes from now
     const expiresAt = new Date();
@@ -83,7 +102,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, email: targetEmail });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Send OTP Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -3,10 +3,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { tmdb } from '@/lib/tmdb';
 import { prisma } from '@/lib/prisma';
+import { applyRateLimit, getClientIp, normalizeText } from '@/lib/security';
 
 export async function GET(req: Request) {
+  const rateLimit = applyRateLimit({
+    key: `global-search:${getClientIp(req)}`,
+    limit: 60,
+    windowMs: 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: 'Too many search requests' }, { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
-  let q = searchParams.get('q');
+  let q = normalizeText(searchParams.get('q'), 100);
   
   if (!q) {
     return NextResponse.json({ movies: [], series: [], users: [], collections: [], groupChats: [] });

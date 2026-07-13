@@ -3,21 +3,35 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { applyRateLimit, enforceSameOrigin, getClientIp, isValidOtp, isValidPin, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const originError = enforceSameOrigin(req);
+    if (originError) return originError;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { otp, newPin } = body;
+    const otp = normalizeText(body.otp, 6);
+    const newPin = normalizeText(body.newPin, 4);
 
-    if (!otp || !newPin || newPin.length !== 4) {
+    if (!isValidOtp(otp) || !isValidPin(newPin)) {
       return NextResponse.json({ error: 'Valid OTP and 4-digit PIN required' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const rateLimit = applyRateLimit({
+      key: `pin-reset:${user.id}:${getClientIp(req)}`,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many PIN reset attempts. Please try again later.' }, { status: 429 });
+    }
 
     if (!user.chatPinResetOtp || !user.chatPinResetExpires) {
       return NextResponse.json({ error: 'No OTP request found' }, { status: 400 });
@@ -43,7 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Reset PIN Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

@@ -1,19 +1,29 @@
 import { NextResponse } from 'next/server';
 import { tmdb } from '@/lib/tmdb';
 import { prisma } from '@/lib/prisma';
+import { applyRateLimit, getClientIp, normalizeText } from '@/lib/security';
 
 export async function GET(request: Request) {
+  const rateLimit = applyRateLimit({
+    key: `search:${getClientIp(request)}`,
+    limit: 60,
+    windowMs: 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: 'Too many search requests' }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get('q');
-  const type = searchParams.get('type') || 'movie'; // 'movie', 'series', 'user', 'multi'
-  const region = searchParams.get('region') || '';
+  const q = normalizeText(searchParams.get('q'), 100);
+  const type = normalizeText(searchParams.get('type'), 10) || 'movie';
+  const region = normalizeText(searchParams.get('region'), 10);
 
   if (!q) {
     return NextResponse.json({ results: [] });
   }
 
   try {
-    let results: any[] = [];
+    let results: Array<Record<string, unknown>> = [];
 
     if (type === 'movie' || type === 'series' || type === 'tv' || type === 'multi') {
       const tmdbType = type === 'series' ? 'tv' : type as 'movie' | 'tv' | 'multi';
