@@ -87,10 +87,12 @@ function CollectionCard({ collection, isSelectMode, isSelected, onToggle, onLong
 
 export const ProfileTabs = ({
   myCollections,
-  savedCollections
+  savedCollections,
+  canPin = false
 }: {
   myCollections: any[];
   savedCollections: any[];
+  canPin?: boolean;
 }) => {
   const [activeTab, setActiveTab] = useState<'my' | 'saved'>('my');
   const [selectMode, setSelectMode] = useState(false);
@@ -172,7 +174,7 @@ export const ProfileTabs = ({
             <span>SAVED<span className="hidden sm:inline"> COLLECTIONS</span></span>
           </button>
           
-          {activeCollections.length > 0 && activeTab === 'my' && (
+          {activeCollections.length > 0 && activeTab === 'my' && canPin && (
             <div className="absolute right-0 top-1/2 -translate-y-1/2">
               <button 
                 onClick={() => {
@@ -202,7 +204,7 @@ export const ProfileTabs = ({
                   isSelected={selectedIds.has(collection.id)}
                   onToggle={() => toggleSelection(collection.id)}
                   onLongPress={() => {
-                    if (!selectMode && activeTab === 'my') {
+                    if (!selectMode && activeTab === 'my' && canPin) {
                       setSelectMode(true);
                       setSelectedIds(new Set([collection.id]));
                     }
