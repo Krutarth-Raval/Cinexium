@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    let results: Array<Record<string, unknown>> = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let results: any[] = [];
 
     if (type === 'movie' || type === 'series' || type === 'tv' || type === 'multi') {
       const tmdbType = type === 'series' ? 'tv' : type as 'movie' | 'tv' | 'multi';
