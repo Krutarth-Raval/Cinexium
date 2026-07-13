@@ -75,7 +75,8 @@ export const authOptions: AuthOptions = {
               name: name || email.split('@')[0],
               username: finalUsername,
               country: country || "",
-              verified: true
+              verified: true,
+              isPrivate: true
             }
           })
         } else {
@@ -127,7 +128,8 @@ export const authOptions: AuthOptions = {
               email: token.email,
               name: token.name || 'User',
               username: finalUsername,
-              verified: true
+              verified: true,
+              isPrivate: true
             }
           })
           token.id = newUser.id;

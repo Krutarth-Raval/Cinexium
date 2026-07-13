@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         username,
         email,
         password: hashedPassword,
+        isPrivate: true,
       }
     });
 

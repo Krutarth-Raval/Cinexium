@@ -23,7 +23,7 @@ model User {
   role                 String    @default("user")
   deleteRequested      Boolean   @default(false)
   deleteAt             DateTime?
-  isPrivate            Boolean   @default(false)
+  isPrivate            Boolean   @default(true)
   chatNotifications    Boolean   @default(true)
   appNotifications     Boolean   @default(true)
   lastSeen             DateTime?
