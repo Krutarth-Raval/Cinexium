@@ -73,7 +73,11 @@ export const VerifyOtpForm = () => {
         throw new Error(result.error);
       }
 
-      router.push('/');
+      if (action === 'signup') {
+        router.push('/premium');
+      } else {
+        router.push('/');
+      }
       router.refresh();
     } catch (err: any) {
       setError(err.message || 'Verification failed');

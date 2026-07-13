@@ -1,22 +1,24 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
-import Script from 'next/script';
 import Link from 'next/link';
+import { load } from '@cashfreepayments/cashfree-js';
 
 export default function PremiumPage() {
   const [isYearly, setIsYearly] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [modalStatus, setModalStatus] = useState<'success' | 'error' | 'cancelled' | null>(null);
+  const [modalMessage, setModalMessage] = useState('');
 
   let monthlyPrice = 2.99;
   let yearlyPrice = 29.99;
   let currencySymbol = '$';
 
-  if (userData?.country === 'India' || userData?.country === 'IN') {
+  if (userData?.country === 'India' || userData?.country === 'IN' || process.env.NODE_ENV !== 'production') {
     monthlyPrice = 99;
     yearlyPrice = 999;
     currencySymbol = '₹';
@@ -25,7 +27,7 @@ export default function PremiumPage() {
   useEffect(() => {
     fetch('/api/user/me')
       .then(async res => {
-        if (!res.ok) throw new Error("Failed to fetch user");
+        if (!res.ok) return { user: null };
         return res.json();
       })
       .then(data => {
@@ -34,9 +36,38 @@ export default function PremiumPage() {
       .catch(console.error);
   }, []);
 
+  const verifyPayment = async (orderId: string, notes: any) => {
+    try {
+      const verifyRes = await fetch('/api/payment/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          userId: notes.userId,
+          plan: notes.plan
+        })
+      });
+      const verifyData = await verifyRes.json();
+      if (verifyData.success) {
+        setModalStatus('success');
+        setModalMessage('Payment successful! Welcome to Cinexium Pro.');
+        setTimeout(() => {
+          window.location.href = '/?upgrade=success';
+        }, 3000);
+      } else {
+        setModalStatus('error');
+        setModalMessage('Payment verification failed.');
+      }
+    } catch (e) {
+      setModalStatus('error');
+      setModalMessage('Error verifying payment.');
+    }
+  };
+
   const handleSubscribe = async () => {
     if (!termsAccepted) {
-      alert("Please accept the Terms & Conditions first.");
+      setModalStatus('error');
+      setModalMessage("Please accept the Terms & Conditions first.");
       return;
     }
     
@@ -49,47 +80,44 @@ export default function PremiumPage() {
       });
       const order = await res.json();
 
-      if (order.error) throw new Error(order.error);
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Cinexium Pro",
-        description: `Upgrade to Cinexium Pro (${isYearly ? 'Yearly' : 'Monthly'})`,
-        order_id: order.id,
-        handler: async function (response: any) {
-          const verifyRes = await fetch('/api/payment/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              userId: order.notes.userId,
-              plan: order.notes.plan
-            })
-          });
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            window.location.href = '/settings/account?upgrade=success';
-          } else {
-            alert("Payment verification failed.");
-          }
-        },
-        theme: {
-          color: "#a855f7"
+      if (order.error) {
+        if (order.error === 'Unauthorized') {
+          window.location.href = '/login';
+          return;
         }
+        setModalStatus('error');
+        setModalMessage(order.error);
+        setIsProcessing(false);
+        return;
+      }
+
+      const cashfree = await load({
+        mode: "sandbox", // Change to "production" when going live
+      });
+
+      let checkoutOptions = {
+        paymentSessionId: order.payment_session_id,
+        redirectTarget: "_modal",
       };
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        alert("Payment failed. Please try again.");
+      cashfree.checkout(checkoutOptions).then((result: any) => {
+        if (result.error) {
+          console.log("Payment error or user closed popup", result.error);
+          setModalStatus('cancelled');
+          setModalMessage("Payment was cancelled or failed.");
+        }
+        if (result.redirect) {
+          console.log("Payment will be redirected");
+        }
+        if (result.paymentDetails) {
+          console.log("Payment has been completed", result.paymentDetails.paymentMessage);
+          verifyPayment(order.order_id, order.notes);
+        }
       });
-      rzp.open();
     } catch (error) {
       console.error(error);
-      alert("Failed to initiate payment. Are you logged in?");
+      setModalStatus('error');
+      setModalMessage("Failed to initiate payment. Are you logged in?");
     } finally {
       setIsProcessing(false);
     }
@@ -97,7 +125,6 @@ export default function PremiumPage() {
 
   return (
     <div className="min-h-screen bg-[#0f1115] pt-24 pb-24 px-4 overflow-hidden relative">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
 
@@ -293,6 +320,54 @@ export default function PremiumPage() {
           </div>
         )}
       </div>
+
+      {/* Payment Status Modal */}
+      <AnimatePresence>
+        {modalStatus && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setModalStatus(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-[#1a1d24] border border-white/10 p-8 rounded-3xl max-w-md w-full relative z-10 text-center shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+            >
+              <div className="flex justify-center mb-6">
+                {modalStatus === 'success' ? (
+                  <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-5xl">
+                    🥳
+                  </div>
+                ) : modalStatus === 'cancelled' ? (
+                  <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center text-5xl">
+                    😕
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-5xl">
+                    😢
+                  </div>
+                )}
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                {modalStatus === 'success' ? 'Woohoo!' : modalStatus === 'cancelled' ? 'Oh no!' : 'Oops!'}
+              </h3>
+              <p className="text-gray-400 mb-8">{modalMessage}</p>
+              
+              <button 
+                onClick={() => setModalStatus(null)}
+                className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-colors"
+              >
+                {modalStatus === 'success' ? 'Redirecting...' : 'Close'}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,19 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
+import { Cashfree, CFEnvironment } from 'cashfree-pg';
+
+const cashfree = new Cashfree(
+  process.env.NODE_ENV === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX,
+  process.env.CASHFREE_APP_ID || '',
+  process.env.CASHFREE_SECRET_KEY || ''
+);
 
 export async function POST(req: Request) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, plan } = await req.json();
+    const { order_id, userId, plan } = await req.json();
 
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const response = await cashfree.PGOrderFetchPayments(order_id);
+    
+    // Check if any payment was successful
+    const successfulPayment = response.data.find((payment: any) => payment.payment_status === 'SUCCESS');
 
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-      .update(body.toString())
-      .digest('hex');
-
-    if (expectedSignature === razorpay_signature) {
+    if (successfulPayment) {
       // Payment is valid! Upgrade the user!
       
       const now = new Date();
@@ -35,10 +39,10 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true });
     } else {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      return NextResponse.json({ error: 'Payment not successful' }, { status: 400 });
     }
-  } catch (error) {
-    console.error('Verify Payment Error:', error);
+  } catch (error: any) {
+    console.error('Verify Payment Error:', error.response?.data || error.message || error);
     return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 });
   }
 }

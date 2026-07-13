@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import Razorpay from 'razorpay';
+import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { prisma } from '@/lib/prisma';
+
+const cashfree = new Cashfree(
+  process.env.NODE_ENV === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX,
+  process.env.CASHFREE_APP_ID || '',
+  process.env.CASHFREE_SECRET_KEY || ''
+);
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +23,7 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { country: true }
+      select: { country: true, name: true, email: true }
     });
 
     const isIndia = user?.country === 'India' || user?.country === 'IN';
@@ -25,34 +31,48 @@ export async function POST(req: Request) {
     let amount = 0;
     let currency = 'USD';
 
-    if (isIndia) {
+    if (isIndia || process.env.NODE_ENV !== 'production') {
       currency = 'INR';
-      // Prices in paise
-      amount = plan === 'yearly' ? 999 * 100 : 99 * 100;
+      // Prices in standard format
+      amount = plan === 'yearly' ? 999.00 : 99.00;
     } else {
       currency = 'USD';
-      // Prices in cents
-      amount = plan === 'yearly' ? 2999 : 299;
+      // Prices in standard format
+      amount = plan === 'yearly' ? 29.99 : 2.99;
     }
 
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
-    });
+    const orderId = `rcpt_${Date.now()}_${userId.substring(0, 8)}`;
 
-    const order = await razorpay.orders.create({
-      amount,
-      currency,
-      receipt: `rcpt_${Date.now()}_${userId.substring(0, 8)}`,
-      notes: {
-        userId,
-        plan
-      }
-    });
+    const request = {
+      order_amount: amount,
+      order_currency: currency,
+      order_id: orderId,
+      customer_details: {
+        customer_id: userId,
+        customer_name: user?.name || 'Customer',
+        customer_email: user?.email || 'test@example.com',
+        customer_phone: '9999999999' // Cashfree requires a phone number
+      },
+      order_meta: {
+        // This is primarily for hosted checkout, but good to include
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/settings/account?order_id={order_id}`
+      },
+      order_note: plan
+    };
 
-    return NextResponse.json(order);
-  } catch (error) {
-    console.error('Create Order Error:', error);
+    const response = await cashfree.PGCreateOrder(request);
+    
+    // We return the response data which contains the payment_session_id
+    // We also return our notes (userId, plan) so frontend knows about it, 
+    // but typically Cashfree webhook handles verification.
+    // For this flow, we'll verify manually using order_id.
+    
+    return NextResponse.json({
+      ...response.data,
+      notes: { userId, plan } // Pass notes to frontend so it can send them to verify endpoint
+    });
+  } catch (error: any) {
+    console.error('Create Order Error:', error.response?.data || error.message || error);
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
   }
 }
