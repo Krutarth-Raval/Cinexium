@@ -32,6 +32,47 @@ export const RegionEdgePanel = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  useEffect(() => {
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.changedTouches[0].clientX;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      touchEndX = e.changedTouches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      if (!touchStartX || !touchEndX) return;
+      const swipeDistance = touchStartX - touchEndX;
+
+      // Swipe Left to Open (starting near the right edge)
+      if (swipeDistance > 40 && touchStartX > window.innerWidth - 60) {
+        if (!isOpen) setIsOpen(true);
+      }
+
+      // Swipe Right to Close
+      if (swipeDistance < -40 && isOpen) {
+        setIsOpen(false);
+      }
+      
+      touchStartX = 0;
+      touchEndX = 0;
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isOpen]);
+
   const regions = [
     { id: 'hollywood', label: 'ENG', fullLabel: 'HOLLYWOOD' },
     { id: 'bollywood', label: 'HIN', fullLabel: 'BOLLYWOOD' },
@@ -90,7 +131,7 @@ export const RegionEdgePanel = () => {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="w-2 h-32 bg-primary-500 rounded-l-md shadow-[0_0_15px_rgba(229,9,20,0.5)] hover:w-3 transition-all duration-200"
+            className="w-[11px] h-32 bg-primary-500 rounded-l-md shadow-[0_0_15px_rgba(229,9,20,0.5)] hover:w-[14px] transition-all duration-200"
             aria-label="Open region toggle"
           />
         )}
