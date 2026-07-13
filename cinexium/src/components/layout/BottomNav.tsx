@@ -9,9 +9,9 @@ export const BottomNav = () => {
   const { hasUnreadMessages } = useSocket();
 
   if (
-    pathname === '/login' || 
-    pathname === '/register' || 
-    pathname === '/verify-otp' || 
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/verify-otp' ||
     pathname?.startsWith('/chat/') ||
     pathname === '/privacy' ||
     pathname === '/terms' ||
@@ -45,17 +45,21 @@ export const BottomNav = () => {
       href: '/movies',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-7.5a1.125 1.125 0 01-1.125-1.125v-3.75c0-.621.504-1.125 1.125-1.125z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m6.2 5.3 3.1 3.9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m12.4 3.4 3.1 4" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
         </svg>
       )
     },
 
     {
-      name: 'Series',
+      name: 'TV Shows',
       href: '/series',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125z" />
+          <rect width="20" height="15" x="2" y="7" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points="17 2 12 7 7 2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )
     },
