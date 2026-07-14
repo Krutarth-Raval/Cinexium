@@ -61,9 +61,15 @@ export default function TermsOfServicePage() {
             The Cinexium platform, including its original content, features, and functionality, are owned by Cinexium and are protected by international copyright and trademark laws.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">8. Premium Subscriptions & No Refunds</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">8. Premium Subscriptions & Refund Policy</h2>
           <p className="mb-6">
-            Cinexium offers optional premium subscriptions ("Cinexium Pro") for enhanced features. All purchases are strictly final. We have a strict <strong>NO REFUNDS</strong> policy. If you decide to delete your account, you will permanently lose access to your premium subscription and no partial or full refunds will be issued. Registering again with the same email will result in a new, free account.
+            Cinexium Pro is offered as a recurring monthly or yearly subscription. You may cancel your subscription at any time to prevent future renewals.
+          </p>
+          <p className="mb-6">
+            Refund requests are reviewed on a case-by-case basis and may be granted where required by applicable law or in situations such as accidental duplicate charges, billing errors, or technical issues that prevent access to purchased premium features.
+          </p>
+          <p className="mb-6">
+            If you believe you are eligible for a refund, contact <a href="mailto:cinexium@gmail.com" className="text-primary-500 hover:underline">cinexium@gmail.com</a> with your purchase details. Approved refunds will be processed through the original payment method whenever possible.
           </p>
 
           <h2 className="text-xl font-semibold mt-8 mb-4">9. Service Availability</h2>
