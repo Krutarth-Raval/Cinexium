@@ -7,10 +7,25 @@ import { signOut } from 'next-auth/react';
 import { PrivacyToggle } from '@/components/profile/PrivacyToggle';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
 
+type AccountUser = {
+  email: string;
+  isPremium: boolean;
+  isPrivate: boolean;
+  premiumType?: string | null;
+  premiumUntil?: string | null;
+  themePreference?: string | null;
+};
+
+type ThemeOption = {
+  id: string;
+  name: string;
+  colorClass: string;
+};
+
 export default function AccountSettingsPage() {
   const router = useRouter();
   
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Deletion states
@@ -18,8 +33,10 @@ export default function AccountSettingsPage() {
   const [deleteOtp, setDeleteOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [isSendingDeleteOtp, setIsSendingDeleteOtp] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isThemeSelectionOpen, setIsThemeSelectionOpen] = useState(false);
-  const [themeToConfirm, setThemeToConfirm] = useState<any>(null);
+  const [themeToConfirm, setThemeToConfirm] = useState<ThemeOption | null>(null);
 
   const getActiveThemeId = () => {
     if (!user) return 'default';
@@ -29,7 +46,7 @@ export default function AccountSettingsPage() {
     return user.themePreference || 'default';
   };
 
-  const themes = [
+  const themes: ThemeOption[] = [
     { id: 'default', name: 'Default', colorClass: 'bg-[#e50914]' }, // For Free Users
     { id: 'neon-purple', name: 'Neon Purple', colorClass: 'bg-purple-500' },
     { id: 'red', name: 'Classic Red', colorClass: 'bg-[#e50914]' }, // For Premium Users wanting red
@@ -59,37 +76,46 @@ export default function AccountSettingsPage() {
 
   const requestDeleteOtp = async () => {
     setDeleteError('');
+    setIsSendingDeleteOtp(true);
     try {
-      const res = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, action: 'login' }) 
+      const res = await fetch('/api/user/delete', {
+        method: 'PUT',
       });
+
       if (res.ok) {
         setOtpSent(true);
+        setDeleteError('');
       } else {
-        setDeleteError('Failed to send OTP.');
+        const data = await res.json().catch(() => null);
+        setDeleteError(data?.error || 'Failed to send OTP.');
       }
     } catch {
       setDeleteError('Error sending OTP.');
+    } finally {
+      setIsSendingDeleteOtp(false);
     }
   };
 
   const confirmDelete = async () => {
     setDeleteError('');
+    setIsConfirmingDelete(true);
     try {
       const res = await fetch('/api/user/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: deleteOtp })
       });
+
       if (res.ok) {
-        signOut({ callbackUrl: '/' });
+        await signOut({ callbackUrl: '/' });
       } else {
-        setDeleteError('Invalid OTP');
+        const data = await res.json().catch(() => null);
+        setDeleteError(data?.error || 'Invalid OTP');
       }
     } catch {
       setDeleteError('Error deleting account');
+    } finally {
+      setIsConfirmingDelete(false);
     }
   };
 
@@ -224,14 +250,26 @@ export default function AccountSettingsPage() {
                   
                   {!otpSent ? (
                     <div className="flex gap-4">
-                      <button onClick={requestDeleteOtp} className="px-6 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm shadow-[0_0_10px_rgba(229,9,20,0.3)]">Send OTP</button>
+                      <button
+                        onClick={requestDeleteOtp}
+                        disabled={isSendingDeleteOtp}
+                        className="px-6 py-2 bg-primary-500 text-white rounded-xl font-bold text-sm shadow-[0_0_10px_rgba(229,9,20,0.3)] disabled:opacity-70 disabled:cursor-wait"
+                      >
+                        {isSendingDeleteOtp ? 'Sending...' : 'Send OTP'}
+                      </button>
                       <button onClick={() => setIsDeleting(false)} className="px-6 py-2 text-gray-400 hover:text-white font-medium text-sm">Cancel</button>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       <input type="text" value={deleteOtp} onChange={e => setDeleteOtp(e.target.value)} placeholder="Enter 6-digit OTP" className="w-full bg-[#0f1115] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary-500 tracking-widest text-center text-lg font-mono" maxLength={6} />
                       <div className="flex gap-4">
-                        <button onClick={confirmDelete} className="flex-1 px-6 py-3 bg-primary-500 text-white rounded-xl font-bold">Confirm Deletion</button>
+                        <button
+                          onClick={confirmDelete}
+                          disabled={isConfirmingDelete || deleteOtp.trim().length !== 6}
+                          className="flex-1 px-6 py-3 bg-primary-500 text-white rounded-xl font-bold disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          {isConfirmingDelete ? 'Deleting...' : 'Confirm Deletion'}
+                        </button>
                         <button onClick={() => { setIsDeleting(false); setOtpSent(false); setDeleteOtp(''); }} className="px-6 py-3 bg-[#252a34] text-white rounded-xl font-medium">Cancel</button>
                       </div>
                     </div>
@@ -329,7 +367,9 @@ export default function AccountSettingsPage() {
                   setIsThemeSelectionOpen(false);
                   
                   // Optimistic update
-                  setUser({ ...user, themePreference: newTheme });
+                  setUser((currentUser) =>
+                    currentUser ? { ...currentUser, themePreference: newTheme } : currentUser
+                  );
                   window.dispatchEvent(new CustomEvent('themeChanged', { detail: newTheme }));
 
                   // Save to API
