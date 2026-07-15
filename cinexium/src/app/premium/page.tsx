@@ -301,7 +301,7 @@ export default function PremiumPage() {
                   className="mt-1 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900 bg-gray-800 cursor-pointer"
                 />
                 <label htmlFor="terms" className="text-xs text-gray-400 cursor-pointer">
-                  I agree to the <Link href="/terms" className="text-purple-400 hover:underline" target="_blank">Terms & Conditions</Link>. I understand that all purchases are final and there are <strong>no refunds</strong>, even upon account deletion.
+                  I agree to the <Link href="/terms" className="text-purple-400 hover:underline" target="_blank">Terms & Conditions</Link> and Refund Policy.
                 </label>
               </div>
 
