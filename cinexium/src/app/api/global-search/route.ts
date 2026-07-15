@@ -26,7 +26,8 @@ export async function GET(req: Request) {
   if (q.toUpperCase().startsWith('M-')) { filter = 'movie'; q = q.substring(2); }
   else if (q.toUpperCase().startsWith('TV-')) { filter = 'tv'; q = q.substring(3); }
   else if (q.startsWith('@')) { filter = 'user'; q = q.substring(1); }
-  else if (q.toUpperCase().startsWith('C-')) { filter = 'community'; q = q.substring(2); }
+  else if (q.startsWith('#')) { filter = 'community'; q = q.substring(1); }
+  else if (q.toUpperCase().startsWith('C-')) { filter = 'collection'; q = q.substring(2); }
 
   if (!q.trim()) {
     return NextResponse.json({ movies: [], series: [], users: [], collections: [], groupChats: [] });
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
         take: 20,
         select: { id: true, name: true, username: true, avatar: true, isPremium: true }
       }) : Promise.resolve([]),
-      (filter === 'all') ? prisma.collection.findMany({
+      (filter === 'all' || filter === 'collection') ? prisma.collection.findMany({
         where: { 
           name: { contains: q, mode: 'insensitive' }, 
           isPublic: true,

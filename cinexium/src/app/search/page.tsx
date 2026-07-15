@@ -119,7 +119,7 @@ export default function SearchPage() {
         saveToHistory(searchQuery);
         
         // Did You Mean typo check
-        const cleanQuery = searchQuery.replace(/^(M-|TV-|C-|@)/i, '').trim().toLowerCase();
+        const cleanQuery = searchQuery.replace(/^(M-|TV-|C-|@|#)/i, '').trim().toLowerCase();
         let suggestion = null;
         const checkSuggestion = (title?: string) => {
           if (!title) return null;
@@ -154,9 +154,11 @@ export default function SearchPage() {
       
       {/* Animated Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary-500/20 rounded-full blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-        <div className="absolute top-[30%] right-[20%] w-[30%] h-[30%] bg-purple-500/10 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+        <div className="absolute left-[-12%] top-[-12%] h-[44%] w-[38%] rounded-full bg-primary-500/18 blur-[150px] mix-blend-screen animate-pulse" style={{ animationDuration: '5.5s' }} />
+        <div className="absolute left-[-10%] bottom-[-10%] h-[38%] w-[40%] rounded-full bg-purple-500/16 blur-[145px] mix-blend-screen animate-pulse" style={{ animationDuration: '6.6s', animationDelay: '1.2s' }} />
+        <div className="absolute left-1/2 top-[34%] h-[22%] w-[18%] -translate-x-1/2 rounded-full bg-green-500/12 blur-[105px] mix-blend-screen animate-pulse" style={{ animationDuration: '5.9s', animationDelay: '0.8s' }} />
+        <div className="absolute right-[-12%] top-[-8%] h-[36%] w-[42%] rounded-full bg-blue-500/16 blur-[145px] mix-blend-screen animate-pulse" style={{ animationDuration: '6.8s', animationDelay: '1.5s' }} />
+        <div className="absolute bottom-[-12%] right-[-10%] h-[40%] w-[34%] rounded-full bg-amber-500/16 blur-[145px] mix-blend-screen animate-pulse" style={{ animationDuration: '6.2s', animationDelay: '2s' }} />
       </div>
       
       {/* Search Bar Container */}
@@ -187,7 +189,7 @@ export default function SearchPage() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder="Press Enter to search movies, series, users..."
+                placeholder="Press Enter to search movies, series, users, collections..."
                 className="flex-1 bg-transparent text-white text-sm sm:text-lg px-2 py-2 sm:py-2.5 outline-none placeholder:text-gray-500 font-normal w-full"
               />
               <AnimatePresence>
@@ -230,42 +232,47 @@ export default function SearchPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-4xl mx-auto px-4 mt-4 sm:mt-12 z-40 relative"
+          className="relative z-40 mx-auto mt-4 w-full max-w-[820px] px-4 sm:mt-12"
         >
           <h3 className="text-gray-400 mb-6 text-center font-medium tracking-wider text-xs sm:text-sm uppercase">Advanced Search Filters</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 auto-rows-[88px] gap-3 sm:auto-rows-[96px] sm:gap-4">
             {[
-              { prefix: 'M-', label: 'Movies', icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              { prefix: 'M-', label: 'Movies', layoutClass: 'col-start-1 row-start-1 row-span-2', cardClass: '', icon: (
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                 </svg>
               ), color: 'text-primary-500', groupHover: 'group-hover:text-primary-400', groupBorder: 'hover:border-primary-500/30' },
-              { prefix: 'TV-', label: 'Series', icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              { prefix: 'TV-', label: 'TV Shows', layoutClass: 'col-start-2 row-start-1 col-span-2', cardClass: 'py-4 sm:py-5', icon: (
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               ), color: 'text-blue-500', groupHover: 'group-hover:text-blue-400', groupBorder: 'hover:border-blue-500/30' },
-              { prefix: '@', label: 'Users', icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              { prefix: '@', label: 'Users', layoutClass: 'col-start-2 row-start-2', cardClass: 'py-4 sm:py-5', icon: (
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               ), color: 'text-green-500', groupHover: 'group-hover:text-green-400', groupBorder: 'hover:border-green-500/30' },
-              { prefix: 'C-', label: 'Communities', icon: (
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              { prefix: '#', label: 'Communities', layoutClass: 'col-start-1 row-start-3 col-span-2', cardClass: 'py-4 sm:py-5', icon: (
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               ), color: 'text-purple-500', groupHover: 'group-hover:text-purple-400', groupBorder: 'hover:border-purple-500/30' },
+              { prefix: 'C-', label: 'Collections', layoutClass: 'col-start-3 row-start-2 row-span-2', cardClass: '', icon: (
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 6h-15A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h15a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 19.5 6ZM3 9.75h18M7.5 3h9A1.5 1.5 0 0 1 18 4.5V6H6V4.5A1.5 1.5 0 0 1 7.5 3Z" />
+                </svg>
+              ), color: 'text-amber-500', groupHover: 'group-hover:text-amber-400', groupBorder: 'hover:border-amber-500/30' },
             ].map((tip) => (
               <button 
                 key={tip.prefix}
                 onClick={() => setQuery(tip.prefix)}
-                className={`flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl border border-white/5 bg-[#13161c]/60 backdrop-blur-md ${tip.groupBorder} hover:bg-white/5 transition-all duration-300 group shadow-lg`}
+                className={`flex h-full min-h-[88px] w-full flex-col items-center justify-center rounded-2xl border border-white/5 bg-[#13161c]/60 px-3 py-3 text-center backdrop-blur-md ${tip.groupBorder} ${tip.layoutClass} ${tip.cardClass} hover:bg-white/5 transition-all duration-300 group shadow-lg sm:min-h-[96px] sm:px-4 sm:py-4`}
               >
-                <div className={`mb-3 text-gray-500 ${tip.groupHover} transition-colors duration-300`}>
+                <div className={`mb-2 text-gray-500 ${tip.groupHover} transition-colors duration-300`}>
                   {tip.icon}
                 </div>
-                <span className={`font-bold ${tip.color} mb-1 text-sm sm:text-base tracking-wide`}>{tip.prefix}</span>
-                <span className="text-gray-400 text-xs text-center font-medium">{tip.label}</span>
+                <span className={`mb-1 font-bold ${tip.color} text-sm tracking-wide sm:text-base`}>{tip.prefix}</span>
+                <span className="text-center text-[11px] font-medium leading-tight text-gray-400 sm:text-xs">{tip.label}</span>
               </button>
             ))}
           </div>

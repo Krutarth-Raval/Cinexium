@@ -38,11 +38,20 @@ export const RegionEdgePanel = () => {
   useEffect(() => {
     let touchStartX = 0;
     let touchEndX = 0;
+    let touchStartY = 0;
     let localIsDragging = false;
+
+    const isWithinEdgeHandleBand = () => {
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (!rect) return false;
+
+      return touchStartY >= rect.top && touchStartY <= rect.bottom;
+    };
 
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX = e.changedTouches[0].clientX;
       touchEndX = touchStartX;
+      touchStartY = e.changedTouches[0].clientY;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -51,7 +60,7 @@ export const RegionEdgePanel = () => {
       const diff = touchStartX - touchEndX;
 
       // Swipe Left to Open (starting near the right edge)
-      if (!isOpen && touchStartX > window.innerWidth - 60) {
+      if (!isOpen && touchStartX > window.innerWidth - 60 && isWithinEdgeHandleBand()) {
         if (diff > 0) {
           if (!localIsDragging) {
             setIsDragging(true);
@@ -79,7 +88,7 @@ export const RegionEdgePanel = () => {
       const diff = touchStartX - touchEndX;
 
       // Threshold to trigger state change
-      if (!isOpen && touchStartX > window.innerWidth - 60) {
+      if (!isOpen && touchStartX > window.innerWidth - 60 && isWithinEdgeHandleBand()) {
         if (diff > 40) setIsOpen(true);
       } else if (isOpen) {
         if (diff < -40) setIsOpen(false);
@@ -90,6 +99,7 @@ export const RegionEdgePanel = () => {
       localIsDragging = false;
       touchStartX = 0;
       touchEndX = 0;
+      touchStartY = 0;
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: true });

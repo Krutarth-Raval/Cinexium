@@ -96,7 +96,7 @@ export default function ShareProfileModal({
 
   const renderHeader = () => (
     <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
-      <h3 className="text-xl font-bold text-white">Share Profile</h3>
+      <h3 className="text-xl font-bold text-white">{`Share @${profileUsername}`}</h3>
       <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
@@ -104,10 +104,13 @@ export default function ShareProfileModal({
   );
 
   const renderContent = () => (
-    <div className="p-6 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
       <div className="mb-2">
-        <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Send to</p>
-        <div className="flex overflow-x-auto gap-4 pb-2 custom-scrollbar hide-scrollbar">
+        <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.24em] mb-4">Send to</p>
+        <div
+          className="grid gap-x-3 gap-y-5"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}
+        >
           
           {contacts.map(f => {
             const contact = f.follower || f;
@@ -115,11 +118,11 @@ export default function ShareProfileModal({
             return (
               <div 
                 key={contact.id} 
-                className={`flex flex-col items-center gap-2 shrink-0 w-16 cursor-pointer transition-all ${isSent ? 'opacity-60' : 'hover:scale-105 active:scale-95'}`}
+                className={`flex w-full flex-col items-center gap-2 min-w-0 cursor-pointer transition-all ${isSent ? 'opacity-60' : 'hover:scale-[1.04] active:scale-95'}`}
                 onClick={() => handleShare(contact.id)}
               >
                 <div className="relative">
-                  <div className={`w-14 h-14 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm border-2 transition-colors ${isSent ? 'border-primary-500' : 'border-white/10'}`}>
+                  <div className={`w-16 h-16 rounded-full bg-gray-700 overflow-hidden shrink-0 shadow-sm border-2 transition-colors ${isSent ? 'border-primary-500' : 'border-white/10'}`}>
                     {contact.avatar ? (
                       <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
                     ) : (
@@ -134,23 +137,23 @@ export default function ShareProfileModal({
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-white text-center truncate w-full px-1">{contact.name?.split(' ')[0]}</p>
+                <p className="text-[11px] leading-4 text-white text-center line-clamp-2 w-full px-1">{contact.name?.split(' ')[0]}</p>
               </div>
             );
           })}
 
           <div 
-            className="flex flex-col items-center gap-2 shrink-0 w-16 cursor-pointer transition-all hover:scale-105 active:scale-95"
+            className="flex w-full flex-col items-center gap-2 min-w-0 cursor-pointer transition-all hover:scale-[1.04] active:scale-95"
             onClick={handleCopyLink}
           >
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 shadow-sm border-2 transition-colors ${copied ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-[#2a2d36] border-white/10 text-white hover:bg-[#323642]'}`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center shrink-0 shadow-sm border-2 transition-colors ${copied ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-[#2a2d36] border-white/10 text-white hover:bg-[#323642]'}`}>
               {copied ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               ) : (
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
               )}
             </div>
-            <p className={`text-xs text-center truncate w-full px-1 ${copied ? 'text-green-500' : 'text-white'}`}>
+            <p className={`text-[11px] leading-4 text-center line-clamp-2 w-full px-1 ${copied ? 'text-green-500' : 'text-white'}`}>
               {copied ? 'Copied' : 'Copy Link'}
             </p>
           </div>
@@ -195,20 +198,16 @@ export default function ShareProfileModal({
             </div>
           </motion.div>
 
-          {/* Desktop Modal */}
+          {/* Desktop Side Drawer */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-[120] hidden lg:flex items-center justify-center p-4 pointer-events-none"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-4 bottom-4 right-4 w-[400px] bg-[#0f1115]/80 backdrop-blur-xl z-[120] hidden lg:flex flex-col border border-white/10 shadow-2xl rounded-[32px] overflow-hidden"
           >
-            <div 
-              className="bg-[#1a1d24] rounded-2xl w-full max-w-sm shadow-2xl border border-white/10 flex flex-col pointer-events-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              {renderHeader()}
-              {renderContent()}
-            </div>
+            {renderHeader()}
+            {renderContent()}
           </motion.div>
         </>
       )}

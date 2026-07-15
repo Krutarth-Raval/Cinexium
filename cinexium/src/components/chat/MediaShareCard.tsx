@@ -15,7 +15,7 @@ export const MediaShareCard = ({
   reactionCount?: number;
 }) => {
   const mediaType = meta.creatorUsername === 'Cinexium:tv' ? 'series' : 'movie';
-  const linkHref = `/${mediaType}/${meta.collectionId}`;
+  const linkHref = meta.shareUrlPath || `/${mediaType}/${meta.collectionId}`;
 
   return (
     <div className={`flex flex-col min-w-0 ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'} group`}>

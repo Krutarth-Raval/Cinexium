@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/Button';
-import { CustomTrailerPlayer } from '@/components/media/CustomTrailerPlayer';
+import { CustomTrailerPlayer, type CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
 import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
 import { OverviewDrawer } from '@/components/media/OverviewDrawer';
 
@@ -27,11 +27,13 @@ interface HeroBannerProps {
 export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const trailerPlayerRef = useRef<CustomTrailerPlayerRef>(null);
 
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const [isCompactHeroLayout, setIsCompactHeroLayout] = useState(false);
 
   // Auto-scroll logic
   useEffect(() => {
@@ -48,6 +50,16 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
     setIsPlayingTrailer(false);
     setIsTrailerPlaying(false);
   }, [items]);
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setIsCompactHeroLayout(window.innerWidth < 1024);
+    };
+
+    syncViewport();
+    window.addEventListener('resize', syncViewport);
+    return () => window.removeEventListener('resize', syncViewport);
+  }, []);
 
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -85,6 +97,27 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
     router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
   };
 
+  const handleTrailerClose = () => {
+    setIsPlayingTrailer(false);
+    setIsTrailerPlaying(false);
+  };
+
+  const handleTrailerButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+
+    if (!currentItem.trailerKey) {
+      router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
+      return;
+    }
+
+    if (isCompactHeroLayout && isPlayingTrailer && trailerPlayerRef.current) {
+      trailerPlayerRef.current.togglePlay();
+      return;
+    }
+
+    setIsPlayingTrailer(true);
+  };
+
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 mt-[104px] pb-6">
       <div
@@ -105,8 +138,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               {isPlayingTrailer && index === currentIndex && item.trailerKey ? (
                 <div className="absolute inset-0 z-30 bg-black" onClick={(e) => e.stopPropagation()}>
                   <CustomTrailerPlayer
+                    ref={trailerPlayerRef}
                     videoId={item.trailerKey}
-                    onClose={() => setIsPlayingTrailer(false)}
+                    onClose={handleTrailerClose}
                     onPlayingChange={setIsTrailerPlaying}
                   />
                 </div>
@@ -193,18 +227,22 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               <Button
                 variant="primary"
                 className="gap-2 justify-center !rounded-full !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (currentItem.trailerKey) {
-                    setIsPlayingTrailer(true);
-                  } else {
-                    router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
-                  }
-                }}
+                onClick={handleTrailerButtonClick}
+                aria-label={
+                  isCompactHeroLayout && isPlayingTrailer
+                    ? (isTrailerPlaying ? 'Pause trailer' : 'Play trailer')
+                    : 'Watch trailer'
+                }
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
-                  <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
-                </svg>
+                {isCompactHeroLayout && isPlayingTrailer && isTrailerPlaying ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
+                    <path fillRule="evenodd" d="M6.75 5.25A2.25 2.25 0 0 0 4.5 7.5v9a2.25 2.25 0 0 0 4.5 0v-9a2.25 2.25 0 0 0-2.25-2.25Zm10.5 0A2.25 2.25 0 0 0 15 7.5v9a2.25 2.25 0 0 0 4.5 0v-9a2.25 2.25 0 0 0-2.25-2.25Z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
+                    <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
+                  </svg>
+                )}
                 <span className="hidden sm:inline">Watch Trailer</span>
               </Button>
               <Button

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
@@ -37,6 +38,8 @@ export default function AccountSettingsPage() {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isThemeSelectionOpen, setIsThemeSelectionOpen] = useState(false);
   const [themeToConfirm, setThemeToConfirm] = useState<ThemeOption | null>(null);
+  const [isMobileThemeDrawer, setIsMobileThemeDrawer] = useState(false);
+  const [themeDrawerHeight, setThemeDrawerHeight] = useState<'half' | 'full'>('half');
 
   const getActiveThemeId = () => {
     if (!user) return 'default';
@@ -73,6 +76,38 @@ export default function AccountSettingsPage() {
     };
     fetchUser();
   }, [router]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobileThemeDrawer(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isThemeSelectionOpen) {
+      document.body.style.overflow = 'hidden';
+      setThemeDrawerHeight('half');
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isThemeSelectionOpen]);
+
+  const handleThemeDrawerDragEnd = (_e: any, info: any) => {
+    if (themeDrawerHeight === 'half') {
+      if (info.offset.y < -50 || info.velocity.y < -200) {
+        setThemeDrawerHeight('full');
+      } else if (info.offset.y > 50 || info.velocity.y > 200) {
+        setIsThemeSelectionOpen(false);
+      }
+    } else if (info.offset.y > 50 || info.velocity.y > 200) {
+      setThemeDrawerHeight('half');
+    }
+  };
 
   const requestDeleteOtp = async () => {
     setDeleteError('');
@@ -149,20 +184,14 @@ export default function AccountSettingsPage() {
         <div>
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Your Activity</h2>
           <div className="bg-[#1a1d24] rounded-2xl shadow-xl border border-white/5 overflow-hidden flex flex-col">
-            <Link href="/settings/activities/liked-collections" className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors group">
-              <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Liked Collections</span>
+            <Link href="/settings/activities/liked-content" className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors group">
+              <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Liked Content</span>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
             </Link>
-            <Link href="/settings/activities/liked-media" className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors group">
-              <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Liked Media (Movies & Series)</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-              </svg>
-            </Link>
-            <Link href="/settings/activities/liked-comments" className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group">
-              <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Liked Comments</span>
+            <Link href="/settings/activities/your-comments" className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group">
+              <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Your Comments</span>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
               </svg>
@@ -172,6 +201,7 @@ export default function AccountSettingsPage() {
 
         {/* Premium Upgrade Banner */}
         <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Your Subscription</h2>
           <Link href="/premium" className="block relative bg-gradient-to-r from-purple-600/20 to-fuchsia-600/20 hover:from-purple-600/30 hover:to-fuchsia-600/30 border border-purple-500/30 rounded-2xl p-6 transition-all group overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 blur-[30px] rounded-full" />
             <div className="flex items-center justify-between relative z-10">
@@ -192,7 +222,7 @@ export default function AccountSettingsPage() {
         </section>
 
         <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Your Account</h2>
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Your Account</h2>
           <div className="bg-[#1a1d24] rounded-2xl shadow-xl border border-white/5 overflow-hidden flex flex-col">
             
             {/* Privacy Toggle inline */}
@@ -304,51 +334,128 @@ export default function AccountSettingsPage() {
 
       </div>
 
-      {/* Theme Selection Modal */}
-      {isThemeSelectionOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1a1d24] rounded-3xl border border-white/10 w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
-              <h2 className="text-xl font-bold text-white">Select Theme</h2>
-              <button onClick={() => setIsThemeSelectionOpen(false)} className="text-gray-400 hover:text-white p-2">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="p-4 flex flex-col gap-2">
-              {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
-                const isLocked = !user?.isPremium && theme.id !== 'default';
-                const isSelected = getActiveThemeId() === theme.id;
-                
-                return (
-                  <div 
-                    key={theme.id}
-                    onClick={() => {
-                      if (isLocked) {
-                        router.push('/premium');
-                        return;
-                      }
-                      if (!isSelected) {
-                        setThemeToConfirm(theme);
-                      }
-                    }}
-                    className={`flex items-center justify-between p-4 rounded-xl border ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'} transition-colors cursor-pointer`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full ${theme.colorClass} shadow-lg flex items-center justify-center`}>
-                        {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+      {/* Theme Selection Drawer */}
+      <AnimatePresence>
+        {isThemeSelectionOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsThemeSelectionOpen(false)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+            />
+
+            {isMobileThemeDrawer ? (
+              <motion.div
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.1, bottom: 0.5 }}
+                onDragEnd={handleThemeDrawerDragEnd}
+                initial={{ height: '0vh', y: 0 }}
+                animate={{ height: themeDrawerHeight === 'half' ? '58vh' : '92vh', y: 0 }}
+                exit={{ height: '0vh', y: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed bottom-0 left-0 right-0 z-[60] flex flex-col rounded-t-[32px] border-t border-white/10 bg-[#0f1115]/95 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:hidden"
+              >
+                <div className="flex w-full justify-center py-4 shrink-0 cursor-grab active:cursor-grabbing">
+                  <div className="h-1.5 w-12 rounded-full bg-white/20" />
+                </div>
+
+                <div className="flex items-center justify-between px-6 pb-4 border-b border-white/5 shrink-0">
+                  <h2 className="text-xl font-bold text-white">Select Theme</h2>
+                  <button onClick={() => setIsThemeSelectionOpen(false)} className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+                  {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
+                    const isLocked = !user?.isPremium && theme.id !== 'default';
+                    const isSelected = getActiveThemeId() === theme.id;
+                    
+                    return (
+                      <div 
+                        key={theme.id}
+                        onClick={() => {
+                          if (isLocked) {
+                            setIsThemeSelectionOpen(false);
+                            router.push('/premium');
+                            return;
+                          }
+                          if (!isSelected) {
+                            setThemeToConfirm(theme);
+                          }
+                        }}
+                        className={`flex items-center justify-between rounded-xl border p-4 transition-colors cursor-pointer ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${theme.colorClass} shadow-lg`}>
+                            {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
+                        </div>
+                        {isLocked && (
+                          <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        )}
                       </div>
-                      <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
-                    </div>
-                    {isLocked && (
-                      <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed top-4 bottom-4 right-4 z-[60] hidden w-[420px] flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[#0f1115]/95 shadow-2xl backdrop-blur-xl lg:flex"
+              >
+                <div className="flex items-center justify-between border-b border-white/5 bg-[#1a1d24]/50 px-6 py-5 shrink-0">
+                  <h2 className="text-xl font-bold text-white">Select Theme</h2>
+                  <button onClick={() => setIsThemeSelectionOpen(false)} className="rounded-full p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+                  {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
+                    const isLocked = !user?.isPremium && theme.id !== 'default';
+                    const isSelected = getActiveThemeId() === theme.id;
+                    
+                    return (
+                      <div 
+                        key={theme.id}
+                        onClick={() => {
+                          if (isLocked) {
+                            setIsThemeSelectionOpen(false);
+                            router.push('/premium');
+                            return;
+                          }
+                          if (!isSelected) {
+                            setThemeToConfirm(theme);
+                          }
+                        }}
+                        className={`flex items-center justify-between rounded-xl border p-4 transition-colors cursor-pointer ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${theme.colorClass} shadow-lg`}>
+                            {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
+                        </div>
+                        {isLocked && (
+                          <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Confirmation Modal */}
       {themeToConfirm && (

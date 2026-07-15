@@ -589,7 +589,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                     </div>
 
                     {isMe && (
-                      <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-1 shadow-sm">
+                      <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
                         {currentUser?.avatar ? (
                           <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
                         ) : (

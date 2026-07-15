@@ -264,6 +264,7 @@ export const MovieHero = ({
         collectionThumbnail={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : ''}
         collectionItemCount={0}
         creatorUsername={`Cinexium:${mediaType}`} // generic for movies and series
+        shareUrlPath={`/${mediaType}/${mediaId}`}
         onShareSuccess={() => {
           setSharesCount(prev => prev + 1);
           fetch(`/api/media/${mediaId}/share`, { 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSocket } from '@/components/providers/SocketProvider';
 import CreateGroupModal from './CreateGroupModal';
 import PinEntryModal from './PinEntryModal';
@@ -10,12 +10,14 @@ import { useHiddenChat } from '@/components/providers/HiddenChatProvider';
 import { CommunityBadge } from './CommunityBadge';
 
 export default function ChatSidebar() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'group' | 'community'>('group');
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState('');
   const { isHiddenModeActive, setIsHiddenModeActive } = useHiddenChat();
   const pathname = usePathname();
   const { pusherClient } = useSocket();
@@ -38,6 +40,21 @@ export default function ChatSidebar() {
   useEffect(() => {
     fetchConversations();
   }, [pathname, isHiddenModeActive]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await fetch('/api/user/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        setCurrentUsername(data.user?.username || '');
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (!pusherClient) return;
@@ -88,6 +105,25 @@ export default function ChatSidebar() {
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
                   Create Community
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentUsername) {
+                      router.push(`/profile/${currentUsername}`);
+                    }
+                    setIsDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                  My Profile
+                </button>
+                <button
+                  onClick={() => { router.push('/settings/notifications'); setIsDropdownOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75v-.7V9a6 6 0 1 0-12 0v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.081 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+                  Notification Setting
                 </button>
                 {!isHiddenModeActive ? (
                   <button
