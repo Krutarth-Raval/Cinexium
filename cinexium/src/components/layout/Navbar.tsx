@@ -12,7 +12,7 @@ import { useSocket } from '../providers/SocketProvider';
 import { Logo } from '../ui/Logo';
 
 export const Navbar = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { hasUnreadMessages } = useSocket();
   const router = useRouter();
   const pathname = usePathname();
@@ -20,53 +20,72 @@ export const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [isResolvingUser, setIsResolvingUser] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const [loadingText, setLoadingText] = useState('');
 
   useEffect(() => {
-    if (session) {
-      fetch('/api/user/me')
-        .then(async res => {
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`Failed to fetch user: ${res.status} ${text}`);
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (data.user) {
-            setUserData(data.user);
-
-            const applyTheme = (themePref: string, isPrem: boolean) => {
-              let themeToApply = 'theme-default';
-              if (isPrem) {
-                if (!themePref || themePref === 'default') {
-                  themeToApply = 'theme-neon-purple';
-                } else {
-                  themeToApply = `theme-${themePref}`;
-                }
-              }
-              document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
-              if (themeToApply !== 'theme-default') {
-                document.body.classList.add(themeToApply);
-              }
-            };
-
-            applyTheme(data.user.themePreference, data.user.isPremium);
-
-            const handleThemeChange = (e: Event) => {
-              const customEvent = e as CustomEvent;
-              applyTheme(customEvent.detail, data.user.isPremium);
-            };
-
-            window.addEventListener('themeChanged', handleThemeChange);
-            return () => window.removeEventListener('themeChanged', handleThemeChange);
-          }
-        })
-        .catch(console.error);
+    if (!session) {
+      setUserData(null);
+      setIsResolvingUser(false);
+      return;
     }
+
+    setIsResolvingUser(true);
+
+    fetch('/api/user/me')
+      .then(async res => {
+        if (res.status === 404) {
+          return { user: null };
+        }
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Failed to fetch user: ${res.status} ${text}`);
+        }
+
+        return res.json();
+      })
+      .then(data => {
+        if (data.user) {
+          setUserData(data.user);
+
+          const applyTheme = (themePref: string, isPrem: boolean) => {
+            let themeToApply = 'theme-default';
+            if (isPrem) {
+              if (!themePref || themePref === 'default') {
+                themeToApply = 'theme-neon-purple';
+              } else {
+                themeToApply = `theme-${themePref}`;
+              }
+            }
+            document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
+            if (themeToApply !== 'theme-default') {
+              document.body.classList.add(themeToApply);
+            }
+          };
+
+          applyTheme(data.user.themePreference, data.user.isPremium);
+
+          const handleThemeChange = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            applyTheme(customEvent.detail, data.user.isPremium);
+          };
+
+          window.addEventListener('themeChanged', handleThemeChange);
+          return () => window.removeEventListener('themeChanged', handleThemeChange);
+        }
+
+        setUserData(null);
+      })
+      .catch(console.error)
+      .finally(() => {
+        setIsResolvingUser(false);
+      });
   }, [session]);
+
+  const hasAuthenticatedUser = Boolean(session && userData);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -123,7 +142,11 @@ export const Navbar = () => {
   }
 
   const renderAuthSection = (isMobile = false) => {
-    if (session) {
+    if (status === 'loading' || isResolvingUser) {
+      return null;
+    }
+
+    if (hasAuthenticatedUser) {
       // User is logged in - show profile circle
       const name = userData?.name || session.user?.name || '';
       const email = userData?.email || session.user?.email || '';
@@ -251,7 +274,7 @@ export const Navbar = () => {
                   ))}
                 </div>
 
-                {session && <NotificationBell />}
+                {hasAuthenticatedUser && <NotificationBell />}
 
                 {/* Auth Buttons / Profile Circle */}
                 {renderAuthSection(false)}
@@ -259,7 +282,7 @@ export const Navbar = () => {
 
               {/* Mobile Actions */}
               <div className="flex md:hidden items-center gap-3">
-                {session && <NotificationBell isMobile={true} />}
+                {hasAuthenticatedUser && <NotificationBell isMobile={true} />}
 
                 {/* Mobile Auth Buttons / Profile Circle */}
                 {renderAuthSection(true)}
