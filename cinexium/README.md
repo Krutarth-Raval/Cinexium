@@ -14,11 +14,44 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the local development URL shown by `npm run dev` in your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Payments
+
+Cinexium uses Paddle as its only payment provider.
+
+Set these environment variables for Paddle:
+
+```bash
+PADDLE_ENV=sandbox
+
+# Sandbox
+PADDLE_SANDBOX_API_KEY=
+PADDLE_SANDBOX_WEBHOOK_SECRET=
+NEXT_PUBLIC_PADDLE_SANDBOX_CLIENT_TOKEN=
+PADDLE_SANDBOX_PRICE_ID_INR_MONTHLY=
+PADDLE_SANDBOX_PRICE_ID_INR_YEARLY=
+PADDLE_SANDBOX_PRICE_ID_USD_MONTHLY=
+PADDLE_SANDBOX_PRICE_ID_USD_YEARLY=
+
+# Live
+PADDLE_API_KEY=
+PADDLE_WEBHOOK_SECRET=
+NEXT_PUBLIC_PADDLE_CLIENT_SIDE_TOKEN=
+PADDLE_PRICE_ID_INR_MONTHLY=
+PADDLE_PRICE_ID_INR_YEARLY=
+PADDLE_PRICE_ID_USD_MONTHLY=
+PADDLE_PRICE_ID_USD_YEARLY=
+
+# Feature flag
+NEXT_PUBLIC_ENABLE_PRO_SUBSCRIPTIONS=false
+```
+
+`NEXT_PUBLIC_ENABLE_PRO_SUBSCRIPTIONS=false` keeps the Pro checkout disabled and shows the temporary "Subscriptions Coming Soon" modal instead of launching Paddle.
 
 ## Learn More
 

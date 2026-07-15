@@ -148,8 +148,8 @@ export const Navbar = () => {
 
     if (hasAuthenticatedUser) {
       // User is logged in - show profile circle
-      const name = userData?.name || session.user?.name || '';
-      const email = userData?.email || session.user?.email || '';
+      const name = userData?.name || session?.user?.name || '';
+      const email = userData?.email || session?.user?.email || '';
       const initial = name.charAt(0).toUpperCase() || email.charAt(0).toUpperCase() || 'U';
       const avatarUrl = userData?.avatar;
 

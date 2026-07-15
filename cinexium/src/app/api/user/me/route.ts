@@ -6,6 +6,16 @@ import cloudinary from '@/lib/cloudinary';
 
 import { headers } from 'next/headers';
 
+type AvatarUploadResult = {
+  secure_url: string;
+};
+
+type UserSettingsPatch = {
+  isPrivate?: boolean;
+  chatNotifications?: boolean;
+  appNotifications?: boolean;
+};
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -25,6 +35,8 @@ export async function GET() {
       chatNotifications: true,
       appNotifications: true,
       isPremium: true,
+      premiumType: true,
+      premiumUntil: true,
       themePreference: true,
       country: true,
     }
@@ -60,12 +72,13 @@ export async function PUT(request: Request) {
     if (avatarFile && avatarFile.size > 0) {
       const buffer = Buffer.from(await avatarFile.arrayBuffer());
       
-      const uploadResult: any = await new Promise((resolve, reject) => {
+      const uploadResult = await new Promise<AvatarUploadResult>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           { folder: 'cinexium/avatars' },
           (error, result) => {
             if (error) reject(error);
-            else resolve(result);
+            else if (result?.secure_url) resolve({ secure_url: result.secure_url });
+            else reject(new Error('Avatar upload failed'));
           }
         );
         uploadStream.end(buffer);
@@ -111,8 +124,8 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const data = await request.json();
-    const updateData: any = {};
+    const data = (await request.json()) as UserSettingsPatch;
+    const updateData: UserSettingsPatch = {};
     
     if (typeof data.isPrivate === 'boolean') updateData.isPrivate = data.isPrivate;
     if (typeof data.chatNotifications === 'boolean') updateData.chatNotifications = data.chatNotifications;

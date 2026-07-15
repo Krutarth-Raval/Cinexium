@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { enforceSameOrigin, isValidPlan } from '@/lib/security';
+import { enforceSameOrigin } from '@/lib/security';
+import type { PremiumPlan } from '@/lib/payments/types';
+import { getTransaction } from '@/lib/payments/providers/paddle';
 
-const cashfree = new Cashfree(
-  process.env.NODE_ENV === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX,
-  process.env.CASHFREE_APP_ID || '',
-  process.env.CASHFREE_SECRET_KEY || ''
-);
+function isPremiumPlan(value: unknown): value is PremiumPlan {
+  return value === 'monthly' || value === 'yearly';
+}
 
 export async function POST(req: Request) {
   try {
@@ -23,21 +22,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { order_id, plan } = await req.json();
-    if (!order_id || typeof order_id !== 'string' || !isValidPlan(plan)) {
+    const { orderId } = await req.json();
+    if (!orderId || typeof orderId !== 'string') {
       return NextResponse.json({ error: 'Invalid payment verification request' }, { status: 400 });
     }
 
-    const response = await cashfree.PGOrderFetchPayments(order_id);
-    
-    const successfulPayment = response.data.find((payment: { payment_status?: string; customer_details?: { customer_id?: string } }) => {
-      return payment.payment_status === 'SUCCESS' && payment.customer_details?.customer_id === userId;
-    });
+    const transaction = await getTransaction(orderId);
+    const transactionUserId =
+      typeof transaction.customData?.userId === 'string' ? transaction.customData.userId : null;
+    const transactionPlan = transaction.customData?.plan;
 
-    if (successfulPayment) {
+    if (
+      transactionUserId === userId &&
+      isPremiumPlan(transactionPlan) &&
+      (transaction.status === 'paid' || transaction.status === 'completed')
+    ) {
       const now = new Date();
       const premiumUntil = new Date();
-      if (plan === 'yearly') {
+      if (transactionPlan === 'yearly') {
         premiumUntil.setFullYear(now.getFullYear() + 1);
       } else {
         premiumUntil.setMonth(now.getMonth() + 1);
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
         where: { id: userId },
         data: {
           isPremium: true,
-          premiumType: plan,
+          premiumType: transactionPlan,
           premiumUntil: premiumUntil
         }
       });

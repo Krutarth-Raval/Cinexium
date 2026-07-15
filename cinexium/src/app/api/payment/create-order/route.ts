@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { prisma } from '@/lib/prisma';
 import { enforceSameOrigin, isValidPlan } from '@/lib/security';
+import { getPricingForCountry } from '@/lib/payments/pricing';
+import { getPaddleCheckoutEnvironment, getPaddlePriceId } from '@/lib/payments/paddle-config';
+import type { PricingResponse } from '@/lib/payments/types';
+import { createCheckout } from '@/lib/payments/providers/paddle';
 
-const cashfree = new Cashfree(
-  process.env.NODE_ENV === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX,
-  process.env.CASHFREE_APP_ID || '',
-  process.env.CASHFREE_SECRET_KEY || ''
-);
+type CreateOrderResponse = {
+  provider: 'paddle';
+  orderId: string;
+  paymentSessionId: string;
+  environment: 'sandbox' | 'production';
+  billingCountry: string;
+  currency: PricingResponse['currency'];
+  checkoutUrl: string | null;
+  transactionId: string;
+  subscriptionId: string | null;
+};
 
 export async function POST(req: Request) {
   try {
@@ -33,51 +42,52 @@ export async function POST(req: Request) {
       select: { country: true, name: true, email: true }
     });
 
-    const isIndia = user?.country === 'India' || user?.country === 'IN';
+    const pricing = getPricingForCountry(user?.country ?? null);
+    const priceId = getPaddlePriceId(pricing.currency, plan);
 
-    let amount = 0;
-    let currency = 'USD';
+    console.info('Create Order Request', {
+      provider: 'paddle',
+      userId,
+      plan,
+      billingCountry: pricing.billingCountry,
+      currency: pricing.currency,
+      priceId,
+    });
 
-    if (isIndia || process.env.NODE_ENV !== 'production') {
-      currency = 'INR';
-      // Prices in standard format
-      amount = plan === 'yearly' ? 999.00 : 99.00;
-    } else {
-      currency = 'USD';
-      // Prices in standard format
-      amount = plan === 'yearly' ? 29.99 : 2.99;
-    }
-
-    const orderId = `rcpt_${Date.now()}_${userId.substring(0, 8)}`;
-
-    const request = {
-      order_amount: amount,
-      order_currency: currency,
-      order_id: orderId,
-      customer_details: {
-        customer_id: userId,
-        customer_name: user?.name || 'Customer',
-        customer_email: user?.email || 'test@example.com',
-        customer_phone: '9999999999' // Cashfree requires a phone number
+    const checkout = await createCheckout({
+      items: [{ priceId, quantity: 1 }],
+      customData: {
+        userId,
+        plan,
+        billingCountry: pricing.billingCountry,
+        currency: pricing.currency,
       },
-      order_meta: {
-        // This is primarily for hosted checkout, but good to include
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/settings/account?order_id={order_id}`
-      },
-      order_note: plan
+    });
+
+    const response: CreateOrderResponse = {
+      provider: 'paddle',
+      orderId: checkout.transactionId,
+      paymentSessionId: checkout.checkoutUrl ?? '',
+      environment: getPaddleCheckoutEnvironment(),
+      billingCountry: pricing.billingCountry,
+      currency: pricing.currency,
+      checkoutUrl: checkout.checkoutUrl,
+      transactionId: checkout.transactionId,
+      subscriptionId: checkout.subscriptionId,
     };
 
-    const response = await cashfree.PGCreateOrder(request);
-    
-    // We return the response data which contains the payment_session_id
-    // We also return our notes (userId, plan) so frontend knows about it, 
-    // but typically Cashfree webhook handles verification.
-    // For this flow, we'll verify manually using order_id.
-    
-    return NextResponse.json({
-      ...response.data,
-      notes: { userId, plan }
+    console.info('Create Order Response', {
+      provider: response.provider,
+      orderId: response.orderId,
+      transactionId: response.transactionId,
+      subscriptionId: response.subscriptionId,
+      billingCountry: response.billingCountry,
+      currency: response.currency,
+      hasCheckoutUrl: Boolean(response.checkoutUrl),
+      environment: response.environment,
     });
+
+    return NextResponse.json<CreateOrderResponse>(response);
   } catch (error) {
     console.error('Create Order Error:', error);
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });

@@ -1,0 +1,2 @@
+export const ENABLE_PRO_SUBSCRIPTIONS =
+  process.env.NEXT_PUBLIC_ENABLE_PRO_SUBSCRIPTIONS === 'true';
