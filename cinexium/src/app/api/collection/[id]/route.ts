@@ -62,12 +62,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (thumbnailFile && thumbnailFile.size > 0) {
       const buffer = Buffer.from(await thumbnailFile.arrayBuffer());
       
-      const uploadResult: any = await new Promise((resolve, reject) => {
+      const uploadResult: { secure_url: string } = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           { folder: 'cinexium/collections' },
           (error, result) => {
             if (error) reject(error);
-            else resolve(result);
+            else if (result?.secure_url) resolve(result);
+            else reject(new Error('Collection thumbnail upload failed'));
           }
         );
         uploadStream.end(buffer);
@@ -87,7 +88,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     return NextResponse.json({ success: true, collection: updatedCollection });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating collection:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -133,8 +134,44 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error patching collection:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const collection = await prisma.collection.findUnique({
+      where: { id }
+    });
+
+    if (!collection || collection.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found or Forbidden' }, { status: 403 });
+    }
+
+    await prisma.collection.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error('Error deleting collection:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

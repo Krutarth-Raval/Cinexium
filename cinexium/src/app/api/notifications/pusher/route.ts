@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { pusherServer } from '@/lib/pusher';
+import { getUserChannelName, pusherServer } from '@/lib/pusher';
 import { prisma } from '@/lib/prisma';
 import { enforceSameOrigin, isValidNotificationType, normalizeText } from '@/lib/security';
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    await pusherServer.trigger(`user-${targetUserId}`, 'receiveNotification', {
+    await pusherServer.trigger(getUserChannelName(targetUserId), 'receiveNotification', {
       targetUserId,
       type,
       actor: { username: currentUser.username, id: currentUser.id }

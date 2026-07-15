@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { pusherServer } from '@/lib/pusher';
+import { getUserChannelName, pusherServer } from '@/lib/pusher';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       revalidatePath(`/profile/${username}`);
 
       // Notify both users via Pusher
-      await pusherServer.trigger([`user-${user.id}`, `user-${targetUser.id}`], 'blockStatusChanged', {
+      await pusherServer.trigger([getUserChannelName(user.id), getUserChannelName(targetUser.id)], 'blockStatusChanged', {
         blockerId: user.id,
         blockedId: targetUser.id,
         isBlocked: false
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       revalidatePath(`/profile/${username}`);
 
       // Notify both users via Pusher
-      await pusherServer.trigger([`user-${user.id}`, `user-${targetUser.id}`], 'blockStatusChanged', {
+      await pusherServer.trigger([getUserChannelName(user.id), getUserChannelName(targetUser.id)], 'blockStatusChanged', {
         blockerId: user.id,
         blockedId: targetUser.id,
         isBlocked: true

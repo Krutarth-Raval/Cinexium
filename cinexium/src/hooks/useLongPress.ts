@@ -68,6 +68,9 @@ export function useLongPress(
     onMouseLeave: (e: any) => clear(e, false),
     onTouchEnd: (e: any) => clear(e),
     onTouchCancel: (e: any) => clear(e, false),
+    onContextMenu: (e: any) => {
+      e.preventDefault();
+    },
     onClick: handleClick
   };
 }

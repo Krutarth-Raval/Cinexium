@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { pusherServer } from '@/lib/pusher';
+import { getUserChannelName, pusherServer } from '@/lib/pusher';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      await pusherServer.trigger(`user-${targetUserId}`, 'receiveMessage', { message });
-      await pusherServer.trigger(`user-${senderId}`, 'messageSent', { message });
+      await pusherServer.trigger(getUserChannelName(targetUserId), 'receiveMessage', { message });
+      await pusherServer.trigger(getUserChannelName(senderId), 'messageSent', { message });
 
       return NextResponse.json({ success: true, message });
     }
@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
           ? existingMessage.conversation.user2Id
           : existingMessage.conversation.user1Id;
       
-      await pusherServer.trigger(`user-${targetUserId}`, 'messageUpdated', { message });
-      await pusherServer.trigger(`user-${user.id}`, 'messageUpdated', { message });
+      await pusherServer.trigger(getUserChannelName(targetUserId), 'messageUpdated', { message });
+      await pusherServer.trigger(getUserChannelName(user.id), 'messageUpdated', { message });
       
       return NextResponse.json({ success: true, message });
     }
@@ -163,8 +163,8 @@ export async function POST(req: NextRequest) {
           ? existingMessage.conversation.user2Id
           : existingMessage.conversation.user1Id;
       
-      await pusherServer.trigger(`user-${targetUserId}`, 'messageUpdated', { message });
-      await pusherServer.trigger(`user-${user.id}`, 'messageUpdated', { message });
+      await pusherServer.trigger(getUserChannelName(targetUserId), 'messageUpdated', { message });
+      await pusherServer.trigger(getUserChannelName(user.id), 'messageUpdated', { message });
       
       return NextResponse.json({ success: true, message });
     }
@@ -207,8 +207,8 @@ export async function POST(req: NextRequest) {
           existingMessage.conversation.user1Id === user.id
             ? existingMessage.conversation.user2Id
             : existingMessage.conversation.user1Id;
-        await pusherServer.trigger(`user-${targetUserId}`, 'messageUpdated', { message });
-        await pusherServer.trigger(`user-${user.id}`, 'messageUpdated', { message });
+        await pusherServer.trigger(getUserChannelName(targetUserId), 'messageUpdated', { message });
+        await pusherServer.trigger(getUserChannelName(user.id), 'messageUpdated', { message });
       }
       return NextResponse.json({ success: true, message });
     }

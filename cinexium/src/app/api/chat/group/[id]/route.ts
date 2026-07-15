@@ -7,6 +7,10 @@ import { enforceSameOrigin, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/s
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const url = new URL(req.url);
+    const before = url.searchParams.get('before');
+    const limitParam = Number(url.searchParams.get('limit') || '50');
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 50;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const user = session.user as { id: string };
@@ -17,13 +21,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         members: {
           include: { user: { select: { id: true, username: true, name: true, avatar: true, isPremium: true } } },
           orderBy: { role: 'asc' }
-        },
-        messages: {
-          include: { 
-            sender: { select: { id: true, username: true, name: true, avatar: true, isPremium: true } },
-            reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } }
-          },
-          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -56,21 +53,45 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }
     }));
 
-    // Add isBlocked flag to message senders
-    const maskedMessages = group.messages.map(msg => ({
-      ...msg,
-      sender: {
-        ...msg.sender,
-        isBlocked: blockedUserIds.has(msg.sender.id)
-      }
-    }));
-
     if (!isMember) {
-      // If not a member, return group info without messages
-      return NextResponse.json({ ...group, members: maskedMembers, messages: [], isMember: false });
+      return NextResponse.json({
+        id: group.id,
+        name: group.name,
+        avatar: group.avatar,
+        isCommunity: group.isCommunity,
+        isPublic: group.isPublic,
+        isPremiumOnly: group.isPremiumOnly,
+        members: [],
+        messages: [],
+        hasMore: false,
+        isMember: false,
+      });
     }
 
-    return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessages, isMember: true });
+    const fetchedMessages = await prisma.groupMessage.findMany({
+      where: { groupId: id },
+      include: {
+        sender: { select: { id: true, username: true, name: true, avatar: true, isPremium: true } },
+        reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(before ? { cursor: { id: before }, skip: 1 } : {})
+    });
+
+    const hasMore = fetchedMessages.length > limit;
+    const maskedMessages = fetchedMessages
+      .slice(0, limit)
+      .map(msg => ({
+        ...msg,
+        sender: {
+          ...msg.sender,
+          isBlocked: blockedUserIds.has(msg.sender.id)
+        }
+      }))
+      .reverse();
+
+    return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessages, hasMore, isMember: true });
   } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

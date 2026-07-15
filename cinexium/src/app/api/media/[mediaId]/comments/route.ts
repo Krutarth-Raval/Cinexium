@@ -140,9 +140,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ med
       });
       
       // Notify via Pusher directly since we're on the server
-      const { pusherServer } = await import('@/lib/pusher');
+      const { getUserChannelName, pusherServer } = await import('@/lib/pusher');
       await pusherServer.trigger(
-        `user-${targetUserId}`,
+        getUserChannelName(targetUserId),
         'receiveNotification',
         {
           type: 'COMMENT_REPLY',

@@ -278,6 +278,7 @@ export const MovieHero = ({
         onClose={() => setIsCommentsDrawerOpen(false)}
         mediaId={mediaId}
         mediaType={mediaType}
+        onCommentsCountChange={setCommentsCount}
       />
       <MediaLikesDrawer
         isOpen={isLikesDrawerOpen}

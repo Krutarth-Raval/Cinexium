@@ -6,6 +6,9 @@ import { prisma } from '@/lib/prisma';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
     const { username } = await params;
+    const before = req.nextUrl.searchParams.get('before');
+    const limitParam = Number(req.nextUrl.searchParams.get('limit') || '50');
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 50;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -57,6 +60,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       return NextResponse.json({ 
         conversation: { isMuted: false, isHidden: false }, 
         messages: [],
+        hasMore: false,
         targetUser: { 
           id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar,
           isBlockedByMe, hasBlockedMe, isFollowing, isFollowedBy
@@ -68,30 +72,40 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     const isUser1 = conversation.user1Id === user.id;
 
     // Mark unread messages from target user as read
-    await prisma.message.updateMany({
-      where: {
-        conversationId: conversation.id,
-        senderId: targetUser.id,
-        isRead: false
-      },
-      data: { isRead: true }
-    });
+    if (!before) {
+      await prisma.message.updateMany({
+        where: {
+          conversationId: conversation.id,
+          senderId: targetUser.id,
+          isRead: false
+        },
+        data: { isRead: true }
+      });
+    }
 
     // Fetch messages
-    const messages = await prisma.message.findMany({
+    const messageWhere = {
+      conversationId: conversation.id,
+      ...(isUser1 
+          ? { OR: [{ senderId: user.id, isDeletedBySender: false }, { senderId: targetUser.id, isDeletedByReceiver: false }] }
+          : { OR: [{ senderId: user.id, isDeletedBySender: false }, { senderId: targetUser.id, isDeletedByReceiver: false }] }
+      )
+    };
+
+    const fetchedMessages = await prisma.message.findMany({
       where: {
-        conversationId: conversation.id,
-        // Only return messages not deleted by this user
-        ...(isUser1 
-            ? { OR: [{ senderId: user.id, isDeletedBySender: false }, { senderId: targetUser.id, isDeletedByReceiver: false }] }
-            : { OR: [{ senderId: user.id, isDeletedBySender: false }, { senderId: targetUser.id, isDeletedByReceiver: false }] }
-        )
+        ...messageWhere
       },
       include: {
         reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(before ? { cursor: { id: before }, skip: 1 } : {})
     });
+
+    const hasMore = fetchedMessages.length > limit;
+    const messages = fetchedMessages.slice(0, limit).reverse();
     
     const settings = {
       isMuted: isUser1 ? conversation.isMutedByUser1 : conversation.isMutedByUser2,
@@ -101,6 +115,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     return NextResponse.json({ 
       conversation: settings, 
       messages,
+      hasMore,
       targetUser: { 
         id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar,
         isBlockedByMe, hasBlockedMe, isFollowing, isFollowedBy

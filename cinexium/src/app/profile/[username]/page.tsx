@@ -79,7 +79,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         }
       });
       if (followRecord) {
-        followStatus = (followRecord as any).status as 'ACCEPTED' | 'PENDING';
+        followStatus = followRecord.status as 'ACCEPTED' | 'PENDING';
       }
     }
   }
@@ -239,7 +239,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       </div>
       
       {/* Profile Tabs & Collection Grid */}
-      <ProfileTabs myCollections={visibleCollections} savedCollections={visibleSavedCollections} canPin={isOwnProfile && user.isPremium} />
+      <ProfileTabs
+        myCollections={visibleCollections}
+        savedCollections={visibleSavedCollections}
+        isOwner={isOwnProfile}
+        canPin={isOwnProfile && user.isPremium}
+      />
       <Suspense fallback={null}>
         <FollowsModal username={user.username} />
       </Suspense>

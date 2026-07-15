@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { pusherServer } from '@/lib/pusher';
+import { getUserChannelName, pusherServer } from '@/lib/pusher';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   try {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
       }
     });
 
-    await pusherServer.trigger(`user-${group.ownerId}`, 'receiveNotification', notification);
+    await pusherServer.trigger(getUserChannelName(group.ownerId), 'receiveNotification', notification);
 
     return NextResponse.json({ success: true, request });
   } catch (error) {

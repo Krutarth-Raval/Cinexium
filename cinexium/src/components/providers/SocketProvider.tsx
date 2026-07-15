@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getPusherClient } from '@/lib/pusher';
+import { getPusherClient, getUserChannelName } from '@/lib/pusher';
 import PusherClient from 'pusher-js';
 
 interface SocketContextType {
@@ -58,7 +58,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     setPusherClient(pusher);
     setIsConnected(true);
 
-    const channelName = `user-${userId}`;
+    const channelName = getUserChannelName(userId);
     let channel = pusher.channel(channelName);
     
     if (!channel) {

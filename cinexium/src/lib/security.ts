@@ -21,7 +21,7 @@ const rateLimitStore =
   (globalForSecurity.__cinexiumRateLimitStore__ = new Map<string, RateLimitEntry>());
 
 export const AUTH_ERROR_MESSAGE = 'Invalid credentials';
-export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_MESSAGE_LENGTH = 1000;
 export const MAX_COMMENT_LENGTH = 1000;
 export const MAX_COLLECTION_NAME_LENGTH = 80;
 export const MAX_COLLECTION_DESCRIPTION_LENGTH = 500;
@@ -141,4 +141,3 @@ export function isValidPlan(value: unknown): value is 'monthly' | 'yearly' {
 export function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
-

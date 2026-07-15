@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { pusherServer } from '@/lib/pusher';
+import { getGroupChannelName, pusherServer } from '@/lib/pusher';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         include: { sender: { select: { id: true, username: true, name: true, avatar: true } }, reactions: true }
       });
       
-      await pusherServer.trigger(`group-${groupId}`, 'receiveGroupMessage', { message });
+      await pusherServer.trigger(getGroupChannelName(groupId), 'receiveGroupMessage', { message });
       
       return NextResponse.json({ success: true, message });
     }
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         include: { sender: { select: { id: true, username: true, name: true, avatar: true } }, reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } } }
       });
       
-      await pusherServer.trigger(`group-${groupId}`, 'groupMessageUpdated', { message });
+      await pusherServer.trigger(getGroupChannelName(groupId), 'groupMessageUpdated', { message });
       
       return NextResponse.json({ success: true, message });
     }
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       });
       await prisma.groupMessageReaction.deleteMany({ where: { messageId } });
       
-      await pusherServer.trigger(`group-${groupId}`, 'groupMessageUpdated', { message });
+      await pusherServer.trigger(getGroupChannelName(groupId), 'groupMessageUpdated', { message });
       
       return NextResponse.json({ success: true, message });
     }
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
       });
       
       if (message) {
-        await pusherServer.trigger(`group-${groupId}`, 'groupMessageUpdated', { message });
+        await pusherServer.trigger(getGroupChannelName(groupId), 'groupMessageUpdated', { message });
       }
       return NextResponse.json({ success: true, message });
     }

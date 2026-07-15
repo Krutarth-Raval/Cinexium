@@ -9,9 +9,10 @@ interface MediaCommentsDrawerProps {
   onClose: () => void;
   mediaId: string;
   mediaType: string;
+  onCommentsCountChange?: (count: number) => void;
 }
 
-export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType }: MediaCommentsDrawerProps) => {
+export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType, onCommentsCountChange }: MediaCommentsDrawerProps) => {
   const [heightState, setHeightState] = useState<'half' | 'full'>('half');
 
   // Reset to half when opened
@@ -77,7 +78,7 @@ export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType }: Med
             </div>
 
             <div className="flex-1 flex flex-col min-h-0">
-              <MediaComments mediaId={mediaId} mediaType={mediaType} />
+              <MediaComments mediaId={mediaId} mediaType={mediaType} onCommentsCountChange={onCommentsCountChange} />
             </div>
           </motion.div>
 
@@ -97,7 +98,7 @@ export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType }: Med
             </div>
 
             <div className="flex-1 flex flex-col min-h-0">
-              <MediaComments mediaId={mediaId} mediaType={mediaType} />
+              <MediaComments mediaId={mediaId} mediaType={mediaType} onCommentsCountChange={onCommentsCountChange} />
             </div>
           </motion.div>
         </>
