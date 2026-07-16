@@ -61,15 +61,39 @@ export default function TermsOfServicePage() {
             The Cinexium platform, including its original content, features, and functionality, are owned by Cinexium and are protected by international copyright and trademark laws.
           </p>
 
-          <h2 className="text-xl font-semibold mt-8 mb-4">8. Premium Subscriptions & Refund Policy</h2>
+          <h2 className="text-xl font-semibold mt-8 mb-4">8. Premium Subscription</h2>
           <p className="mb-6">
-            Cinexium Pro is offered as a recurring monthly or yearly subscription. You may cancel your subscription at any time to prevent future renewals.
+            Premium subscriptions are currently processed manually by the Cinexium team.
           </p>
           <p className="mb-6">
-            Refund requests are reviewed on a case-by-case basis and may be granted where required by applicable law or in situations such as accidental duplicate charges, billing errors, or technical issues that prevent access to purchased premium features.
+            Clicking Request Pro only submits a subscription request and does not activate your Premium subscription.
           </p>
           <p className="mb-6">
-            If you believe you are eligible for a refund, contact <a href="mailto:cinexium@gmail.com" className="text-primary-500 hover:underline">cinexium@gmail.com</a> with your purchase details. Approved refunds will be processed through the original payment method whenever possible.
+            Payment instructions will be sent to your registered email after your request has been reviewed.
+          </p>
+          <p className="mb-6">
+            Payments are accepted only through the official UPI details provided in the payment email sent by Cinexium.
+          </p>
+          <p className="mb-6">
+            Premium access is activated only after the payment has been successfully verified by the Cinexium team.
+          </p>
+          <p className="mb-6">
+            Monthly subscriptions remain active for 1 month, and Yearly subscriptions remain active for 1 year, starting from the activation date.
+          </p>
+          <p className="mb-6">
+            Premium subscriptions do not renew automatically. After expiration, you must submit a new Premium request if you wish to continue.
+          </p>
+          <p className="mb-6">
+            Subscription requests may be cancelled if payment is not completed within a reasonable time.
+          </p>
+          <p className="mb-6">
+            Premium subscriptions are linked to your Cinexium account and cannot be transferred to another account.
+          </p>
+          <p className="mb-6">
+            Once a Premium subscription has been activated, payments are generally non-refundable, except where required by applicable law.
+          </p>
+          <p className="mb-6">
+            Cinexium reserves the right to update Premium features, pricing, or these Terms & Conditions at any time. Changes will not affect subscriptions that are already active until their current subscription period ends.
           </p>
 
           <h2 className="text-xl font-semibold mt-8 mb-4">9. Service Availability</h2>
