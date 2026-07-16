@@ -10,8 +10,6 @@ interface CastDrawerProps {
   castId: string | null;
 }
 
-const castCache = new Map<string, any>();
-
 const CastMediaCarousel = ({ title, items }: { title: string; items: any[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -121,16 +119,8 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
   useEffect(() => {
     if (isOpen && castId) {
       let isCancelled = false;
-      setError('');
-      const cachedPerson = castCache.get(castId);
-
-      if (cachedPerson) {
-        setPerson(cachedPerson);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
+      setError('');
       fetch(`/api/person/${castId}`)
         .then(async (res) => {
           const data = await res.json();
@@ -141,7 +131,6 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
         })
         .then(data => {
           if (isCancelled) return;
-          castCache.set(castId, data);
           setPerson(data);
           setLoading(false);
         })
@@ -295,13 +284,6 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
         </div>
 
         <div className="py-6">
-          {person.creditsUnavailable && (
-            <div className="px-4 md:px-6 mb-6">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-gray-400">
-                Some filmography sections are temporarily unavailable, but basic cast details loaded successfully.
-              </div>
-            </div>
-          )}
           <CastMediaCarousel title="Popular Movies" items={getPopularMovies()} />
           <CastMediaCarousel title="Popular Series" items={getPopularSeries()} />
           <CastMediaCarousel title="Upcoming" items={getUpcoming()} />
