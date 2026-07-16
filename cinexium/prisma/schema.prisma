@@ -236,6 +236,8 @@ model GroupMessage {
   groupId             String
   senderId            String
   content             String
+  gifId               String?
+  gifUrl              String?
   isEdited            Boolean  @default(false)
   isDeletedForEveryone Boolean @default(false)
   createdAt           DateTime @default(now())
@@ -299,6 +301,8 @@ model Message {
   conversationId      String
   senderId            String
   content             String
+  gifId               String?
+  gifUrl              String?
   // Interactive Chat Features
   isEdited            Boolean  @default(false)
   isDeletedForEveryone Boolean @default(false)
@@ -349,6 +353,8 @@ model MediaComment {
   mediaId   String   // TMDB ID
   mediaType String   // "movie" or "series"
   content   String
+  gifId     String?
+  gifUrl    String?
   userId    String
   parentId  String?
   createdAt DateTime @default(now())

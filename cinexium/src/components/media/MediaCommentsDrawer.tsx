@@ -78,7 +78,12 @@ export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType, onCom
             </div>
 
             <div className="flex-1 flex flex-col min-h-0">
-              <MediaComments mediaId={mediaId} mediaType={mediaType} onCommentsCountChange={onCommentsCountChange} />
+              <MediaComments
+                mediaId={mediaId}
+                mediaType={mediaType}
+                onCommentsCountChange={onCommentsCountChange}
+                onGifOpen={() => setHeightState('full')}
+              />
             </div>
           </motion.div>
 
@@ -98,7 +103,11 @@ export const MediaCommentsDrawer = ({ isOpen, onClose, mediaId, mediaType, onCom
             </div>
 
             <div className="flex-1 flex flex-col min-h-0">
-              <MediaComments mediaId={mediaId} mediaType={mediaType} onCommentsCountChange={onCommentsCountChange} />
+              <MediaComments
+                mediaId={mediaId}
+                mediaType={mediaType}
+                onCommentsCountChange={onCommentsCountChange}
+              />
             </div>
           </motion.div>
         </>

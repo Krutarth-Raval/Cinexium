@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { GifPicker } from '@/components/gif/GifPicker';
+import { SelectedGifPreview } from '@/components/gif/SelectedGifPreview';
 import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
 import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
 import { MediaShareCard } from '@/components/chat/MediaShareCard';
@@ -12,6 +14,7 @@ import AddMemberModal from '@/components/chat/AddMemberModal';
 import ShareGroupModal from '@/components/chat/ShareGroupModal';
 import { CommunityBadge } from '@/components/chat/CommunityBadge';
 import { getGroupChannelName } from '@/lib/pusher';
+import type { GifSelection } from '@/lib/giphy';
 
 export default function GroupChatRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -25,6 +28,8 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   const [group, setGroup] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [input, setInput] = useState('');
+  const [selectedGif, setSelectedGif] = useState<GifSelection | null>(null);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -50,7 +55,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   const previousScrollTop = useRef(0);
   const MAX_CHAT_MESSAGE_LENGTH = 1000;
   const isOverMessageLimit = input.length > MAX_CHAT_MESSAGE_LENGTH;
-  const canSendMessage = Boolean(input.trim()) && !isOverMessageLimit;
+  const canSendMessage = Boolean(input.trim() || selectedGif) && !isOverMessageLimit;
   const clearLongPressTimer = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -114,6 +119,32 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleTouchCleanup = () => {
+      clearLongPressTimer();
+    };
+
+    const handlePageHide = () => {
+      closeMessageActions();
+    };
+
+    window.addEventListener('touchend', handleTouchCleanup, { passive: true });
+    window.addEventListener('touchcancel', handleTouchCleanup, { passive: true });
+    window.addEventListener('pointerup', handleTouchCleanup, { passive: true });
+    window.addEventListener('pointercancel', handleTouchCleanup, { passive: true });
+    window.addEventListener('blur', handlePageHide);
+    document.addEventListener('visibilitychange', handlePageHide);
+
+    return () => {
+      window.removeEventListener('touchend', handleTouchCleanup);
+      window.removeEventListener('touchcancel', handleTouchCleanup);
+      window.removeEventListener('pointerup', handleTouchCleanup);
+      window.removeEventListener('pointercancel', handleTouchCleanup);
+      window.removeEventListener('blur', handlePageHide);
+      document.removeEventListener('visibilitychange', handlePageHide);
+    };
+  }, []);
 
   const isInitialScroll = useRef(true);
 
@@ -188,8 +219,23 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     const handleReceive = (data: any) => {
       if (data?.message?.groupId === group.id) {
         setMessages(prev => {
-          const filtered = prev.filter(m => !m.id.startsWith('temp-') || m.content !== data.message.content);
-          return [...filtered, data.message];
+          const matchingTemp = prev.find((message) =>
+            message.id.startsWith('temp-') &&
+            message.content === data.message.content &&
+            (message.gifId ?? null) === (data.message.gifId ?? null)
+          );
+          const filtered = prev.filter((m) => {
+            if (!m.id.startsWith('temp-')) return true;
+            return !(
+              m.content === data.message.content &&
+              (m.gifId ?? null) === (data.message.gifId ?? null)
+            );
+          });
+          return [...filtered, {
+            ...data.message,
+            gifWidth: data.message.gifWidth ?? matchingTemp?.gifWidth ?? null,
+            gifHeight: data.message.gifHeight ?? matchingTemp?.gifHeight ?? null,
+          }];
         });
       }
     };
@@ -214,7 +260,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     if (!canSendMessage || !group || !currentUser) return;
     
     const content = input.trim();
+    const pendingGif = selectedGif;
     setInput('');
+    setSelectedGif(null);
+    setIsGifPickerOpen(false);
 
     if (editingMessageId) {
       fetch('/api/chat/group/message', {
@@ -232,6 +281,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
       groupId: group.id,
       senderId: currentUser.id,
       content,
+      gifId: pendingGif?.id ?? null,
+      gifUrl: pendingGif?.url ?? null,
+      gifWidth: pendingGif?.width ?? null,
+      gifHeight: pendingGif?.height ?? null,
       createdAt: new Date().toISOString(),
       sender: currentUser,
       reactions: []
@@ -240,7 +293,13 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     fetch('/api/chat/group/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sendGroupMessage', groupId: group.id, content })
+      body: JSON.stringify({
+        action: 'sendGroupMessage',
+        groupId: group.id,
+        content,
+        gifId: pendingGif?.id ?? null,
+        gifUrl: pendingGif?.url ?? null,
+      })
     });
   };
 
@@ -489,6 +548,15 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     <div className="flex-1 flex h-full min-h-0 md:bg-transparent bg-[#1a1d24] md:gap-4 overflow-hidden">
       {/* Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 md:rounded-2xl md:border md:border-white/10 md:shadow-2xl overflow-hidden bg-[#111318] relative">
+        {!editingMessageId && group?.isMember && (
+          <GifPicker
+            isOpen={isGifPickerOpen}
+            mode="drawer"
+            variant="comment"
+            onClose={() => setIsGifPickerOpen(false)}
+            onSelect={(gif) => setSelectedGif(gif)}
+          />
+        )}
         {!group.isMember ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-10">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-red-800 mb-6 flex items-center justify-center shadow-xl">
@@ -585,6 +653,10 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       {groupedMessages[dateStr].map((msg: any) => {
                         const isMe = msg.senderId === currentUser.id;
                         const isDeleted = msg.isDeletedForEveryone;
+                        const hasGif = Boolean(msg.gifUrl);
+                        const isGroupInvite = typeof msg.content === 'string' && msg.content.startsWith('[GROUP_INVITE]:');
+                        const isCollectionShare = typeof msg.content === 'string' && msg.content.startsWith('[COLLECTION_SHARE]:');
+                        const isEditableTextMessage = !hasGif && !isGroupInvite && !isCollectionShare;
                         
                         const uniqueReactions = msg.reactions ? Array.from(new Set(msg.reactions.map((r: any) => r.emoji))) : [];
                         const reactionCount = msg.reactions?.length || 0;
@@ -612,15 +684,16 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                               )}
                               
                               <div 
-                                className="flex group items-center gap-2 relative min-w-0"
-                                onContextMenu={(e) => e.preventDefault()}
-                                onTouchStart={(e) => {
-                                  e.stopPropagation();
-                                  longPressTimer.current = setTimeout(() => openMessageActions(msg.id), 500);
-                                }}
-                                onTouchEnd={clearLongPressTimer}
-                                onTouchMove={clearLongPressTimer}
-                                onTouchCancel={clearLongPressTimer}
+                              className="flex group items-center gap-2 relative min-w-0"
+                              onContextMenu={(e) => e.preventDefault()}
+                              onTouchStart={(e) => {
+                                e.stopPropagation();
+                                clearLongPressTimer();
+                                longPressTimer.current = setTimeout(() => openMessageActions(msg.id), 500);
+                              }}
+                              onTouchEnd={clearLongPressTimer}
+                              onTouchMove={clearLongPressTimer}
+                              onTouchCancel={clearLongPressTimer}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (activeMessageId) {
@@ -631,8 +704,8 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                 {isMe && !isDeleted && !msg.id.startsWith('temp-') && (
                                   <div className={`flex items-center gap-2 transition-opacity ${activeMessageId === msg.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
                                     <div className="flex gap-1 bg-[#252a34] rounded-full px-2 py-1 border border-white/5 shadow-lg">
-                                      {!msg.content.startsWith('[GROUP_INVITE]:') && !msg.content.startsWith('[COLLECTION_SHARE]:') && (
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingMessageId(msg.id); setInput(msg.content); closeMessageActions(); }} className="text-gray-400 hover:text-white p-1">
+                                      {isEditableTextMessage && (
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingMessageId(msg.id); setInput(msg.content); setSelectedGif(null); setIsGifPickerOpen(false); closeMessageActions(); }} className="text-gray-400 hover:text-white p-1">
                                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                         </button>
                                       )}
@@ -643,7 +716,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                   </div>
                                 )}
 
-                                {msg.content.startsWith('[GROUP_INVITE]:') ? (() => {
+                                {isGroupInvite ? (() => {
                                   try {
                                     const meta = JSON.parse(msg.content.substring(15));
                                     return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
@@ -654,7 +727,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                       </div>
                                     );
                                   }
-                                })() : msg.content.startsWith('[COLLECTION_SHARE]:') ? (() => {
+                                })() : isCollectionShare ? (() => {
                                   try {
                                     const meta = JSON.parse(msg.content.substring(19));
                                     const isMedia = meta.creatorUsername?.startsWith('Cinexium') && meta.itemCount === 0;
@@ -669,7 +742,53 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                       </div>
                                     );
                                   }
-                                })() : (
+                                })() : hasGif ? (
+                                  <div className={`flex min-w-0 w-[180px] flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
+                                    <div className="relative">
+                                      <div className={`overflow-hidden rounded-2xl border border-white/10 bg-[#1a1d24] shadow-xl isolate ${isMe ? 'rounded-br-none' : 'rounded-bl-none'}`}>
+                                      {msg.gifUrl && (
+                                        <div
+                                          className="w-full bg-[#111318]"
+                                          style={msg.gifWidth && msg.gifHeight ? { aspectRatio: `${msg.gifWidth} / ${msg.gifHeight}` } : undefined}
+                                        >
+                                          <img
+                                            src={msg.gifUrl}
+                                            alt="GIF message"
+                                            className="h-full max-h-72 w-full object-cover"
+                                            draggable={false}
+                                            onDragStart={(e) => e.preventDefault()}
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            style={{ touchAction: 'manipulation', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                                          />
+                                        </div>
+                                      )}
+                                        {msg.content && (
+                                          <div className="border-t border-white/10 bg-[#1a1d24] px-4 py-3">
+                                            <p className="text-sm text-white whitespace-pre-wrap break-words break-all">
+                                              {msg.content}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {reactionCount > 0 && !isDeleted && (
+                                        <div 
+                                          onClick={() => setReactionModalData({ isOpen: true, reactions: msg.reactions })}
+                                          className={`absolute -bottom-2 ${isMe ? '-left-2' : '-right-2'} bg-[#15181e] border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-sm z-10 cursor-pointer hover:bg-white/10 transition-colors`}
+                                        >
+                                          <span>{uniqueReactions.join(' ')}</span>
+                                          {reactionCount > 1 && <span className="text-[10px] font-bold text-primary-500">{reactionCount}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className={`mt-1 flex w-full items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                      {msg.isEdited && !isDeleted && <span>Edited</span>}
+                                      <span>
+                                        {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
                                   <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
                                     <p className="text-sm whitespace-pre-wrap break-words break-all">
                                     {msg.content.length > 1000 && !expandedMessages.has(msg.id) 
@@ -753,47 +872,75 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       Message must be 1000 characters or fewer.
                     </p>
                   )}
+                  {selectedGif && !editingMessageId && (
+                    <SelectedGifPreview gif={selectedGif} onClear={() => setSelectedGif(null)} className="max-w-sm" />
+                  )}
                   <div className="flex items-center gap-2">
-                  <div className="flex-1 relative">
-                    <textarea 
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          if (!isOverMessageLimit) {
-                            sendMessage(e);
-                          }
-                        }
-                      }}
-                      placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
-                      className={`w-full max-h-32 min-h-[46px] bg-[#252a34] text-white text-sm rounded-[24px] px-5 py-3 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none border custom-scrollbar ${editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'}`}
-                      rows={1}
-                    />
-                  </div>
-
-                  {editingMessageId ? (
-                    <button 
-                      type="button"
-                      onClick={() => { setEditingMessageId(null); setInput(''); }}
-                      className="h-[46px] w-[46px] rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center text-white transition-colors shrink-0"
-                      title="Cancel Edit"
+                    <div
+                      className={`flex min-h-[46px] flex-1 items-center gap-2 rounded-[24px] border bg-[#252a34] pl-5 pr-2 focus-within:ring-1 focus-within:ring-primary-500 ${
+                        editingMessageId ? 'border-primary-500 shadow-[0_0_10px_rgba(229,9,20,0.2)]' : 'border-white/5'
+                      }`}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  ) : null}
+                      <textarea 
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (!isOverMessageLimit) {
+                              sendMessage(e);
+                            }
+                          }
+                        }}
+                        placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
+                        className="min-h-[46px] min-w-0 flex-1 resize-none bg-transparent py-3 text-sm text-white outline-none placeholder:text-gray-400 custom-scrollbar"
+                        rows={1}
+                      />
+                      {!editingMessageId && (
+                        <button
+                          type="button"
+                          onClick={() => setIsGifPickerOpen((prev) => !prev)}
+                          className={`flex h-8 shrink-0 items-center justify-center rounded-full border px-1.5 transition-colors ${
+                            isGifPickerOpen || selectedGif
+                              ? 'border-primary-500/40 bg-primary-500/15 text-white'
+                              : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white'
+                          }`}
+                        >
+                          <span
+                            className={`flex h-6 items-center rounded-[8px] px-2.5 text-[11px] font-black uppercase leading-none tracking-[0.18em] ${
+                              isGifPickerOpen || selectedGif
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-[#2b313d] text-white/95'
+                            }`}
+                          >
+                            GIF
+                          </span>
+                        </button>
+                      )}
+                    </div>
 
-                  <button 
-                    type="submit"
-                    disabled={!canSendMessage}
-                    className="h-[46px] w-[46px] rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                  >
                     {editingMessageId ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    ) : (
-                      <svg className="w-5 h-5 rotate-90 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-                    )}
-                  </button>
+                      <button 
+                        type="button"
+                        onClick={() => { setEditingMessageId(null); setInput(''); setSelectedGif(null); }}
+                        className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-gray-600 text-white transition-colors hover:bg-gray-500"
+                        title="Cancel Edit"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    ) : null}
+
+                    <button 
+                      type="submit"
+                      disabled={!canSendMessage}
+                      className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {editingMessageId ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      ) : (
+                        <svg className="ml-1 w-5 h-5 rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                      )}
+                    </button>
                   </div>
                 </form>
               </div>

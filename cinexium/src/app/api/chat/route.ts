@@ -82,11 +82,16 @@ export async function GET(req: NextRequest) {
       const latestMessage = conv.messages[0];
 
       let previewText = '';
-      let isUnread = false;
       if (latestMessage) {
         const isSender = latestMessage.senderId === user.id;
         const isDeleted = isSender ? latestMessage.isDeletedBySender : latestMessage.isDeletedByReceiver;
-        if (!isDeleted) previewText = latestMessage.content;
+        if (!isDeleted) {
+          if (latestMessage.gifUrl) {
+            previewText = '[GIF]';
+          } else {
+            previewText = latestMessage.content;
+          }
+        }
         // We now have _count.messages for unread count
       }
 
@@ -112,7 +117,13 @@ export async function GET(req: NextRequest) {
       const latestMessage = group.messages[0];
       let previewText = '';
       if (latestMessage) {
-        if (!latestMessage.isDeletedForEveryone) previewText = latestMessage.content;
+        if (!latestMessage.isDeletedForEveryone) {
+          if (latestMessage.gifUrl) {
+            previewText = '[GIF]';
+          } else {
+            previewText = latestMessage.content;
+          }
+        }
       }
       return {
         id: group.id,

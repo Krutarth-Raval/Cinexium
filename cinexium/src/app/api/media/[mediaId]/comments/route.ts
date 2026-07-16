@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COMMENT_LENGTH, normalizeText } from '@/lib/security';
 
+const normalizeGifField = (value: unknown) =>
+  typeof value === 'string' ? value.trim().slice(0, 2048) : '';
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ mediaId: string }> }) {
   try {
     const { mediaId } = await params;
@@ -70,13 +73,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ med
       return NextResponse.json({ error: 'You are commenting too quickly.' }, { status: 429 });
     }
 
-    const { content, mediaType, parentId } = await req.json();
+    const { content, mediaType, parentId, gifId, gifUrl } = await req.json();
     const normalizedContent = normalizeText(content, MAX_COMMENT_LENGTH);
     const normalizedMediaType = normalizeText(mediaType, 16) || 'movie';
     const normalizedParentId = normalizeText(parentId, 64) || null;
+    const normalizedGifId = normalizeGifField(gifId).slice(0, 128) || null;
+    const normalizedGifUrl = normalizeGifField(gifUrl) || null;
 
-    if (!normalizedContent) {
-      return NextResponse.json({ error: 'Comment content is required' }, { status: 400 });
+    if (!normalizedContent && !normalizedGifId && !normalizedGifUrl) {
+      return NextResponse.json({ error: 'Comment content or GIF is required' }, { status: 400 });
+    }
+
+    if ((normalizedGifId && !normalizedGifUrl) || (!normalizedGifId && normalizedGifUrl)) {
+      return NextResponse.json({ error: 'GIF ID and URL must be provided together' }, { status: 400 });
     }
 
     if (!['movie', 'tv', 'series'].includes(normalizedMediaType)) {
@@ -98,6 +107,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ med
         mediaId,
         mediaType: normalizedMediaType === 'series' ? 'tv' : normalizedMediaType,
         content: normalizedContent,
+        gifId: normalizedGifId,
+        gifUrl: normalizedGifUrl,
         userId: user.id,
         parentId: normalizedParentId,
       },

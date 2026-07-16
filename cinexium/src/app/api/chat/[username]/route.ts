@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { fetchGifDimensionsByIds } from '@/lib/giphy-server';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -106,6 +107,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
 
     const hasMore = fetchedMessages.length > limit;
     const messages = fetchedMessages.slice(0, limit).reverse();
+    const gifDimensionsById = await fetchGifDimensionsByIds(
+      messages.map((message) => message.gifId || '').filter(Boolean)
+    );
+    const messagesWithGifDimensions = messages.map((message) => ({
+      ...message,
+      gifWidth: message.gifId ? gifDimensionsById[message.gifId]?.width ?? null : null,
+      gifHeight: message.gifId ? gifDimensionsById[message.gifId]?.height ?? null : null,
+    }));
     
     const settings = {
       isMuted: isUser1 ? conversation.isMutedByUser1 : conversation.isMutedByUser2,
@@ -114,7 +123,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
 
     return NextResponse.json({ 
       conversation: settings, 
-      messages,
+      messages: messagesWithGifDimensions,
       hasMore,
       targetUser: { 
         id: targetUser.id, username: targetUser.username, name: targetUser.name, avatar: targetUser.avatar,

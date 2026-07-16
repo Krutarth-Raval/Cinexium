@@ -42,6 +42,18 @@ export default function ChatSidebar() {
   }, [pathname, isHiddenModeActive]);
 
   useEffect(() => {
+    const handleChatReadSync = () => {
+      fetchConversations();
+    };
+
+    window.addEventListener('chat:read-sync', handleChatReadSync);
+
+    return () => {
+      window.removeEventListener('chat:read-sync', handleChatReadSync);
+    };
+  }, [isHiddenModeActive]);
+
+  useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const res = await fetch('/api/user/me');
@@ -190,11 +202,16 @@ export default function ChatSidebar() {
             {searchQuery ? 'No contacts found.' : 'No messages or contacts yet.'}
           </div>
         ) : (
-          filteredConversations.map(conv => (
+          filteredConversations.map(conv => {
+            const href = conv.isGroup ? `/chat/group/${conv.id}` : `/chat/${conv.user.username}`;
+            const isActiveConversation = pathname === href;
+            const visibleUnreadCount = isActiveConversation ? 0 : conv.unreadCount;
+
+            return (
             <Link
               key={conv.id}
-              href={conv.isGroup ? `/chat/group/${conv.id}` : `/chat/${conv.user.username}`}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${(conv.isGroup ? pathname === `/chat/group/${conv.id}` : pathname === `/chat/${conv.user.username}`) ? 'bg-white/10 border-white/10' : 'border-white/5 hover:bg-white/5 hover:border-white/10'}`}
+              href={href}
+              className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${isActiveConversation ? 'bg-white/10 border-white/10' : 'border-white/5 hover:bg-white/5 hover:border-white/10'}`}
             >
               <div className="relative">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
@@ -227,7 +244,7 @@ export default function ChatSidebar() {
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-white font-semibold' : (conv.isContactOnly ? 'text-gray-500 italic' : 'text-gray-400')}`}>
+                  <p className={`text-xs truncate ${visibleUnreadCount > 0 ? 'text-white font-semibold' : (conv.isContactOnly ? 'text-gray-500 italic' : 'text-gray-400')}`}>
                     {(() => {
                       if (conv.latestMessage?.startsWith('[GROUP_INVITE]:')) return 'Group Invite';
                       if (conv.latestMessage?.startsWith('[COLLECTION_SHARE]:')) {
@@ -241,6 +258,7 @@ export default function ChatSidebar() {
                           return 'Shared a Collection';
                         }
                       }
+                      if (conv.latestMessage === '[GIF]') return 'Shared a GIF';
                       return conv.latestMessage || 'No messages yet';
                     })()}
                   </p>
@@ -248,16 +266,16 @@ export default function ChatSidebar() {
                     {conv.isMuted && (
                       <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                     )}
-                    {conv.unreadCount > 0 && (
+                    {visibleUnreadCount > 0 && (
                       <div className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-primary-500 rounded-full text-[10px] font-bold text-white shadow-[0_0_8px_rgba(229,9,20,0.5)]">
-                        {conv.unreadCount}
+                        {visibleUnreadCount}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             </Link>
-          ))
+          )})
         )}
       </div>
       </div>

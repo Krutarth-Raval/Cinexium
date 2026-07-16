@@ -4,10 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { GifPicker } from '@/components/gif/GifPicker';
+import { SelectedGifPreview } from '@/components/gif/SelectedGifPreview';
+import type { GifSelection } from '@/lib/giphy';
 
 interface Comment {
   id: string;
   content: string;
+  gifId?: string | null;
+  gifUrl?: string | null;
   createdAt: string;
   parentId?: string | null;
   user: { id: string; name: string; username: string; avatar: string | null };
@@ -48,14 +53,18 @@ export const MediaComments = ({
   mediaId,
   mediaType,
   onCommentsCountChange,
+  onGifOpen,
 }: {
   mediaId: string,
   mediaType: string,
   onCommentsCountChange?: (count: number) => void,
+  onGifOpen?: () => void,
 }) => {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [selectedGif, setSelectedGif] = useState<GifSelection | null>(null);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyingToUsername, setReplyingToUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +74,11 @@ export const MediaComments = ({
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentUser = (session?.user as SessionUser | undefined) ?? {};
   const currentUserId = currentUser.id ?? '';
+  const canSubmitComment = Boolean(newComment.trim() || selectedGif) && !posting;
+
+  useEffect(() => {
+    onCommentsCountChange?.(countComments(comments));
+  }, [comments, onCommentsCountChange]);
 
   const reloadComments = useCallback(async () => {
     try {
@@ -72,7 +86,6 @@ export const MediaComments = ({
       if (res.ok) {
         const nextComments = await res.json();
         setComments(nextComments);
-        onCommentsCountChange?.(countComments(nextComments));
       }
     } catch (e) {
       console.error(e);
@@ -91,16 +104,22 @@ export const MediaComments = ({
 
   const handlePostComment = async () => {
     const content = newComment;
-    if (!content.trim() || posting) return;
+    if ((!content.trim() && !selectedGif) || posting) return;
     
-    const finalContent = replyingToUsername ? `@${replyingToUsername} ${content}` : content;
+    const trimmedContent = content.trim();
+    const finalContent = replyingToUsername && trimmedContent
+      ? `@${replyingToUsername} ${trimmedContent}`
+      : trimmedContent;
     const isReply = !!replyingTo;
     const targetParentId = replyingTo;
+    const pendingGif = selectedGif;
 
     // Create optimistic comment
     const optimisticComment: Comment = {
       id: `temp-${Date.now()}`,
       content: finalContent,
+      gifId: pendingGif?.id ?? null,
+      gifUrl: pendingGif?.url ?? null,
       createdAt: new Date().toISOString(),
       user: {
         id: currentUser.id || '',
@@ -126,14 +145,14 @@ export const MediaComments = ({
           return c;
         })
         : [optimisticComment, ...prev];
-
-      onCommentsCountChange?.(countComments(nextComments));
       return nextComments;
     });
 
     setPosting(true);
     // Clear inputs immediately for better UX
     setNewComment('');
+    setSelectedGif(null);
+    setIsGifPickerOpen(false);
     setReplyingTo(null);
     setReplyingToUsername(null);
 
@@ -143,6 +162,8 @@ export const MediaComments = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           content: finalContent, 
+          gifId: pendingGif?.id ?? null,
+          gifUrl: pendingGif?.url ?? null,
           mediaType, 
           parentId: targetParentId 
         })
@@ -215,7 +236,6 @@ export const MediaComments = ({
 
     const nextComments = removeCommentById(comments, targetId);
     setComments(nextComments);
-    onCommentsCountChange?.(countComments(nextComments));
     if (focusedCommentId === targetId) {
       setFocusedCommentId(null);
     }
@@ -227,13 +247,11 @@ export const MediaComments = ({
 
       if (!res.ok) {
         setComments(previousComments);
-        onCommentsCountChange?.(countComments(previousComments));
         reloadComments();
       }
     } catch (e) {
       console.error(e);
       setComments(previousComments);
-      onCommentsCountChange?.(countComments(previousComments));
       reloadComments();
     } finally {
       setCommentToDelete(null);
@@ -310,7 +328,18 @@ export const MediaComments = ({
                     {formatCompactRelativeTime(comment.createdAt)}
                   </span>
                 </div>
-                <p className="text-gray-300 text-sm mb-2 whitespace-pre-wrap">{comment.content}</p>
+                {comment.content && (
+                  <p className="text-gray-300 text-sm mb-2 whitespace-pre-wrap">{comment.content}</p>
+                )}
+                {comment.gifUrl && (
+                  <div className="mb-2">
+                    <img
+                      src={comment.gifUrl}
+                      alt="Comment GIF"
+                      className="max-h-48 rounded-2xl border border-white/10 object-cover"
+                    />
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
                   <button 
@@ -428,34 +457,70 @@ export const MediaComments = ({
             </button>
           </div>
         )}
+        {selectedGif && (
+          <div className="w-full max-w-4xl mx-auto">
+            <SelectedGifPreview gif={selectedGif} onClear={() => setSelectedGif(null)} className="max-w-full sm:max-w-[14rem]" />
+          </div>
+        )}
         <div className="flex gap-3 max-w-4xl mx-auto items-center w-full">
-          <div className="flex-1 flex items-center bg-[#1a1d24] border border-white/10 rounded-full px-5 h-12 overflow-hidden focus-within:border-primary-500 transition-colors">
-            {replyingToUsername && (
-              <span className="text-primary-500 font-medium text-sm mr-2 whitespace-nowrap bg-primary-500/10 px-2 py-0.5 rounded cursor-default select-none flex items-center gap-1">
-                @{replyingToUsername}
-              </span>
-            )}
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="What are your thoughts?"
-              className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none h-full w-full min-w-0"
-              onKeyDown={(e) => {
-                if (e.key === 'Backspace' && newComment === '') {
-                  setReplyingTo(null);
-                  setReplyingToUsername(null);
-                }
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handlePostComment();
-                }
-              }}
+          <div className="relative flex-1">
+            <GifPicker
+              isOpen={isGifPickerOpen}
+              mode="popover"
+              variant="comment"
+              onClose={() => setIsGifPickerOpen(false)}
+              onSelect={(gif) => setSelectedGif(gif)}
             />
+            <div className="flex-1 flex items-center bg-[#1a1d24] border border-white/10 rounded-full px-5 pr-16 h-12 overflow-hidden focus-within:border-primary-500 transition-colors">
+              {replyingToUsername && (
+                <span className="text-primary-500 font-medium text-sm mr-2 whitespace-nowrap bg-primary-500/10 px-2 py-0.5 rounded cursor-default select-none flex items-center gap-1">
+                  @{replyingToUsername}
+                </span>
+              )}
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="What are your thoughts?"
+                className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none h-full w-full min-w-0"
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace' && newComment === '') {
+                    setReplyingTo(null);
+                    setReplyingToUsername(null);
+                  }
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handlePostComment();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  onGifOpen?.();
+                  setIsGifPickerOpen((prev) => !prev);
+                }}
+                className={`absolute inset-y-0 right-2 my-auto flex h-8 items-center justify-center rounded-full border px-1.5 transition-colors ${
+                  isGifPickerOpen || selectedGif
+                    ? 'border-primary-500/40 bg-primary-500/15 text-white'
+                    : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white'
+                }`}
+              >
+                <span
+                  className={`flex h-6 items-center rounded-[8px] px-2.5 text-[11px] font-black uppercase leading-none tracking-[0.18em] ${
+                    isGifPickerOpen || selectedGif
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-[#2b313d] text-white/95'
+                  }`}
+                >
+                  GIF
+                </span>
+              </button>
+            </div>
           </div>
           <button
             onClick={() => handlePostComment()}
-            disabled={!newComment.trim() || posting}
+            disabled={!canSubmitComment}
             className="w-12 h-12 rounded-full bg-primary-500 text-white flex items-center justify-center self-center shrink-0 disabled:opacity-50 hover:bg-primary-600 transition-colors shadow-lg"
           >
             <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>

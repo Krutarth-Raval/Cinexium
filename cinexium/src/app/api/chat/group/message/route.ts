@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { getGroupChannelName, pusherServer } from '@/lib/pusher';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
+const normalizeGifField = (value: unknown) =>
+  typeof value === 'string' ? value.trim().slice(0, 2048) : '';
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -37,9 +40,15 @@ export async function POST(req: NextRequest) {
     if (action === 'sendGroupMessage') {
       const groupId = normalizeText(data.groupId, 64);
       const content = normalizeText(data.content, MAX_MESSAGE_LENGTH);
+      const gifId = normalizeGifField(data.gifId).slice(0, 128) || null;
+      const gifUrl = normalizeGifField(data.gifUrl) || null;
 
-      if (!groupId || !content) {
-        return NextResponse.json({ error: 'Group and content are required' }, { status: 400 });
+      if (!groupId || (!content && !gifId && !gifUrl)) {
+        return NextResponse.json({ error: 'Group and a message or GIF are required' }, { status: 400 });
+      }
+
+      if ((gifId && !gifUrl) || (!gifId && gifUrl)) {
+        return NextResponse.json({ error: 'GIF ID and URL must be provided together' }, { status: 400 });
       }
 
       const group = await prisma.groupChat.findUnique({
@@ -68,7 +77,9 @@ export async function POST(req: NextRequest) {
         data: {
           groupId: groupId,
           senderId: user.id,
-          content: content
+          content: content,
+          gifId,
+          gifUrl,
         },
         include: { sender: { select: { id: true, username: true, name: true, avatar: true } }, reactions: true }
       });
@@ -138,7 +149,7 @@ export async function POST(req: NextRequest) {
 
       const message = await prisma.groupMessage.update({
         where: { id: messageId },
-        data: { isDeletedForEveryone: true, content: 'This message was deleted' },
+        data: { isDeletedForEveryone: true, content: 'This message was deleted', gifId: null, gifUrl: null },
         include: { sender: { select: { id: true, username: true, name: true, avatar: true } }, reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } } }
       });
       await prisma.groupMessageReaction.deleteMany({ where: { messageId } });

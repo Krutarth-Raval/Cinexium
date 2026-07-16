@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { getUserChannelName, pusherServer } from '@/lib/pusher';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
+const normalizeGifField = (value: unknown) =>
+  typeof value === 'string' ? value.trim().slice(0, 2048) : '';
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -37,10 +40,16 @@ export async function POST(req: NextRequest) {
     if (action === 'sendMessage') {
       const targetUserId = normalizeText(data.targetUserId, 64);
       const content = normalizeText(data.content, MAX_MESSAGE_LENGTH);
+      const gifId = normalizeGifField(data.gifId).slice(0, 128) || null;
+      const gifUrl = normalizeGifField(data.gifUrl) || null;
       const senderId = user.id;
 
-      if (!targetUserId || !content) {
-        return NextResponse.json({ error: 'Target user and content are required' }, { status: 400 });
+      if (!targetUserId || (!content && !gifId && !gifUrl)) {
+        return NextResponse.json({ error: 'Target user and a message or GIF are required' }, { status: 400 });
+      }
+
+      if ((gifId && !gifUrl) || (!gifId && gifUrl)) {
+        return NextResponse.json({ error: 'GIF ID and URL must be provided together' }, { status: 400 });
       }
 
       const block = await prisma.block.findFirst({
@@ -82,7 +91,9 @@ export async function POST(req: NextRequest) {
         data: {
           conversationId: conversation.id,
           senderId: senderId,
-          content: content
+          content: content,
+          gifId,
+          gifUrl,
         }
       });
 
@@ -153,7 +164,7 @@ export async function POST(req: NextRequest) {
 
       const message = await prisma.message.update({
         where: { id: messageId },
-        data: { isDeletedForEveryone: true, content: 'This message was deleted' },
+        data: { isDeletedForEveryone: true, content: 'This message was deleted', gifId: null, gifUrl: null },
         include: { reactions: { include: { user: { select: { id: true, name: true, username: true, avatar: true } } } } }
       });
       await prisma.messageReaction.deleteMany({ where: { messageId } });
