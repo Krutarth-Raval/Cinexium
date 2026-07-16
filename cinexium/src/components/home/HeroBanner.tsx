@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Button } from '../ui/Button';
 import { CustomTrailerPlayer, type CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
-import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
-import { OverviewDrawer } from '@/components/media/OverviewDrawer';
+
+const SaveMediaModal = dynamic(() => import('@/components/collection/SaveMediaModal').then((mod) => mod.SaveMediaModal));
+const OverviewDrawer = dynamic(() => import('@/components/media/OverviewDrawer').then((mod) => mod.OverviewDrawer));
 
 export interface MediaItem {
   id: string;
@@ -31,9 +33,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
 
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
+  const [isTrailerLoading, setIsTrailerLoading] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [isCompactHeroLayout, setIsCompactHeroLayout] = useState(false);
+  const [trailerKeys, setTrailerKeys] = useState<Record<string, string | null>>(() =>
+    Object.fromEntries(items.map((item) => [`${item.type}:${item.id}`, item.trailerKey ?? null]))
+  );
 
   // Auto-scroll logic
   useEffect(() => {
@@ -49,6 +55,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
     setCurrentIndex(0);
     setIsPlayingTrailer(false);
     setIsTrailerPlaying(false);
+    setIsTrailerLoading(false);
+    setTrailerKeys(Object.fromEntries(items.map((item) => [`${item.type}:${item.id}`, item.trailerKey ?? null])));
   }, [items]);
 
   useEffect(() => {
@@ -92,6 +100,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   if (!items || items.length === 0) return null;
 
   const currentItem = items[currentIndex];
+  const currentItemKey = `${currentItem.type}:${currentItem.id}`;
+  const currentTrailerKey = trailerKeys[currentItemKey] ?? currentItem.trailerKey ?? null;
 
   const handleBannerClick = () => {
     router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
@@ -105,17 +115,36 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
   const handleTrailerButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
 
-    if (!currentItem.trailerKey) {
-      router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
-      return;
-    }
-
-    if (isCompactHeroLayout && isPlayingTrailer && trailerPlayerRef.current) {
+    if (isCompactHeroLayout && isPlayingTrailer && trailerPlayerRef.current && currentTrailerKey) {
       trailerPlayerRef.current.togglePlay();
       return;
     }
 
-    setIsPlayingTrailer(true);
+    if (currentTrailerKey) {
+      setIsPlayingTrailer(true);
+      return;
+    }
+
+    setIsTrailerLoading(true);
+
+    fetch(`/api/media/trailer?type=${currentItem.type === 'movie' ? 'movie' : 'tv'}&id=${currentItem.id}`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Failed to load trailer')))
+      .then((data) => {
+        const trailerKey = data.trailerKey ?? null;
+        setTrailerKeys((prev) => ({ ...prev, [currentItemKey]: trailerKey }));
+
+        if (trailerKey) {
+          setIsPlayingTrailer(true);
+        } else {
+          router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
+        }
+      })
+      .catch(() => {
+        router.push(`/${currentItem.type === 'movie' ? 'movie' : 'series'}/${currentItem.id}`);
+      })
+      .finally(() => {
+        setIsTrailerLoading(false);
+      });
   };
 
   return (
@@ -135,11 +164,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'
                 } ${isPlayingTrailer && index === currentIndex ? 'z-20 bg-black' : ''}`}
             >
-              {isPlayingTrailer && index === currentIndex && item.trailerKey ? (
+              {isPlayingTrailer && index === currentIndex && currentTrailerKey ? (
                 <div className="absolute inset-0 z-30 bg-black" onClick={(e) => e.stopPropagation()}>
                   <CustomTrailerPlayer
                     ref={trailerPlayerRef}
-                    videoId={item.trailerKey}
+                    videoId={currentTrailerKey}
                     onClose={handleTrailerClose}
                     onPlayingChange={setIsTrailerPlaying}
                   />
@@ -151,6 +180,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                     alt={item.title}
                     className="w-full h-full object-cover"
                     loading={index === 0 ? "eager" : "lazy"}
+                    fetchPriority={index === 0 ? 'high' : 'auto'}
                   />
                   {/* Gradients only on desktop to make overlaid text readable, softened for better image clarity */}
                   <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/50 to-transparent" />
@@ -165,20 +195,15 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         <div className={`relative sm:absolute sm:inset-0 sm:pointer-events-none flex flex-col justify-between sm:justify-end p-5 sm:p-6 lg:p-10 z-10 min-h-[160px] sm:min-h-0 bg-[#16181d] sm:bg-transparent border-t border-white/5 sm:border-none overflow-hidden transition-opacity duration-500 ${isPlayingTrailer ? 'sm:opacity-0 sm:pointer-events-none' : 'opacity-100'}`}>
 
           {/* Ambient Blurred Background (Mobile Only) */}
-          {items.map((item, index) => (
-            <div
-              key={`bg-${item.id}`}
-              className={`sm:hidden absolute inset-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${index === currentIndex ? 'opacity-100' : 'opacity-0'
-                }`}
-            >
-              <img
-                src={item.bannerUrl}
-                alt="Decorative blurred background for banner"
-                className="w-full h-full object-cover blur-3xl scale-125 opacity-70"
-              />
-              <div className="absolute inset-0 bg-[#0f1115]/75" />
-            </div>
-          ))}
+          <div className="sm:hidden absolute inset-0 transition-opacity duration-500 ease-in-out pointer-events-none opacity-100">
+            <img
+              src={currentItem.bannerUrl}
+              alt="Decorative blurred background for banner"
+              className="w-full h-full object-cover blur-3xl scale-125 opacity-70"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-[#0f1115]/75" />
+          </div>
 
           <div
             className="relative z-10 animate-fade-in-up w-full max-w-4xl sm:pointer-events-auto flex flex-col h-full justify-between sm:justify-end"
@@ -229,12 +254,18 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 className="gap-2 justify-center !rounded-full !w-10 !h-10 sm:!w-auto sm:!h-auto !p-0 sm:!py-3 sm:!px-6 !text-xs sm:!text-base"
                 onClick={handleTrailerButtonClick}
                 aria-label={
-                  isCompactHeroLayout && isPlayingTrailer
+                  isCompactHeroLayout && isPlayingTrailer && currentTrailerKey
                     ? (isTrailerPlaying ? 'Pause trailer' : 'Play trailer')
                     : 'Watch trailer'
                 }
+                disabled={isTrailerLoading}
               >
-                {isCompactHeroLayout && isPlayingTrailer && isTrailerPlaying ? (
+                {isTrailerLoading ? (
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z" />
+                  </svg>
+                ) : isCompactHeroLayout && isPlayingTrailer && isTrailerPlaying ? (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                     <path fillRule="evenodd" d="M6.75 5.25A2.25 2.25 0 0 0 4.5 7.5v9a2.25 2.25 0 0 0 4.5 0v-9a2.25 2.25 0 0 0-2.25-2.25Zm10.5 0A2.25 2.25 0 0 0 15 7.5v9a2.25 2.25 0 0 0 4.5 0v-9a2.25 2.25 0 0 0-2.25-2.25Z" clipRule="evenodd" />
                   </svg>

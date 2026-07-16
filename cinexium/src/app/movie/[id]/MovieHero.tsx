@@ -2,14 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { CustomTrailerPlayer, CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
-import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
-import { ShareCollectionModal } from '@/app/collection/[id]/ShareCollectionModal';
-import { MediaCommentsDrawer } from '@/components/media/MediaCommentsDrawer';
-import { MediaLikesDrawer } from '@/components/media/MediaLikesDrawer';
 import { trackHistoryAction } from '@/app/actions/history';
 
 import { AnimatePresence, motion } from 'framer-motion';
+
+const SaveMediaModal = dynamic(() => import('@/components/collection/SaveMediaModal').then((mod) => mod.SaveMediaModal));
+const ShareCollectionModal = dynamic(() => import('@/app/collection/[id]/ShareCollectionModal').then((mod) => mod.ShareCollectionModal));
+const MediaCommentsDrawer = dynamic(() => import('@/components/media/MediaCommentsDrawer').then((mod) => mod.MediaCommentsDrawer));
+const MediaLikesDrawer = dynamic(() => import('@/components/media/MediaLikesDrawer').then((mod) => mod.MediaLikesDrawer));
 
 export const MovieHero = ({
   mediaId,

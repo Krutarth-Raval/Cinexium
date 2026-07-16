@@ -69,9 +69,8 @@ export default async function Home() {
     }
   }
 
-  // Fetch all data concurrently for maximum performance
+  // Fetch homepage data concurrently and reuse the now-playing lists for the hero.
   const [
-    featuredItems,
     moviesNowPlaying,
     seriesNowPlaying,
     moviesPopular,
@@ -82,7 +81,6 @@ export default async function Home() {
     trendingCountryData,
     globalTop20
   ] = await Promise.all([
-    tmdb.getFeaturedHero(region),
     tmdb.getMovies('now_playing', region),
     tmdb.getSeries('now_playing', region),
     tmdb.getMovies('popular', region),
@@ -93,6 +91,8 @@ export default async function Home() {
     tmdb.getTrendingByCountry(countryCode, region),
     tmdb.getGlobalTop20()
   ]);
+
+  const featuredItems = tmdb.buildFeaturedHero(moviesNowPlaying, seriesNowPlaying);
 
   return (
     <main className="min-h-screen flex flex-col pb-8">
