@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import prisma from '@/lib/prisma';
 import { enforceSameOrigin, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -129,6 +130,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const inviteCode = normalizeText(body.inviteCode, 64);
       
       if (group.isPremiumOnly) {
+        await syncExpiredSubscriptionForUser(user.id);
         const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
         if (!dbUser?.isPremium) {
           return NextResponse.json({ error: 'This is a Cinexium Pro exclusive community. Upgrade to Pro to join!', premiumRequired: true }, { status: 403 });
@@ -206,6 +208,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       
       if (group.isPremiumOnly) {
+        await Promise.all(normalizedIds.map((newId) => syncExpiredSubscriptionForUser(newId)));
         const premiumUsers = await prisma.user.findMany({
           where: { id: { in: normalizedIds }, isPremium: true }
         });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,10 +20,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const existingSave = await prisma.collectionSave.findUnique({
       where: {
         userId_collectionId: {
-          userId: user.id,
+          userId: refreshedUser.id,
           collectionId: id
         }
       }
@@ -36,9 +46,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: true, saved: false });
     } else {
       // Check premium limit for saving
-      if (!user.isPremium) {
+      if (!refreshedUser.isPremium) {
         const saveCount = await prisma.collectionSave.count({
-          where: { userId: user.id }
+          where: { userId: refreshedUser.id }
         });
         if (saveCount >= 2) {
           return NextResponse.json({ 
@@ -50,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Save
       await prisma.collectionSave.create({
         data: {
-          userId: user.id,
+          userId: refreshedUser.id,
           collectionId: id
         }
       });

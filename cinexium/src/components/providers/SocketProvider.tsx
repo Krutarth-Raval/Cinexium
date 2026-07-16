@@ -28,6 +28,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Clear unread dot if user navigates to chat
   useEffect(() => {
@@ -93,14 +94,37 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
+    const handlePremiumActivated = async () => {
+      try {
+        const response = await fetch('/api/user/me', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to refresh premium status.');
+        }
+
+        const data = await response.json();
+        if (data.user) {
+          window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: data.user }));
+          window.dispatchEvent(new CustomEvent('themeChanged', { detail: data.user.themePreference }));
+          router.refresh();
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     channel.bind('receiveMessage', handleReceiveMessage);
     channel.bind('messageUpdated', handleMessageUpdated);
+    channel.bind('premiumActivated', handlePremiumActivated);
 
     return () => {
       channel?.unbind('receiveMessage', handleReceiveMessage);
       channel?.unbind('messageUpdated', handleMessageUpdated);
+      channel?.unbind('premiumActivated', handlePremiumActivated);
     };
-  }, [session]);
+  }, [router, session]);
 
   return (
     <SocketContext.Provider value={{ pusherClient, isConnected, hasUnreadMessages, clearUnreadMessages }}>

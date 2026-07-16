@@ -1,5 +1,13 @@
 import nodemailer from 'nodemailer';
 
+const getAppBaseUrl = () => {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    'https://cinexium.site'
+  ).replace(/\/+$/, '');
+};
+
 const getTransporter = () => {
   const emailUser = process.env.EMAIL_USER;
   const emailPass = process.env.EMAIL_PASS;
@@ -96,4 +104,88 @@ export const sendDeleteAccountOTP = async (to: string, otp: string) => {
     console.log(`[DEVELOPMENT] Delete account OTP for ${to} is: ${otp}`);
   }
   return success;
+};
+
+export const sendSubscriptionPaymentEmail = async ({
+  to,
+  name,
+  plan,
+  amount,
+  upiId,
+  requestId,
+}: {
+  to: string;
+  name: string;
+  plan: 'monthly' | 'yearly';
+  amount: number;
+  upiId: string;
+  requestId: string;
+}) => {
+  const planLabel = plan === 'yearly' ? 'Yearly' : 'Monthly';
+  const payUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Cinexium')}&am=${encodeURIComponent(amount.toString())}&cu=INR`;
+  const paymentPageUrl = `${getAppBaseUrl()}/premium/pay?requestId=${encodeURIComponent(requestId)}`;
+
+  const htmlContent = `
+    <h2 style="color: #ffffff; margin-bottom: 8px;">Hello ${name},</h2>
+    <p style="font-size: 15px; line-height: 1.7; color: #d1d5db;">
+      Your Cinexium Premium ${planLabel.toLowerCase()} subscription request is ready for payment.
+    </p>
+    <div style="background-color: #1a1d24; border: 1px solid #2a2f3a; border-radius: 14px; padding: 20px; margin: 24px 0;">
+      <p style="margin: 0 0 10px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #9ca3af;">Requested Plan</p>
+      <p style="margin: 0 0 16px; font-size: 24px; font-weight: 700; color: #ffffff;">${planLabel} Premium</p>
+      <p style="margin: 0 0 10px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #9ca3af;">Amount</p>
+      <p style="margin: 0 0 16px; font-size: 24px; font-weight: 700; color: #ffffff;">&#8377;${amount}</p>
+      <p style="margin: 0 0 10px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #9ca3af;">UPI ID</p>
+      <p style="margin: 0; font-size: 16px; font-weight: 600; color: #ffffff;">${upiId}</p>
+    </div>
+    <div style="margin: 28px 0; text-align: center;">
+      <a href="${paymentPageUrl}" style="display: inline-block; padding: 14px 28px; border-radius: 12px; background: linear-gradient(90deg, #a855f7, #d946ef); color: #ffffff; font-weight: 700; text-decoration: none;">Pay Now</a>
+    </div>
+    <p style="font-size: 14px; line-height: 1.7; color: #fca5a5; margin-top: 16px;">
+      This payment link expires in 10 minutes.
+    </p>
+    <p style="font-size: 14px; line-height: 1.7; color: #9ca3af;">
+      If the button does not open your UPI app directly, copy this payment link into your browser:
+    </p>
+    <p style="font-size: 12px; line-height: 1.7; color: #c084fc; word-break: break-all; margin-top: 8px;">
+      ${paymentPageUrl}
+    </p>
+    <p style="font-size: 14px; line-height: 1.7; color: #9ca3af; margin-top: 16px;">
+      Direct UPI link: <span style="word-break: break-all; color: #d1d5db;">${payUrl}</span>
+    </p>
+    <p style="font-size: 14px; line-height: 1.7; color: #9ca3af;">
+      Once your payment is completed, our team will activate your Cinexium Premium subscription manually.
+    </p>
+  `;
+
+  return sendEmail(to, `Cinexium Premium ${planLabel} Payment Details`, htmlContent);
+};
+
+export const sendSubscriptionActivatedEmail = async (to: string) => {
+  const htmlContent = `
+    <div style="text-align: center; margin-bottom: 28px;">
+      <p style="margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #c084fc;">Cinexium Premium</p>
+      <h2 style="margin: 0; font-size: 32px; color: #ffffff;">Your Subscription Is Active</h2>
+    </div>
+    <div style="background: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(217,70,239,0.12)); border: 1px solid rgba(192,132,252,0.35); border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #f3f4f6; text-align: left;">
+        Thank you for subscribing to Cinexium Premium. Your membership has been activated successfully and your account now has access to Premium features.
+      </p>
+    </div>
+    <div style="background-color: #1a1d24; border: 1px solid #2a2f3a; border-radius: 14px; padding: 20px; margin: 24px 0;">
+      <p style="margin: 0 0 10px; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af;">What&apos;s Next</p>
+      <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #f3f4f6;">
+        Enjoy your Premium features, including expanded collections, Pro-exclusive perks, and a more personalized Cinexium experience.
+      </p>
+    </div>
+    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; margin-top: 24px;">
+      <p style="margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #e9d5ff;">Need help?</p>
+      <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #d1d5db;">
+        If you have any questions about your subscription or need assistance, contact
+        <a href="mailto:cinexium@gmail.com" style="color: #c084fc; text-decoration: none; margin-left: 4px;">cinexium@gmail.com</a>.
+      </p>
+    </div>
+  `;
+
+  return sendEmail(to, 'Your Cinexium Premium subscription is active', htmlContent);
 };

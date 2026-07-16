@@ -5,14 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
-import { ENABLE_PRO_SUBSCRIPTIONS } from '@/lib/payments/feature-flags';
-import { beginPremiumCheckout } from '@/lib/payments/client';
-import type { PricingResponse } from '@/lib/payments/types';
+import type { PricingResponse } from '@/lib/pricing';
 
 type PremiumUser = {
   isPremium: boolean;
   premiumType?: string | null;
   premiumUntil?: string | null;
+};
+
+type SubscriptionRequestState = {
+  id: string;
+  plan: string;
+  status: string;
+  buttonLabel: string;
+  disabled: boolean;
+  requestedAt: string;
+  actionExpiresAt: string | null;
+  paymentEmailSent: boolean;
 };
 
 export default function PremiumPage() {
@@ -23,16 +32,18 @@ export default function PremiumPage() {
   const [pricing, setPricing] = useState<PricingResponse | null>(null);
   const [isPricingLoading, setIsPricingLoading] = useState(true);
   const [pricingError, setPricingError] = useState('');
-  const [modalStatus, setModalStatus] = useState<'success' | 'error' | 'cancelled' | null>(null);
+  const [modalStatus, setModalStatus] = useState<'success' | 'error' | null>(null);
+  const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
-  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
+  const [requestState, setRequestState] = useState<SubscriptionRequestState | null>(null);
 
   useEffect(() => {
     const loadPageData = async () => {
       try {
-        const [userRes, pricingRes] = await Promise.all([
-          fetch('/api/user/me'),
-          fetch('/api/payment/pricing'),
+        const [userRes, pricingRes, requestRes] = await Promise.all([
+          fetch('/api/user/me', { cache: 'no-store' }),
+          fetch('/api/pricing', { cache: 'no-store' }),
+          fetch('/api/subscription-requests', { cache: 'no-store' }),
         ]);
 
         if (userRes.ok) {
@@ -49,6 +60,13 @@ export default function PremiumPage() {
         const pricingResponse = await pricingRes.json();
         setPricing(pricingResponse);
         setPricingError('');
+
+        if (requestRes.ok) {
+          const requestResponse = await requestRes.json();
+          setRequestState(requestResponse.request || null);
+        } else if (requestRes.status !== 401) {
+          setRequestState(null);
+        }
       } catch (error) {
         console.error(error);
         setPricingError('Unable to load pricing right now. Please try again in a moment.');
@@ -60,19 +78,50 @@ export default function PremiumPage() {
     void loadPageData();
   }, []);
 
-  const handleSubscribe = async () => {
-    if (!ENABLE_PRO_SUBSCRIPTIONS) {
-      setIsComingSoonOpen(true);
+  useEffect(() => {
+    const handleUserProfileUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<PremiumUser>;
+      if (!customEvent.detail) {
+        return;
+      }
+
+      setUserData(customEvent.detail);
+      if (customEvent.detail.isPremium) {
+        setRequestState(null);
+      }
+    };
+
+    window.addEventListener('userProfileUpdated', handleUserProfileUpdated);
+
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleUserProfileUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!requestState?.actionExpiresAt) {
       return;
     }
 
+    const intervalId = window.setInterval(() => {
+      if (new Date(requestState.actionExpiresAt!).getTime() <= Date.now()) {
+        setRequestState(null);
+      }
+    }, 30_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [requestState]);
+
+  const handleSubscribe = async () => {
     if (!termsAccepted) {
+      setModalTitle('Action Required');
       setModalStatus('error');
       setModalMessage('Please accept the Terms & Conditions first.');
       return;
     }
 
     if (!pricing) {
+      setModalTitle('Pricing Unavailable');
       setModalStatus('error');
       setModalMessage(pricingError || 'Pricing is unavailable right now. Please try again shortly.');
       return;
@@ -80,28 +129,43 @@ export default function PremiumPage() {
 
     setIsProcessing(true);
     try {
-      const result = await beginPremiumCheckout(isYearly ? 'yearly' : 'monthly');
+      const response = await fetch('/api/subscription-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: isYearly ? 'yearly' : 'monthly',
+        }),
+      });
 
-      if (!result.success) {
-        if (result.status === 'unauthorized') {
-          window.location.href = '/login';
-          return;
-        }
-
-        setModalStatus(result.status === 'cancelled' ? 'cancelled' : 'error');
-        setModalMessage(result.message);
+      if (response.status === 401) {
+        window.location.href = '/login';
         return;
       }
 
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        if (response.status === 409 && data?.request) {
+          setRequestState(data.request);
+        }
+        setModalTitle('Request Failed');
+        setModalStatus('error');
+        setModalMessage(data?.error || 'Failed to submit your subscription request.');
+        return;
+      }
+
+      const data = await response.json().catch(() => null);
+
+      setModalTitle('Request Submitted');
       setModalStatus('success');
-      setModalMessage('Payment successful! Welcome to Cinexium Pro.');
-      setTimeout(() => {
-        window.location.href = '/?upgrade=success';
-      }, 3000);
+      setModalMessage('Your subscription request has been received successfully.\n\nWe will send your payment details to your registered email shortly.\n\nIf you don\'t receive an email within a few hours, you may submit another request.');
+      setRequestState(data?.request || null);
     } catch (error) {
       console.error(error);
+      setModalTitle('Request Failed');
       setModalStatus('error');
-      setModalMessage('Failed to initiate payment. Are you logged in?');
+      setModalMessage('Failed to submit your subscription request. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -303,15 +367,22 @@ export default function PremiumPage() {
 
               <button
                 onClick={handleSubscribe}
-                disabled={isProcessing || (ENABLE_PRO_SUBSCRIPTIONS && (isPricingLoading || !pricing))}
+                disabled={isProcessing || isPricingLoading || !pricing || requestState?.disabled}
                 className={`w-full py-3 rounded-xl font-bold shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all active:scale-95 relative z-10 ${
-                  isProcessing || (ENABLE_PRO_SUBSCRIPTIONS && (isPricingLoading || !pricing))
+                  isProcessing || isPricingLoading || !pricing || requestState?.disabled
                     ? 'bg-gray-600 text-gray-300 cursor-wait'
                     : 'bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]'
                 }`}
               >
-                {isProcessing ? 'Processing...' : ENABLE_PRO_SUBSCRIPTIONS && isPricingLoading ? 'Loading...' : 'Subscribe Now'}
+                {isProcessing ? 'Processing...' : isPricingLoading ? 'Loading...' : requestState?.disabled ? requestState.buttonLabel : 'Request Pro'}
               </button>
+              {requestState?.disabled && requestState.actionExpiresAt && (
+                <p className="mt-3 text-center text-xs text-gray-400">
+                  {requestState.status === 'WAITING_FOR_PAYMENT'
+                    ? `Payment link expires at ${new Date(requestState.actionExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+                    : `You can send another request after ${new Date(requestState.actionExpiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`}
+                </p>
+              )}
             </motion.div>
           </div>
         )}
@@ -319,53 +390,6 @@ export default function PremiumPage() {
 
       {/* Payment Status Modal */}
       <AnimatePresence>
-        {isComingSoonOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsComingSoonOpen(false)}
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-[#1a1d24] border border-purple-500/30 p-8 rounded-3xl max-w-md w-full relative z-10 text-center shadow-[0_0_50px_rgba(88,28,135,0.35)] overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/20 blur-[50px]" />
-              <div className="relative z-10">
-                <div className="flex justify-center mb-6">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-600/30 border border-purple-400/30 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.25)]">
-                    <svg className="w-12 h-12 text-fuchsia-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-3">Subscriptions Coming Soon</h3>
-                <p className="text-gray-300 mb-8 leading-relaxed">
-                  We&apos;re currently completing payment verification with our payment provider.
-                  <br />
-                  <br />
-                  If you&apos;d like to be notified when Cinexium Pro becomes available, please contact us.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link
-                    href="/contact"
-                    className="flex-1 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all"
-                  >
-                    Contact Us
-                  </Link>
-                  <button
-                    onClick={() => setIsComingSoonOpen(false)}
-                    className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
         {modalStatus && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <motion.div
@@ -386,26 +410,20 @@ export default function PremiumPage() {
                   <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-5xl">
                     <svg className="w-12 h-12 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </div>
-                ) : modalStatus === 'cancelled' ? (
-                  <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center text-5xl">
-                    <svg className="w-12 h-12 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </div>
                 ) : (
                   <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center text-5xl">
                     <svg className="w-12 h-12 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
                 )}
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">
-                {modalStatus === 'success' ? 'Woohoo!' : modalStatus === 'cancelled' ? 'Oh no!' : 'Oops!'}
-              </h3>
-              <p className="text-gray-400 mb-8">{modalMessage}</p>
+              <h3 className="text-2xl font-bold text-white mb-2">{modalTitle}</h3>
+              <p className="text-gray-400 mb-8 whitespace-pre-line">{modalMessage}</p>
 
               <button
                 onClick={() => setModalStatus(null)}
                 className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-colors"
               >
-                {modalStatus === 'success' ? 'Redirecting...' : 'Close'}
+                Close
               </button>
             </motion.div>
           </div>

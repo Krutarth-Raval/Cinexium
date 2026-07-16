@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getGroupChannelName, pusherServer } from '@/lib/pusher';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 const normalizeGifField = (value: unknown) =>
   typeof value === 'string' ? value.trim().slice(0, 2048) : '';
@@ -25,8 +26,18 @@ export async function POST(req: NextRequest) {
     const originError = enforceSameOrigin(req);
     if (originError) return originError;
 
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, name: true, username: true, avatar: true, isPremium: true },
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const rateLimit = applyRateLimit({
-      key: `group-message:${user.id}:${getClientIp(req)}`,
+      key: `group-message:${refreshedUser.id}:${getClientIp(req)}`,
       limit: 30,
       windowMs: 60 * 1000,
     });
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest) {
 
       const group = await prisma.groupChat.findUnique({
         where: { id: groupId },
-        include: { members: { where: { userId: user.id } } }
+        include: { members: { where: { userId: refreshedUser.id } } }
       });
 
       if (!group || group.members.length === 0) {
@@ -68,7 +79,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'Only admins can send messages in this community' }, { status: 403 });
         }
         
-        if (permission === 'PREMIUM_ONLY' && role !== 'ADMIN' && !user.isPremium) {
+        if (permission === 'PREMIUM_ONLY' && role !== 'ADMIN' && !refreshedUser.isPremium) {
           return NextResponse.json({ error: 'Only Pro users and admins can send messages in this community' }, { status: 403 });
         }
       }
@@ -76,7 +87,7 @@ export async function POST(req: NextRequest) {
       const message = await prisma.groupMessage.create({
         data: {
           groupId: groupId,
-          senderId: user.id,
+          senderId: refreshedUser.id,
           content: content,
           gifId,
           gifUrl,

@@ -135,7 +135,14 @@ export const RegionEdgePanel = () => {
     setTimeout(() => setIsOpen(false), 300);
   };
 
-  if (pathname?.startsWith('/chat') || pathname?.startsWith('/notifications') || pathname?.startsWith('/profile') || pathname?.startsWith('/settings') || pathname?.startsWith('/collection')) {
+  if (
+    pathname === '/premium/pay' ||
+    pathname?.startsWith('/chat') ||
+    pathname?.startsWith('/notifications') ||
+    pathname?.startsWith('/profile') ||
+    pathname?.startsWith('/settings') ||
+    pathname?.startsWith('/collection')
+  ) {
     return null;
   }
 

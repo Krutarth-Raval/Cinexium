@@ -25,6 +25,22 @@ export const Navbar = () => {
   const [isPending, startTransition] = useTransition();
   const [loadingText, setLoadingText] = useState('');
 
+  const applyTheme = (themePref: string | null | undefined, isPrem: boolean) => {
+    let themeToApply = 'theme-default';
+    if (isPrem) {
+      if (!themePref || themePref === 'default') {
+        themeToApply = 'theme-neon-purple';
+      } else {
+        themeToApply = `theme-${themePref}`;
+      }
+    }
+
+    document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
+    if (themeToApply !== 'theme-default') {
+      document.body.classList.add(themeToApply);
+    }
+  };
+
   useEffect(() => {
     if (!session) {
       setUserData(null);
@@ -34,7 +50,9 @@ export const Navbar = () => {
 
     setIsResolvingUser(true);
 
-    fetch('/api/user/me')
+    fetch('/api/user/me', {
+      cache: 'no-store',
+    })
       .then(async res => {
         if (res.status === 404) {
           return { user: null };
@@ -50,31 +68,8 @@ export const Navbar = () => {
       .then(data => {
         if (data.user) {
           setUserData(data.user);
-
-          const applyTheme = (themePref: string, isPrem: boolean) => {
-            let themeToApply = 'theme-default';
-            if (isPrem) {
-              if (!themePref || themePref === 'default') {
-                themeToApply = 'theme-neon-purple';
-              } else {
-                themeToApply = `theme-${themePref}`;
-              }
-            }
-            document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
-            if (themeToApply !== 'theme-default') {
-              document.body.classList.add(themeToApply);
-            }
-          };
-
           applyTheme(data.user.themePreference, data.user.isPremium);
-
-          const handleThemeChange = (e: Event) => {
-            const customEvent = e as CustomEvent;
-            applyTheme(customEvent.detail, data.user.isPremium);
-          };
-
-          window.addEventListener('themeChanged', handleThemeChange);
-          return () => window.removeEventListener('themeChanged', handleThemeChange);
+          return;
         }
 
         setUserData(null);
@@ -84,6 +79,31 @@ export const Navbar = () => {
         setIsResolvingUser(false);
       });
   }, [session]);
+
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      applyTheme(customEvent.detail, Boolean(userData?.isPremium));
+    };
+
+    const handleUserProfileUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<any>;
+      if (!customEvent.detail) {
+        return;
+      }
+
+      setUserData(customEvent.detail);
+      applyTheme(customEvent.detail.themePreference, customEvent.detail.isPremium);
+    };
+
+    window.addEventListener('themeChanged', handleThemeChange);
+    window.addEventListener('userProfileUpdated', handleUserProfileUpdated);
+
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeChange);
+      window.removeEventListener('userProfileUpdated', handleUserProfileUpdated);
+    };
+  }, [userData?.isPremium]);
 
   const hasAuthenticatedUser = Boolean(session && userData);
 
@@ -133,6 +153,7 @@ export const Navbar = () => {
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/verify-otp' ||
+    pathname === '/premium/pay' ||
     pathname === '/privacy' ||
     pathname === '/terms' ||
     pathname === '/guidelines' ||
@@ -294,4 +315,4 @@ export const Navbar = () => {
       <RegionEdgePanel />
     </>
   );
-};;
+};

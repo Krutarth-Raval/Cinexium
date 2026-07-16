@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import cloudinary from '@/lib/cloudinary';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,6 +20,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    await syncExpiredSubscriptionForUser(user.id);
 
     const collection = await prisma.collection.findUnique({
       where: { id }
@@ -110,18 +113,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const collection = await prisma.collection.findUnique({
       where: { id }
     });
 
-    if (!collection || collection.userId !== user.id) {
+    if (!collection || collection.userId !== refreshedUser.id) {
       return NextResponse.json({ error: 'Not found or Forbidden' }, { status: 403 });
     }
 
     const { action } = await req.json();
 
     if (action === 'pin' || action === 'unpin') {
-      if (!user.isPremium) {
+      if (!refreshedUser.isPremium) {
         return NextResponse.json({ error: 'Pro membership required to pin collections.', premiumRequired: true }, { status: 403 });
       }
 
@@ -156,6 +168,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    await syncExpiredSubscriptionForUser(user.id);
 
     const collection = await prisma.collection.findUnique({
       where: { id }

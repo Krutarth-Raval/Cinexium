@@ -197,7 +197,26 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                         {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                         {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
                         {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
+                        {n.type === 'SUBSCRIPTION_REQUEST' && `requested ${n.referenceType === 'yearly' ? 'Yearly' : 'Monthly'} Premium.`}
                       </span>
+
+                      {n.type === 'SUBSCRIPTION_REQUEST' && (
+                        <div className="mt-2 rounded-xl border border-yellow-400/20 bg-yellow-400/10 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-yellow-300">
+                            New Premium Request
+                          </p>
+                          <p className="mt-1 text-xs text-yellow-100/80">
+                            Review this request in User Subscriptions and send payment details when you&apos;re ready.
+                          </p>
+                          <Link
+                            href="/settings/admin-tools/subscriptions"
+                            onClick={() => setIsOpen(false)}
+                            className="mt-3 inline-block rounded-lg bg-yellow-300 px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-yellow-200"
+                          >
+                            Open User Subscriptions
+                          </Link>
+                        </div>
+                      )}
                       
                       {n.type === 'FOLLOW_REQUEST' && (
                         <div className="mt-2 flex gap-2">

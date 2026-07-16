@@ -160,7 +160,25 @@ export default function NotificationsPage() {
                   {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
                   {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
                   {n.type === 'COMMUNITY_JOIN_REQUEST' && 'requested to join your community.'}
+                  {n.type === 'SUBSCRIPTION_REQUEST' && `requested ${n.referenceType === 'yearly' ? 'Yearly' : 'Monthly'} Premium.`}
                 </p>
+
+                {n.type === 'SUBSCRIPTION_REQUEST' && (
+                  <div className="mt-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                      New Premium Request
+                    </p>
+                    <p className="mt-2 text-sm text-yellow-100/80">
+                      Open User Subscriptions to review this request, send the payment email, and activate Premium after payment is confirmed.
+                    </p>
+                    <Link
+                      href="/settings/admin-tools/subscriptions"
+                      className="mt-3 inline-flex rounded-xl bg-yellow-300 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-yellow-200"
+                    >
+                      Open User Subscriptions
+                    </Link>
+                  </div>
+                )}
 
                 {n.type === 'COMMENT_REPLY' && n.referenceId && (
                   <div className="mt-3">

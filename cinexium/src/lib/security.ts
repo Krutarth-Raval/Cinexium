@@ -34,6 +34,7 @@ const allowedNotificationTypes = new Set([
   'COMMENT_REPLY',
   'COMMUNITY_JOIN_REQUEST',
   'COMMUNITY_JOIN_ACCEPTED',
+  'SUBSCRIPTION_REQUEST',
 ]);
 
 export function getClientIp(request: Request | NextRequest) {

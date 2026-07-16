@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,12 +19,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ canCreate: false, error: 'User not found' }, { status: 404 });
     }
 
-    if (user.isPremium) {
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ canCreate: false, error: 'User not found' }, { status: 404 });
+    }
+
+    if (refreshedUser.isPremium) {
       return NextResponse.json({ canCreate: true, isPremium: true });
     }
 
     const collectionCount = await prisma.collection.count({
-      where: { userId: user.id }
+      where: { userId: refreshedUser.id }
     });
 
     if (collectionCount >= 3) {

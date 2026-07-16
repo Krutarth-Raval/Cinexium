@@ -2,7 +2,13 @@ import 'server-only';
 
 import { headers } from 'next/headers';
 
-import type { PricingResponse } from '@/lib/payments/types';
+export type PricingResponse = {
+  billingCountry: string;
+  currency: 'INR' | 'USD';
+  symbol: string;
+  monthly: number;
+  yearly: number;
+};
 
 const INDIA_PRICING: Omit<PricingResponse, 'billingCountry'> = {
   currency: 'INR',

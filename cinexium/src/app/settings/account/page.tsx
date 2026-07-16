@@ -9,6 +9,7 @@ import { PrivacyToggle } from '@/components/profile/PrivacyToggle';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
 
 type AccountUser = {
+  role?: string | null;
   email: string;
   isPremium: boolean;
   isPrivate: boolean;
@@ -312,6 +313,20 @@ export default function AccountSettingsPage() {
         </section>
 
         {/* About & Legal Section */}
+        {user?.role === 'admin' && (
+          <div>
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Admin Tools</h2>
+            <div className="bg-[#1a1d24] rounded-2xl shadow-xl border border-white/5 overflow-hidden">
+              <Link href="/settings/admin-tools/subscriptions" className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group">
+                <span className="text-white font-medium group-hover:text-primary-400 transition-colors">User Subscriptions</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div>
           <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">About & Legal</h2>
           <div className="bg-[#1a1d24] rounded-2xl shadow-xl border border-white/5 overflow-hidden">

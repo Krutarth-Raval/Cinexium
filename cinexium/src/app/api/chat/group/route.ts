@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import cloudinary from '@/lib/cloudinary';
 import { applyRateLimit, enforceSameOrigin, generateInviteCode, getClientIp, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function POST(request: Request) {
   try {
@@ -76,9 +77,14 @@ export async function POST(request: Request) {
     const isCommunity = isCommunityStr === 'true';
     const isPremiumOnly = isPremiumOnlyStr === 'true';
 
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     if (isCommunity) {
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (!dbUser?.isPremium) {
+      if (!refreshedUser.isPremium) {
         return NextResponse.json({ error: 'Only Pro users can create Communities.' }, { status: 403 });
       }
     }

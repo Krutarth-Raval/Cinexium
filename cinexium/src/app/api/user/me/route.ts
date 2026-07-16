@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import cloudinary from '@/lib/cloudinary';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type AvatarUploadResult = {
   secure_url: string;
@@ -17,14 +20,13 @@ type UserSettingsPatch = {
 };
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: {
+    const select = {
       id: true,
       name: true,
       username: true,
@@ -39,20 +41,42 @@ export async function GET() {
       premiumUntil: true,
       themePreference: true,
       country: true,
+      role: true,
+    } as const;
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select,
+    });
+
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    try {
+      await syncExpiredSubscriptionForUser(user.id);
+    } catch (error) {
+      console.warn('User subscription expiry sync failed during profile fetch.', error);
     }
-  });
 
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select,
+    });
 
-  const headersList = await headers();
-  const ipCountry = headersList.get('x-vercel-ip-country');
+    if (!refreshedUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  return NextResponse.json({ 
-    user: {
-      ...user,
-      country: user.country || ipCountry || 'US'
-    }
-  });
+    const headersList = await headers();
+    const ipCountry = headersList.get('x-vercel-ip-country');
+
+    return NextResponse.json({ 
+      user: {
+        ...refreshedUser,
+        country: refreshedUser.country || ipCountry || 'US'
+      }
+    });
+  } catch (error) {
+    console.error('User profile GET error:', error);
+    return NextResponse.json({ error: 'Failed to load user profile' }, { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
@@ -70,6 +94,7 @@ export async function PUT(request: Request) {
     let avatarUrl = formData.get('avatarUrl') as string | null;
 
     if (avatarFile && avatarFile.size > 0) {
+      const { default: cloudinary } = await import('@/lib/cloudinary');
       const buffer = Buffer.from(await avatarFile.arrayBuffer());
       
       const uploadResult = await new Promise<AvatarUploadResult>((resolve, reject) => {

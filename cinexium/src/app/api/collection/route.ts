@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COLLECTION_DESCRIPTION_LENGTH, MAX_COLLECTION_NAME_LENGTH, normalizeText } from '@/lib/security';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,8 +23,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    await syncExpiredSubscriptionForUser(user.id);
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const rateLimit = applyRateLimit({
-      key: `collection-create:${user.id}:${getClientIp(req)}`,
+      key: `collection-create:${refreshedUser.id}:${getClientIp(req)}`,
       limit: 10,
       windowMs: 15 * 60 * 1000,
     });
@@ -41,9 +51,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Premium Enforcement
-    if (!user.isPremium) {
+    if (!refreshedUser.isPremium) {
       const collectionCount = await prisma.collection.count({
-        where: { userId: user.id }
+        where: { userId: refreshedUser.id }
       });
 
       if (collectionCount >= 2) {
@@ -56,8 +66,8 @@ export async function POST(req: NextRequest) {
     // Check unique constraint per user
     const existing = await prisma.collection.findUnique({
       where: {
-        userId_name: {
-          userId: user.id,
+          userId_name: {
+          userId: refreshedUser.id,
           name: name
         }
       }
@@ -72,7 +82,7 @@ export async function POST(req: NextRequest) {
         name,
         description,
         isPublic,
-        userId: user.id
+        userId: refreshedUser.id
       }
     });
 

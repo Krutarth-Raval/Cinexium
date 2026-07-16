@@ -12,6 +12,7 @@ export const BottomNav = () => {
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/verify-otp' ||
+    pathname === '/premium/pay' ||
     pathname?.startsWith('/chat/') ||
     pathname === '/privacy' ||
     pathname === '/terms' ||

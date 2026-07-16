@@ -82,6 +82,7 @@ model User {
   
   // Communities
   communityJoinRequests CommunityJoinRequest[]
+  subscriptionRequests  SubscriptionRequest[]
 }
 
 model Favorite {
@@ -272,6 +273,28 @@ model Notification {
 
   user      User     @relation("receivedNotifications", fields: [userId], references: [id], onDelete: Cascade)
   actor     User     @relation("sentNotifications", fields: [actorId], references: [id], onDelete: Cascade)
+}
+
+model SubscriptionRequest {
+  id                 String   @id @default(uuid())
+  userId             String
+  avatar             String?  @default("")
+  username           String
+  email              String
+  plan               String
+  status             String   @default("PENDING")
+  paymentEmailSent   Boolean  @default(false)
+  paymentEmailSentAt DateTime?
+  activatedAt        DateTime?
+  expiresAt          DateTime?
+  requestedAt        DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
 
 // Chat System
