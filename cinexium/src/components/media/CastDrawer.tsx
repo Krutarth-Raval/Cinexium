@@ -10,6 +10,8 @@ interface CastDrawerProps {
   castId: string | null;
 }
 
+const castCache = new Map<string, any>();
+
 const CastMediaCarousel = ({ title, items }: { title: string; items: any[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -119,11 +121,19 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
   useEffect(() => {
     if (isOpen && castId) {
       let isCancelled = false;
-      setLoading(true);
       setError('');
+      const cachedPerson = castCache.get(castId);
+
+      if (cachedPerson) {
+        setPerson(cachedPerson);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       fetch(`/api/person/${castId}`)
         .then(async (res) => {
-          const data = await res.json();
+          const data = await res.json().catch(() => null);
           if (!res.ok || data?.error) {
             throw new Error(data?.error || 'Failed to fetch person details');
           }
@@ -131,12 +141,12 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
         })
         .then(data => {
           if (isCancelled) return;
+          castCache.set(castId, data);
           setPerson(data);
           setLoading(false);
         })
         .catch(err => {
           if (isCancelled) return;
-          console.error(err);
           setPerson(null);
           setError('Failed to load cast details.');
           setLoading(false);

@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { CastDrawer } from '@/components/media/CastDrawer';
 import { OverviewDrawer } from '@/components/media/OverviewDrawer';
 import { GalleryDrawer } from '@/components/media/GalleryDrawer';
-import { CompanyDrawer } from '@/components/media/CompanyDrawer';
+import { CompanyDrawer, primeCompanyDetails } from '@/components/media/CompanyDrawer';
 
 export const MovieBentoGrid = ({ details, region }: { details: any, region?: string }) => {
   const [selectedCastId, setSelectedCastId] = useState<string | null>(null);
@@ -595,6 +595,9 @@ export const MovieBentoGrid = ({ details, region }: { details: any, region?: str
                     <button
                       key={company.id}
                       onClick={() => setSelectedCompanyId(company.id.toString())}
+                      onMouseEnter={() => primeCompanyDetails(company.id.toString(), company)}
+                      onFocus={() => primeCompanyDetails(company.id.toString(), company)}
+                      onTouchStart={() => primeCompanyDetails(company.id.toString(), company)}
                       className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-center shrink-0"
                     >
                       <div className="w-[96px] h-[96px] bg-white rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg p-3 flex items-center justify-center shrink-0">
@@ -697,6 +700,9 @@ export const MovieBentoGrid = ({ details, region }: { details: any, region?: str
                 <button
                   key={company.id}
                   onClick={() => setSelectedCompanyId(company.id.toString())}
+                  onMouseEnter={() => primeCompanyDetails(company.id.toString(), company)}
+                  onFocus={() => primeCompanyDetails(company.id.toString(), company)}
+                  onTouchStart={() => primeCompanyDetails(company.id.toString(), company)}
                   className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-center shrink-0"
                 >
                   <div className="w-[100px] h-[100px] bg-white rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all duration-300 shadow-lg p-3 flex items-center justify-center shrink-0">
@@ -923,6 +929,7 @@ export const MovieBentoGrid = ({ details, region }: { details: any, region?: str
         isOpen={!!selectedCompanyId}
         onClose={() => setSelectedCompanyId(null)}
         companyId={selectedCompanyId}
+        initialCompany={productionCompanies.find((company: any) => company.id.toString() === selectedCompanyId) ?? null}
       />
     </>
   );

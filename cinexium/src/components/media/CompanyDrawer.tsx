@@ -8,6 +8,48 @@ interface CompanyDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   companyId: string | null;
+  initialCompany?: any | null;
+}
+
+const companyCache = new Map<string, any>();
+const companyRequestCache = new Map<string, Promise<any>>();
+
+async function fetchCompanyDetails(companyId: string) {
+  const cachedCompany = companyCache.get(companyId);
+  if (cachedCompany?.produced_movies || cachedCompany?.produced_series) {
+    return cachedCompany;
+  }
+
+  const existingRequest = companyRequestCache.get(companyId);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = fetch(`/api/company/${companyId}`)
+    .then(async (res) => {
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to load company details.');
+      }
+      companyCache.set(companyId, data);
+      return data;
+    })
+    .finally(() => {
+      companyRequestCache.delete(companyId);
+    });
+
+  companyRequestCache.set(companyId, request);
+  return request;
+}
+
+export function primeCompanyDetails(companyId: string, seedCompany?: any | null) {
+  if (!companyId) return;
+
+  if (seedCompany && !companyCache.has(companyId)) {
+    companyCache.set(companyId, seedCompany);
+  }
+
+  void fetchCompanyDetails(companyId).catch(() => {});
 }
 
 const CompanyMediaCarousel = ({ title, items, type }: { title: string; items: any[], type: 'movie' | 'series' }) => {
@@ -98,7 +140,7 @@ const CompanyMediaCarousel = ({ title, items, type }: { title: string; items: an
   );
 };
 
-export const CompanyDrawer = ({ isOpen, onClose, companyId }: CompanyDrawerProps) => {
+export const CompanyDrawer = ({ isOpen, onClose, companyId, initialCompany = null }: CompanyDrawerProps) => {
   const [heightState, setHeightState] = useState<'half' | 'full'>('half');
   const [company, setCompany] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -115,21 +157,32 @@ export const CompanyDrawer = ({ isOpen, onClose, companyId }: CompanyDrawerProps
 
   useEffect(() => {
     if (isOpen && companyId) {
+      const cachedCompany = companyCache.get(companyId);
+      if (cachedCompany) {
+        setCompany(cachedCompany);
+      } else if (initialCompany) {
+        setCompany(initialCompany);
+        companyCache.set(companyId, initialCompany);
+      } else {
+        setCompany(null);
+      }
+
       setLoading(true);
-      fetch(`/api/company/${companyId}`)
-        .then(res => res.json())
+      fetchCompanyDetails(companyId)
         .then(data => {
           setCompany(data);
           setLoading(false);
         })
-        .catch(err => {
-          console.error(err);
+        .catch(() => {
           setLoading(false);
+          if (!initialCompany) {
+            setCompany(null);
+          }
         });
     } else {
       setCompany(null);
     }
-  }, [isOpen, companyId]);
+  }, [isOpen, companyId, initialCompany]);
 
   const handleDragEnd = (e: any, info: any) => {
     if (heightState === 'half') {
@@ -156,11 +209,11 @@ export const CompanyDrawer = ({ isOpen, onClose, companyId }: CompanyDrawerProps
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (loading && !company) {
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
+          </div>
       );
     }
 
