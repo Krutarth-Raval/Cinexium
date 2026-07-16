@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -103,7 +103,6 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
   const [heightState, setHeightState] = useState<'half' | 'full'>('half');
   const [person, setPerson] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const personCacheRef = useRef<Map<string, any>>(new Map());
 
   // Reset to half when opened
   useEffect(() => {
@@ -118,30 +117,17 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
 
   useEffect(() => {
     if (isOpen && castId) {
-      const cachedPerson = personCacheRef.current.get(castId);
-      if (cachedPerson) {
-        setPerson(cachedPerson);
-        setLoading(false);
-        return;
-      }
-
-      const controller = new AbortController();
       setLoading(true);
-      fetch(`/api/person/${castId}`, { signal: controller.signal })
+      fetch(`/api/person/${castId}`)
         .then(res => res.json())
         .then(data => {
-          personCacheRef.current.set(castId, data);
           setPerson(data);
           setLoading(false);
         })
         .catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error(err);
-          }
+          console.error(err);
           setLoading(false);
         });
-
-      return () => controller.abort();
     } else {
       setPerson(null);
     }
@@ -177,40 +163,40 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
     return Array.from(unique.values());
   };
 
-  const popularMovies = useMemo(() => {
+  const getPopularMovies = () => {
     if (!person?.combined_credits?.cast) return [];
     const movies = person.combined_credits.cast.filter((c: any) => c.media_type === 'movie' && c.poster_path);
     return deduplicateCredits(movies)
       .sort((a: any, b: any) => b.popularity - a.popularity)
       .slice(0, 10);
-  }, [person]);
+  };
 
-  const popularSeries = useMemo(() => {
+  const getPopularSeries = () => {
     if (!person?.combined_credits?.cast) return [];
     const series = person.combined_credits.cast.filter((c: any) => c.media_type === 'tv' && c.poster_path);
     return deduplicateCredits(series)
       .sort((a: any, b: any) => b.popularity - a.popularity)
       .slice(0, 10);
-  }, [person]);
+  };
 
-  const upcoming = useMemo(() => {
+  const getUpcoming = () => {
     if (!person?.combined_credits?.cast) return [];
     const now = new Date();
-    const upcomingCredits = person.combined_credits.cast.filter((c: any) => {
+    const upcoming = person.combined_credits.cast.filter((c: any) => {
       if (!c.poster_path) return false;
       const dateStr = c.release_date || c.first_air_date;
       if (!dateStr) return false;
       const date = new Date(dateStr);
       return date > now;
     });
-    return deduplicateCredits(upcomingCredits)
+    return deduplicateCredits(upcoming)
       .sort((a: any, b: any) => {
         const dateA = new Date(a.release_date || a.first_air_date).getTime();
         const dateB = new Date(b.release_date || b.first_air_date).getTime();
         return dateA - dateB;
       })
       .slice(0, 10);
-  }, [person]);
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -280,9 +266,9 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
         </div>
 
         <div className="py-6">
-          <CastMediaCarousel title="Popular Movies" items={popularMovies} />
-          <CastMediaCarousel title="Popular Series" items={popularSeries} />
-          <CastMediaCarousel title="Upcoming" items={upcoming} />
+          <CastMediaCarousel title="Popular Movies" items={getPopularMovies()} />
+          <CastMediaCarousel title="Popular Series" items={getPopularSeries()} />
+          <CastMediaCarousel title="Upcoming" items={getUpcoming()} />
         </div>
       </div>
     );

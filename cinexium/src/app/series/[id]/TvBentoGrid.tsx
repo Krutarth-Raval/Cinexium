@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-
-const CastDrawer = dynamic(() => import('@/components/media/CastDrawer').then((mod) => mod.CastDrawer));
-const OverviewDrawer = dynamic(() => import('@/components/media/OverviewDrawer').then((mod) => mod.OverviewDrawer));
-const GalleryDrawer = dynamic(() => import('@/components/media/GalleryDrawer').then((mod) => mod.GalleryDrawer));
-const SeasonsDrawer = dynamic(() => import('@/components/media/SeasonsDrawer').then((mod) => mod.SeasonsDrawer));
-const EpisodeDrawer = dynamic(() => import('@/components/media/EpisodeDrawer').then((mod) => mod.EpisodeDrawer));
-const CompanyDrawer = dynamic(() => import('@/components/media/CompanyDrawer').then((mod) => mod.CompanyDrawer));
+import { CastDrawer } from '@/components/media/CastDrawer';
+import { OverviewDrawer } from '@/components/media/OverviewDrawer';
+import { GalleryDrawer } from '@/components/media/GalleryDrawer';
+import { SeasonsDrawer } from '@/components/media/SeasonsDrawer';
+import { EpisodeDrawer } from '@/components/media/EpisodeDrawer';
+import { CompanyDrawer } from '@/components/media/CompanyDrawer';
 
 export const TvBentoGrid = ({ details, region }: { details: any, region?: string }) => {
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(1);

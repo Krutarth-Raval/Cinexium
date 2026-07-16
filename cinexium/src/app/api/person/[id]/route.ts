@@ -28,38 +28,7 @@ export async function GET(
     }
 
     const data = await response.json();
-    const cast = Array.isArray(data.combined_credits?.cast)
-      ? data.combined_credits.cast.map((entry: any) => ({
-          id: entry.id,
-          media_type: entry.media_type,
-          poster_path: entry.poster_path,
-          title: entry.title,
-          name: entry.name,
-          character: entry.character,
-          popularity: entry.popularity,
-          release_date: entry.release_date,
-          first_air_date: entry.first_air_date,
-        }))
-      : [];
-
-    return NextResponse.json(
-      {
-        name: data.name,
-        profile_path: data.profile_path,
-        birthday: data.birthday,
-        deathday: data.deathday,
-        place_of_birth: data.place_of_birth,
-        biography: data.biography,
-        combined_credits: {
-          cast,
-        },
-      },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
-        },
-      }
-    );
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching person details:', error);
     return NextResponse.json(
