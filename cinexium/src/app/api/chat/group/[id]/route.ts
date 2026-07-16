@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import prisma from '@/lib/prisma';
 import { enforceSameOrigin, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
-import { fetchGifDimensionsByIds } from '@/lib/giphy-server';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -91,16 +90,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
       }))
       .reverse();
-    const gifDimensionsById = await fetchGifDimensionsByIds(
-      maskedMessages.map((message) => message.gifId || '').filter(Boolean)
-    );
-    const maskedMessagesWithGifDimensions = maskedMessages.map((message) => ({
-      ...message,
-      gifWidth: message.gifId ? gifDimensionsById[message.gifId]?.width ?? null : null,
-      gifHeight: message.gifId ? gifDimensionsById[message.gifId]?.height ?? null : null,
-    }));
 
-    return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessagesWithGifDimensions, hasMore, isMember: true });
+    return NextResponse.json({ ...group, members: maskedMembers, messages: maskedMessages, hasMore, isMember: true });
   } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

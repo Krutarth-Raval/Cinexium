@@ -6,6 +6,26 @@ const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.themoviedb.org/3
 
 type Category = 'now_playing' | 'popular' | 'top_rated';
 
+async function fetchTmdbJson<T>(url: string, revalidate = 3600, timeoutMs = 3500): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`TMDB request failed with ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const getRegionFilters = (region: string, type: 'movie' | 'tv') => {
   if (region === 'bollywood') {
     return '&with_original_language=hi';
@@ -55,10 +75,7 @@ const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, re
   const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=1${regionFilter}${categoryFilter}`;
   
   try {
-    const response = await fetch(url, { next: { revalidate: 3600 } });
-    if (!response.ok) throw new Error(`Failed to fetch ${type} ${category}`);
-    
-    const data = await response.json();
+    const data = await fetchTmdbJson<{ results?: any[] }>(url);
     
     return (data.results || [])
       .filter((item: any) => item.poster_path) // Require poster for carousels
@@ -68,7 +85,7 @@ const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, re
         description: item.overview,
         bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
         posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-        type: type === 'movie' ? 'movie' : 'series',
+        type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
       }))
       .slice(0, 20);
   } catch (error) {
@@ -83,10 +100,7 @@ export const tmdb = {
     try {
       const regionFilter = getRegionFilters(region, 'movie');
       const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&page=1&sort_by=popularity.desc&watch_region=${countryCode}&with_watch_monetization_types=flatrate|free|ads|rent|buy${regionFilter}`;
-      const response = await fetch(url, { next: { revalidate: 3600 } });
-      if (!response.ok) throw new Error(`Failed to fetch trending for ${countryCode}`);
-      
-      const data = await response.json();
+      const data = await fetchTmdbJson<{ results?: any[] }>(url);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path)
@@ -96,7 +110,7 @@ export const tmdb = {
           description: item.overview,
           bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-          type: 'movie',
+          type: 'movie' as const,
         }))
         .slice(0, 20);
     } catch (error) {
@@ -109,10 +123,7 @@ export const tmdb = {
     if (!TMDB_API_KEY) return [];
     try {
       const url = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=en-US`;
-      const response = await fetch(url, { next: { revalidate: 3600 } });
-      if (!response.ok) throw new Error(`Failed to fetch global top 20`);
-      
-      const data = await response.json();
+      const data = await fetchTmdbJson<{ results?: any[] }>(url);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv'))
@@ -122,7 +133,7 @@ export const tmdb = {
           description: item.overview,
           bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-          type: item.media_type === 'movie' ? 'movie' : 'series',
+          type: (item.media_type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
         }))
         .slice(0, 20);
     } catch (error) {
@@ -156,14 +167,15 @@ export const tmdb = {
       top10.map(async (item) => {
         try {
           const typePath = item.type === 'movie' ? 'movie' : 'tv';
-          const response = await fetch(`${TMDB_BASE_URL}/${typePath}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`, { next: { revalidate: 3600 } });
-          if (response.ok) {
-            const data = await response.json();
-            const videos = data.videos?.results || [];
-            const trailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube') || videos.find((v: any) => v.site === 'YouTube');
-            if (trailer) {
-              return { ...item, trailerKey: trailer.key };
-            }
+          const data = await fetchTmdbJson<{ videos?: { results?: any[] } }>(
+            `${TMDB_BASE_URL}/${typePath}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`,
+            3600,
+            1200
+          );
+          const videos = data.videos?.results || [];
+          const trailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube') || videos.find((v: any) => v.site === 'YouTube');
+          if (trailer) {
+            return { ...item, trailerKey: trailer.key };
           }
         } catch (e) {
           console.error(`Failed to fetch trailer for ${item.id}`, e);
@@ -179,16 +191,14 @@ export const tmdb = {
   getMediaDetails: cache(async (type: 'movie' | 'tv', id: string): Promise<MediaItem | null> => {
     if (!TMDB_API_KEY) return null;
     try {
-      const response = await fetch(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`, { next: { revalidate: 3600 } });
-      if (!response.ok) return null;
-      const item = await response.json();
+      const item = await fetchTmdbJson<any>(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`);
       return {
         id: item.id.toString(),
         title: item.title || item.name || item.original_title || item.original_name,
         description: item.overview,
         bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
         posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '',
-        type: type === 'movie' ? 'movie' : 'series',
+        type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
         releaseDate: item.release_date || item.first_air_date || item.primary_release_date || null,
         originalLanguage: item.original_language,
         genres: item.genres,
@@ -206,9 +216,7 @@ export const tmdb = {
         ? 'credits,videos,recommendations,similar,release_dates,watch/providers' 
         : 'credits,videos,recommendations,similar,content_ratings,watch/providers';
         
-      const response = await fetch(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=${appendParams}`, { next: { revalidate: 3600 } });
-      if (!response.ok) return null;
-      return await response.json();
+      return await fetchTmdbJson<any>(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=${appendParams}`, 3600, 5000);
     } catch {
       return null;
     }
@@ -218,9 +226,11 @@ export const tmdb = {
   searchMedia: async (query: string, type: 'movie' | 'tv' | 'multi', region?: string): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY || !query) return [];
     try {
-      const response = await fetch(`${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`);
-      if (!response.ok) throw new Error('Search failed');
-      const data = await response.json();
+      const data = await fetchTmdbJson<{ results?: any[] }>(
+        `${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`,
+        3600,
+        3500
+      );
       
       let tmdbResults = data.results || [];
       
@@ -246,7 +256,7 @@ export const tmdb = {
           description: item.overview,
           bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-          type: item.media_type ? (item.media_type === 'movie' ? 'movie' : 'series') : (type === 'movie' ? 'movie' : 'series'),
+          type: (item.media_type ? (item.media_type === 'movie' ? 'movie' : 'series') : (type === 'movie' ? 'movie' : 'series')) as MediaItem['type'],
           releaseDate: item.primary_release_date || item.first_air_date || null,
         }));
     } catch {
@@ -265,9 +275,7 @@ export const tmdb = {
     const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=1&with_genres=${genreId}${sortFilter}`;
     
     try {
-      const response = await fetch(url, { next: { revalidate: 3600 } });
-      if (!response.ok) throw new Error('Discover by genre failed');
-      const data = await response.json();
+      const data = await fetchTmdbJson<{ results?: any[] }>(url);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path) // Require poster
@@ -277,7 +285,7 @@ export const tmdb = {
           description: item.overview,
           bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-          type: type === 'movie' ? 'movie' : 'series',
+          type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
           releaseDate: item[dateField],
         }));
     } catch {
@@ -313,9 +321,7 @@ export const tmdb = {
     const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}${regionFilter}${sortFilter}`;
 
     try {
-      const response = await fetch(url, { next: { revalidate: 3600 } });
-      if (!response.ok) throw new Error('Discover failed');
-      const data = await response.json();
+      const data = await fetchTmdbJson<{ results?: any[] }>(url);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path) // Require poster
@@ -325,7 +331,7 @@ export const tmdb = {
           description: item.overview,
           bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
-          type: type === 'movie' ? 'movie' : 'series',
+          type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
           releaseDate: item.release_date || item.first_air_date || '',
         }));
     } catch {
