@@ -103,6 +103,7 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
   const [heightState, setHeightState] = useState<'half' | 'full'>('half');
   const [person, setPerson] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Reset to half when opened
   useEffect(() => {
@@ -117,19 +118,36 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
 
   useEffect(() => {
     if (isOpen && castId) {
+      let isCancelled = false;
       setLoading(true);
+      setError('');
       fetch(`/api/person/${castId}`)
-        .then(res => res.json())
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok || data?.error) {
+            throw new Error(data?.error || 'Failed to fetch person details');
+          }
+          return data;
+        })
         .then(data => {
+          if (isCancelled) return;
           setPerson(data);
           setLoading(false);
         })
         .catch(err => {
+          if (isCancelled) return;
           console.error(err);
+          setPerson(null);
+          setError('Failed to load cast details.');
           setLoading(false);
         });
+
+      return () => {
+        isCancelled = true;
+      };
     } else {
       setPerson(null);
+      setError('');
     }
   }, [isOpen, castId]);
 
@@ -210,7 +228,7 @@ export const CastDrawer = ({ isOpen, onClose, castId }: CastDrawerProps) => {
     if (!person) {
       return (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          Failed to load cast details.
+          {error || 'Failed to load cast details.'}
         </div>
       );
     }

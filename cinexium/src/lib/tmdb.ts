@@ -1,4 +1,5 @@
 import { MediaItem } from '@/components/home/HeroBanner';
+import { cache } from 'react';
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.themoviedb.org/3';
@@ -42,7 +43,7 @@ const getCategoryFilters = (category: Category, type: 'movie' | 'tv') => {
   }
 };
 
-async function fetchMediaList(type: 'movie' | 'tv', category: Category, region: string): Promise<MediaItem[]> {
+const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, region: string): Promise<MediaItem[]> => {
   if (!TMDB_API_KEY) {
     console.warn('TMDB_API_KEY is not set');
     return [];
@@ -74,10 +75,10 @@ async function fetchMediaList(type: 'movie' | 'tv', category: Category, region: 
     console.error(`Error in fetchMediaList (${type}, ${category}):`, error);
     return [];
   }
-}
+});
 
 export const tmdb = {
-  getTrendingByCountry: async (countryCode: string, region: string): Promise<MediaItem[]> => {
+  getTrendingByCountry: cache(async (countryCode: string, region: string): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY) return [];
     try {
       const regionFilter = getRegionFilters(region, 'movie');
@@ -102,9 +103,9 @@ export const tmdb = {
       console.error(`Error in getTrendingByCountry (${countryCode}):`, error);
       return [];
     }
-  },
+  }),
 
-  getGlobalTop20: async (): Promise<MediaItem[]> => {
+  getGlobalTop20: cache(async (): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY) return [];
     try {
       const url = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=en-US`;
@@ -128,13 +129,13 @@ export const tmdb = {
       console.error(`Error in getGlobalTop20:`, error);
       return [];
     }
-  },
+  }),
 
   getMovies: (category: Category, region: string) => fetchMediaList('movie', category, region),
   getSeries: (category: Category, region: string) => fetchMediaList('tv', category, region),
   
   // Helper for Hero Banner (interlaced top 10 movies + series)
-  getFeaturedHero: async (region: string): Promise<MediaItem[]> => {
+  getFeaturedHero: cache(async (region: string): Promise<MediaItem[]> => {
     const [movies, series] = await Promise.all([
       fetchMediaList('movie', 'now_playing', region),
       fetchMediaList('tv', 'now_playing', region)
@@ -172,10 +173,10 @@ export const tmdb = {
     );
     
     return top10WithTrailers;
-  },
+  }),
 
   // Fetch specific media details by ID
-  getMediaDetails: async (type: 'movie' | 'tv', id: string): Promise<MediaItem | null> => {
+  getMediaDetails: cache(async (type: 'movie' | 'tv', id: string): Promise<MediaItem | null> => {
     if (!TMDB_API_KEY) return null;
     try {
       const response = await fetch(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`, { next: { revalidate: 3600 } });
@@ -195,10 +196,10 @@ export const tmdb = {
     } catch {
       return null;
     }
-  },
+  }),
 
   // Fetch exhaustive media details
-  getFullMediaDetails: async (type: 'movie' | 'tv', id: string): Promise<any | null> => {
+  getFullMediaDetails: cache(async (type: 'movie' | 'tv', id: string): Promise<any | null> => {
     if (!TMDB_API_KEY) return null;
     try {
       const appendParams = type === 'movie' 
@@ -211,7 +212,7 @@ export const tmdb = {
     } catch {
       return null;
     }
-  },
+  }),
 
   // Search media
   searchMedia: async (query: string, type: 'movie' | 'tv' | 'multi', region?: string): Promise<MediaItem[]> => {
