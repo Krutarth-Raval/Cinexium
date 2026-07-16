@@ -64,6 +64,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
     const pricing = getPricingForCountry('IN');
     const amount = getPricingAmount(pricing, subscriptionRequest.plan as 'monthly' | 'yearly');
     const paymentEmailSentAt = new Date();
+    const appBaseUrl = `${_request.headers.get('x-forwarded-proto') || _request.nextUrl.protocol.replace(':', '')}://${_request.headers.get('x-forwarded-host') || _request.headers.get('host') || _request.nextUrl.host}`;
 
     const emailSent = await sendSubscriptionPaymentEmail({
       to: subscriptionRequest.email,
@@ -72,6 +73,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
       amount,
       upiId,
       requestId: subscriptionRequest.id,
+      appBaseUrl,
     });
 
     if (!emailSent) {

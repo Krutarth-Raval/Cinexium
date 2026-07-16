@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
 
-const getAppBaseUrl = () => {
+const getAppBaseUrl = (preferredBaseUrl?: string) => {
   return (
+    preferredBaseUrl ||
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXTAUTH_URL ||
     'https://cinexium.site'
@@ -113,6 +114,7 @@ export const sendSubscriptionPaymentEmail = async ({
   amount,
   upiId,
   requestId,
+  appBaseUrl,
 }: {
   to: string;
   name: string;
@@ -120,10 +122,11 @@ export const sendSubscriptionPaymentEmail = async ({
   amount: number;
   upiId: string;
   requestId: string;
+  appBaseUrl?: string;
 }) => {
   const planLabel = plan === 'yearly' ? 'Yearly' : 'Monthly';
   const payUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Cinexium')}&am=${encodeURIComponent(amount.toString())}&cu=INR`;
-  const paymentPageUrl = `${getAppBaseUrl()}/premium/pay?requestId=${encodeURIComponent(requestId)}`;
+  const paymentPageUrl = `${getAppBaseUrl(appBaseUrl)}/premium/pay?requestId=${encodeURIComponent(requestId)}`;
 
   const htmlContent = `
     <h2 style="color: #ffffff; margin-bottom: 8px;">Hello ${name},</h2>

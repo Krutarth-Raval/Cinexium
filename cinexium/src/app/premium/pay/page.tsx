@@ -143,6 +143,9 @@ export default function PremiumPayPage() {
   }
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(paymentData.upiUrl)}`;
+  const openUpiApp = () => {
+    window.location.href = paymentData.upiUrl;
+  };
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-white flex items-center justify-center px-4 py-10">
@@ -203,7 +206,15 @@ export default function PremiumPayPage() {
             >
               Open UPI App
             </a>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              onClick={openUpiApp}
+              className="block w-full rounded-2xl bg-gradient-to-r from-purple-500 to-fuchsia-600 px-5 py-3 text-center font-semibold text-white"
+            >
+              Open UPI App
+            </button>
+          )}
           <Link
             href="/premium"
             className="block w-full rounded-2xl bg-white/10 px-5 py-3 text-center font-medium text-white transition-colors hover:bg-white/15"
