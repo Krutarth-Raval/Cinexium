@@ -60,7 +60,7 @@ export function OwnProfileActionsDrawer({ user }: OwnProfileActionsDrawerProps) 
       </button>
 
       <Link
-        href="/settings"
+        href="/settings/account"
         onClick={() => setIsOpen(false)}
         className="w-full flex items-center gap-4 p-4 hover:bg-white/5 rounded-xl transition-colors text-left"
       >

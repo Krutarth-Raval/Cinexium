@@ -657,6 +657,9 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                         const isGroupInvite = typeof msg.content === 'string' && msg.content.startsWith('[GROUP_INVITE]:');
                         const isCollectionShare = typeof msg.content === 'string' && msg.content.startsWith('[COLLECTION_SHARE]:');
                         const isEditableTextMessage = !hasGif && !isGroupInvite && !isCollectionShare;
+                        const shouldUsePosterWidthForText = typeof msg.content === 'string' && (
+                          msg.content.includes('\n') || msg.content.trim().length > 18
+                        );
                         
                         const uniqueReactions = msg.reactions ? Array.from(new Set(msg.reactions.map((r: any) => r.emoji))) : [];
                         const reactionCount = msg.reactions?.length || 0;
@@ -722,8 +725,13 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                     return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
                                   } catch(e) {
                                     return (
-                                      <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
-                                        <p className="text-sm whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                                      <div className={`flex min-w-0 ${shouldUsePosterWidthForText ? 'w-[180px] max-w-[180px]' : 'max-w-[180px]'} flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                                        <div className={`relative ${shouldUsePosterWidthForText ? 'w-full' : 'w-auto'} max-w-full min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5'}`}>
+                                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                        </div>
+                                        <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                          <span>{new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                                        </div>
                                       </div>
                                     );
                                   }
@@ -737,8 +745,13 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                     return <CollectionShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions as any} reactionCount={reactionCount} />;
                                   } catch(e) {
                                     return (
-                                      <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'}`}>
-                                        <p className="text-sm whitespace-pre-wrap break-words break-all">{msg.content}</p>
+                                      <div className={`flex min-w-0 ${shouldUsePosterWidthForText ? 'w-[180px] max-w-[180px]' : 'max-w-[180px]'} flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                                        <div className={`relative ${shouldUsePosterWidthForText ? 'w-full' : 'w-auto'} max-w-full min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5'}`}>
+                                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                        </div>
+                                        <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                          <span>{new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                                        </div>
                                       </div>
                                     );
                                   }
@@ -764,7 +777,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                       )}
                                         {msg.content && (
                                           <div className="border-t border-white/10 bg-[#1a1d24] px-4 py-3">
-                                            <p className="text-sm text-white whitespace-pre-wrap break-words break-all">
+                                            <p className="text-sm text-white whitespace-pre-wrap break-words">
                                               {msg.content}
                                             </p>
                                           </div>
@@ -781,7 +794,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                         </div>
                                       )}
                                     </div>
-                                    <div className={`mt-1 flex w-full items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
                                       {msg.isEdited && !isDeleted && <span>Edited</span>}
                                       <span>
                                         {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
@@ -789,37 +802,39 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className={`relative min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none ml-auto' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5 mr-auto'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
-                                    <p className="text-sm whitespace-pre-wrap break-words break-all">
-                                    {msg.content.length > 1000 && !expandedMessages.has(msg.id) 
-                                      ? msg.content.substring(0, 1000) + '... ' 
-                                      : msg.content + ' '}
-                                    {msg.content.length > 1000 && (
-                                      <button 
-                                        onClick={() => toggleExpand(msg.id)}
-                                        className="text-primary-400 font-bold hover:underline focus:outline-none"
-                                      >
-                                        {expandedMessages.has(msg.id) ? 'Read less' : 'Read more'}
-                                      </button>
-                                    )}
-                                  </p>
-                                  
-                                  <div className="flex justify-between items-center mt-1 gap-4 opacity-70">
-                                    <span className="text-[10px] text-white/50">
-                                      {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                    </span>
-                                    {msg.isEdited && !isDeleted && <span className="text-[10px] text-white/50">Edited</span>}
-                                  </div>
+                                  <div className={`flex min-w-0 ${shouldUsePosterWidthForText ? 'w-[180px] max-w-[180px]' : 'max-w-[180px]'} flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'} ${isDeleted ? 'opacity-50 italic' : ''}`}>
+                                    <div className={`relative ${shouldUsePosterWidthForText ? 'w-full' : 'w-auto'} max-w-full min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5'}`}>
+                                      <p className="text-sm whitespace-pre-wrap break-words">
+                                      {msg.content.length > 1000 && !expandedMessages.has(msg.id) 
+                                        ? msg.content.substring(0, 1000) + '... ' 
+                                        : msg.content + ' '}
+                                      {msg.content.length > 1000 && (
+                                        <button 
+                                          onClick={() => toggleExpand(msg.id)}
+                                          className="text-primary-400 font-bold hover:underline focus:outline-none"
+                                        >
+                                          {expandedMessages.has(msg.id) ? 'Read less' : 'Read more'}
+                                        </button>
+                                      )}
+                                    </p>
 
-                                  {reactionCount > 0 && !isDeleted && (
-                                    <div 
-                                      onClick={() => setReactionModalData({ isOpen: true, reactions: msg.reactions })}
-                                      className={`absolute -bottom-3 ${isMe ? '-left-2' : '-right-2'} bg-[#1a1d24] rounded-full px-1.5 py-0.5 border border-white/10 text-xs shadow-md z-10 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1`}
-                                    >
-                                      <span>{uniqueReactions.join(' ')}</span>
-                                      {reactionCount > 1 && <span className="text-[10px] font-bold text-primary-500">{reactionCount}</span>}
+                                    {reactionCount > 0 && !isDeleted && (
+                                      <div 
+                                        onClick={() => setReactionModalData({ isOpen: true, reactions: msg.reactions })}
+                                        className={`absolute -bottom-3 ${isMe ? '-left-2' : '-right-2'} bg-[#1a1d24] rounded-full px-1.5 py-0.5 border border-white/10 text-xs shadow-md z-10 cursor-pointer hover:bg-white/10 transition-colors flex items-center gap-1`}
+                                      >
+                                        <span>{uniqueReactions.join(' ')}</span>
+                                        {reactionCount > 1 && <span className="text-[10px] font-bold text-primary-500">{reactionCount}</span>}
+                                      </div>
+                                      )}
                                     </div>
-                                    )}
+
+                                    <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                      {msg.isEdited && !isDeleted && <span>Edited</span>}
+                                      <span>
+                                        {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                                      </span>
+                                    </div>
                                   </div>
                                 )}
 

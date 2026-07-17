@@ -211,7 +211,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             <div className="flex justify-start w-full">
               {isOwnProfile ? (
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                  <Link href="/settings" className="flex-1 md:flex-none text-center px-6 py-1.5 bg-[#252a34] hover:bg-[#323844] text-white font-semibold rounded-lg transition-colors text-sm border border-white/10">
+                  <Link href="/settings/profile" className="flex-1 md:flex-none text-center px-6 py-1.5 bg-[#252a34] hover:bg-[#323844] text-white font-semibold rounded-lg transition-colors text-sm border border-white/10">
                     Edit Profile
                   </Link>
                   <CreateCollectionModal />
