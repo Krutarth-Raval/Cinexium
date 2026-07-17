@@ -7,14 +7,6 @@
 
 ---
 
-## 🎥 Experience Cinexium
-
-![Cinexium Home Screen](https://cinexium.site/screenshot.png)
-
-**Welcome to the ultimate entertainment discovery platform.** Cinexium brings together millions of movies and TV shows in one beautiful, interactive space. Whether you're looking for the latest blockbuster, hidden gems, or timeless classics, Cinexium makes finding your next favorite entertainment easy and fun.
-
----
-
 ## ✨ What You Can Do
 
 - **🎯 Smart Discovery** - Browse millions of movies and TV shows from around the world
