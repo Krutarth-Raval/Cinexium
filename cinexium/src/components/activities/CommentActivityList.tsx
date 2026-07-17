@@ -11,6 +11,7 @@ type CommentActivityItem = {
   mediaId: string;
   mediaType: string;
   content: string;
+  gifUrl?: string | null;
   createdAt: Date | string;
   likeCount: number;
   mediaTitle: string;
@@ -291,7 +292,13 @@ function CommentActivityCard({ item, isSelectMode, isSelected, onToggle, onLongP
         </div>
       </div>
 
-      <p className="mb-3 line-clamp-1 text-sm leading-6 text-gray-300">{item.content}</p>
+      {item.gifUrl ? (
+        <div className="mb-3 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+          <img src={item.gifUrl} alt="GIF comment" className="max-h-48 w-full object-contain" />
+        </div>
+      ) : (
+        <p className="mb-3 line-clamp-1 text-sm leading-6 text-gray-300">{item.content}</p>
+      )}
 
       <div className="flex items-center justify-between text-xs text-gray-500">
         <span>{formatRelativeTime(item.createdAt)}</span>

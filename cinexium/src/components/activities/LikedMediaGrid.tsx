@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLongPress } from '@/hooks/useLongPress';
 import { useRouter } from 'next/navigation';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { getMediaDetailHref } from '@/lib/media';
 
 interface MediaItem {
   id: string;
@@ -194,7 +195,7 @@ function MediaGridItem({ item, isSelectMode, isSelected, onToggle, onLongPress }
     if (isSelectMode) {
       onToggle();
     } else {
-      router.push(`/${item.mediaType}/${item.mediaId}`);
+      router.push(getMediaDetailHref(item.mediaType, item.mediaId));
     }
   };
 

@@ -251,7 +251,7 @@ export default function ChatSidebar() {
                         try {
                           const meta = JSON.parse(conv.latestMessage.substring(19));
                           if (meta.creatorUsername === 'Cinexium:movie') return 'Shared a Movie';
-                          if (meta.creatorUsername === 'Cinexium:tv') return 'Shared a Series';
+                          if (meta.creatorUsername === 'Cinexium:tv' || meta.creatorUsername === 'Cinexium:series') return 'Shared a Series';
                           if (meta.creatorUsername === 'Cinexium') return 'Shared a Movie';
                           return 'Shared a Collection';
                         } catch {

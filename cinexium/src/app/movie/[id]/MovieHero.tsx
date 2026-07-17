@@ -8,6 +8,7 @@ import { ShareCollectionModal } from '@/app/collection/[id]/ShareCollectionModal
 import { MediaCommentsDrawer } from '@/components/media/MediaCommentsDrawer';
 import { MediaLikesDrawer } from '@/components/media/MediaLikesDrawer';
 import { trackHistoryAction } from '@/app/actions/history';
+import { getMediaDetailHref, normalizeMediaTypeForRoute } from '@/lib/media';
 
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -82,6 +83,7 @@ export const MovieHero = ({
   };
 
   const bannerUrl = backdropPath ? `https://image.tmdb.org/t/p/original${backdropPath}` : (posterPath ? `https://image.tmdb.org/t/p/original${posterPath}` : '');
+  const publicMediaType = normalizeMediaTypeForRoute(mediaType);
 
   // Fallback to the first sentence of the overview if no tagline is provided by TMDB
   const displayTagline = tagline || (overview ? (overview.split('. ')[0] + (overview.includes('. ') ? '.' : '')) : '');
@@ -263,8 +265,8 @@ export const MovieHero = ({
         collectionName={title}
         collectionThumbnail={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : ''}
         collectionItemCount={0}
-        creatorUsername={`Cinexium:${mediaType}`} // generic for movies and series
-        shareUrlPath={`/${mediaType}/${mediaId}`}
+        creatorUsername={`Cinexium:${publicMediaType}`} // generic for movies and series
+        shareUrlPath={getMediaDetailHref(publicMediaType, mediaId)}
         onShareSuccess={() => {
           setSharesCount(prev => prev + 1);
           fetch(`/api/media/${mediaId}/share`, { 

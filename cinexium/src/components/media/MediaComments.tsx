@@ -361,24 +361,24 @@ export const MediaComments = ({
                 </div>
               </div>
 
-              <div className="flex flex-col items-end shrink-0 min-w-[2rem]">
-                <div className="flex items-center gap-2">
-                  {(showDesktopDelete || showMobileDelete) && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCommentToDelete(comment);
-                      }}
-                      className={`${showMobileDelete ? 'md:hidden' : 'hidden md:inline-flex'} transition-transform active:scale-95 text-gray-500 hover:text-red-400`}
-                      aria-label="Delete comment"
-                      title="Delete comment"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-                    </button>
-                  )}
-                  <button 
+              <div className="flex items-start gap-2 shrink-0 min-w-[2rem]">
+                {(showDesktopDelete || showMobileDelete) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommentToDelete(comment);
+                    }}
+                    className={`${showMobileDelete ? 'md:hidden' : 'hidden md:inline-flex'} transition-transform active:scale-95 text-gray-500 hover:text-red-400`}
+                    aria-label="Delete comment"
+                    title="Delete comment"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                  </button>
+                )}
+                <div className="flex min-w-[1rem] flex-col items-center">
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleLike(comment.id);
@@ -387,10 +387,10 @@ export const MediaComments = ({
                   >
                     <svg className="w-4 h-4" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isLiked ? 0 : 2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                   </button>
+                  {comment._count?.likes > 0 && (
+                    <span className="mt-0.5 text-[10px] font-medium text-gray-500">{comment._count.likes}</span>
+                  )}
                 </div>
-                {comment._count?.likes > 0 && (
-                  <span className="text-[10px] text-gray-500 font-medium mt-0.5 pr-0.5">{comment._count.likes}</span>
-                )}
               </div>
             </div>
           </div>

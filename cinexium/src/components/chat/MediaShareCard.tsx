@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { getMediaDetailHref, normalizeMediaDetailPath } from '@/lib/media';
 
 export const MediaShareCard = ({ 
   meta, 
@@ -14,8 +15,8 @@ export const MediaShareCard = ({
   uniqueReactions?: string[];
   reactionCount?: number;
 }) => {
-  const mediaType = meta.creatorUsername === 'Cinexium:tv' ? 'series' : 'movie';
-  const linkHref = meta.shareUrlPath || `/${mediaType}/${meta.collectionId}`;
+  const isSeries = meta.creatorUsername === 'Cinexium:tv' || meta.creatorUsername === 'Cinexium:series';
+  const linkHref = normalizeMediaDetailPath(meta.shareUrlPath) || getMediaDetailHref(isSeries ? 'series' : 'movie', meta.collectionId);
 
   return (
     <div className={`flex flex-col min-w-0 ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'} group`}>

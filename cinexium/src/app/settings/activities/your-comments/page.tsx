@@ -41,6 +41,7 @@ export default async function YourCommentsPage() {
         mediaId: comment.mediaId,
         mediaType: comment.mediaType,
         content: comment.content,
+        gifUrl: comment.gifUrl,
         createdAt: comment.createdAt,
         likeCount: comment._count.likes,
         mediaTitle: details?.title || 'Unknown Media',

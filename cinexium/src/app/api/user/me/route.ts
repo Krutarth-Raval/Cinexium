@@ -19,6 +19,104 @@ type UserSettingsPatch = {
   appNotifications?: boolean;
 };
 
+type UserProfile = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  bio: string | null;
+  avatar: string | null;
+  isPrivate: boolean;
+  chatNotifications: boolean;
+  appNotifications: boolean;
+  isPremium: boolean;
+  premiumType: string | null;
+  premiumUntil: Date | null;
+  themePreference: string;
+  country: string | null;
+  role: string;
+};
+
+function isMissingUserColumnError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as {
+    code?: string;
+    message?: string;
+  };
+
+  return (
+    candidate.code === 'P2021' ||
+    candidate.code === 'P2022' ||
+    candidate.message?.includes('column') === true ||
+    candidate.message?.includes('Unknown field') === true
+  );
+}
+
+async function getUserProfileByEmail(email: string): Promise<UserProfile | null> {
+  const fullSelect = {
+    id: true,
+    name: true,
+    username: true,
+    email: true,
+    bio: true,
+    avatar: true,
+    isPrivate: true,
+    chatNotifications: true,
+    appNotifications: true,
+    isPremium: true,
+    premiumType: true,
+    premiumUntil: true,
+    themePreference: true,
+    country: true,
+    role: true,
+  } as const;
+
+  try {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: fullSelect,
+    });
+  } catch (error) {
+    if (!isMissingUserColumnError(error)) {
+      throw error;
+    }
+
+    console.warn('Falling back to legacy user profile select because the database schema is missing one or more profile columns.', error);
+
+    const legacyUser = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        bio: true,
+        avatar: true,
+      },
+    });
+
+    if (!legacyUser) {
+      return null;
+    }
+
+    return {
+      ...legacyUser,
+      isPrivate: true,
+      chatNotifications: true,
+      appNotifications: true,
+      isPremium: false,
+      premiumType: null,
+      premiumUntil: null,
+      themePreference: 'default',
+      country: '',
+      role: 'user',
+    };
+  }
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -26,28 +124,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const select = {
-      id: true,
-      name: true,
-      username: true,
-      email: true,
-      bio: true,
-      avatar: true,
-      isPrivate: true,
-      chatNotifications: true,
-      appNotifications: true,
-      isPremium: true,
-      premiumType: true,
-      premiumUntil: true,
-      themePreference: true,
-      country: true,
-      role: true,
-    } as const;
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select,
-    });
+    const user = await getUserProfileByEmail(session.user.email);
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
@@ -57,10 +134,7 @@ export async function GET() {
       console.warn('User subscription expiry sync failed during profile fetch.', error);
     }
 
-    const refreshedUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select,
-    });
+    const refreshedUser = await getUserProfileByEmail(session.user.email);
 
     if (!refreshedUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
