@@ -17,6 +17,18 @@ type UserSettingsPatch = {
   isPrivate?: boolean;
   chatNotifications?: boolean;
   appNotifications?: boolean;
+  pushNotificationsEnabled?: boolean;
+  directMessagePush?: boolean;
+  groupMessagePush?: boolean;
+  communityMentionPush?: boolean;
+  commentReplyPush?: boolean;
+  commentLikePush?: boolean;
+  groupInvitePush?: boolean;
+  communityInvitePush?: boolean;
+  followPush?: boolean;
+  collectionSharePush?: boolean;
+  watchlistReleasePush?: boolean;
+  adminAnnouncementPush?: boolean;
 };
 
 type UserProfile = {
@@ -29,6 +41,18 @@ type UserProfile = {
   isPrivate: boolean;
   chatNotifications: boolean;
   appNotifications: boolean;
+  pushNotificationsEnabled: boolean;
+  directMessagePush: boolean;
+  groupMessagePush: boolean;
+  communityMentionPush: boolean;
+  commentReplyPush: boolean;
+  commentLikePush: boolean;
+  groupInvitePush: boolean;
+  communityInvitePush: boolean;
+  followPush: boolean;
+  collectionSharePush: boolean;
+  watchlistReleasePush: boolean;
+  adminAnnouncementPush: boolean;
   isPremium: boolean;
   premiumType: string | null;
   premiumUntil: Date | null;
@@ -66,6 +90,18 @@ async function getUserProfileByEmail(email: string): Promise<UserProfile | null>
     isPrivate: true,
     chatNotifications: true,
     appNotifications: true,
+    pushNotificationsEnabled: true,
+    directMessagePush: true,
+    groupMessagePush: true,
+    communityMentionPush: true,
+    commentReplyPush: true,
+    commentLikePush: true,
+    groupInvitePush: true,
+    communityInvitePush: true,
+    followPush: true,
+    collectionSharePush: true,
+    watchlistReleasePush: true,
+    adminAnnouncementPush: true,
     isPremium: true,
     premiumType: true,
     premiumUntil: true,
@@ -107,6 +143,18 @@ async function getUserProfileByEmail(email: string): Promise<UserProfile | null>
       isPrivate: true,
       chatNotifications: true,
       appNotifications: true,
+      pushNotificationsEnabled: true,
+      directMessagePush: true,
+      groupMessagePush: true,
+      communityMentionPush: true,
+      commentReplyPush: true,
+      commentLikePush: true,
+      groupInvitePush: true,
+      communityInvitePush: true,
+      followPush: true,
+      collectionSharePush: true,
+      watchlistReleasePush: true,
+      adminAnnouncementPush: true,
       isPremium: false,
       premiumType: null,
       premiumUntil: null,
@@ -235,6 +283,18 @@ export async function PATCH(request: Request) {
     if (typeof data.isPrivate === 'boolean') updateData.isPrivate = data.isPrivate;
     if (typeof data.chatNotifications === 'boolean') updateData.chatNotifications = data.chatNotifications;
     if (typeof data.appNotifications === 'boolean') updateData.appNotifications = data.appNotifications;
+    if (typeof data.pushNotificationsEnabled === 'boolean') updateData.pushNotificationsEnabled = data.pushNotificationsEnabled;
+    if (typeof data.directMessagePush === 'boolean') updateData.directMessagePush = data.directMessagePush;
+    if (typeof data.groupMessagePush === 'boolean') updateData.groupMessagePush = data.groupMessagePush;
+    if (typeof data.communityMentionPush === 'boolean') updateData.communityMentionPush = data.communityMentionPush;
+    if (typeof data.commentReplyPush === 'boolean') updateData.commentReplyPush = data.commentReplyPush;
+    if (typeof data.commentLikePush === 'boolean') updateData.commentLikePush = data.commentLikePush;
+    if (typeof data.groupInvitePush === 'boolean') updateData.groupInvitePush = data.groupInvitePush;
+    if (typeof data.communityInvitePush === 'boolean') updateData.communityInvitePush = data.communityInvitePush;
+    if (typeof data.followPush === 'boolean') updateData.followPush = data.followPush;
+    if (typeof data.collectionSharePush === 'boolean') updateData.collectionSharePush = data.collectionSharePush;
+    if (typeof data.watchlistReleasePush === 'boolean') updateData.watchlistReleasePush = data.watchlistReleasePush;
+    if (typeof data.adminAnnouncementPush === 'boolean') updateData.adminAnnouncementPush = data.adminAnnouncementPush;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

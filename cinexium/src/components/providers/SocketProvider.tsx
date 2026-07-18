@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getPusherClient, getUserChannelName } from '@/lib/pusher';
@@ -29,6 +29,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const acknowledgedMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Clear unread dot if user navigates to chat
   useEffect(() => {
@@ -67,7 +68,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const handleReceiveMessage = async (data: any) => {
-      if (data?.message?.senderId) {
+      if (data?.message?.id && data?.message?.senderId) {
+        const messageId = String(data.message.id);
+        if (!acknowledgedMessageIdsRef.current.has(messageId)) {
+          acknowledgedMessageIdsRef.current.add(messageId);
+          fetch('/api/chat/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'markDelivered',
+              messageId,
+            })
+          }).catch(console.error);
+        }
+
         if (!window.location.pathname.startsWith('/chat')) {
           setHasUnreadMessages(true);
         } else {

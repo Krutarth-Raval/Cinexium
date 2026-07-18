@@ -1,135 +1,64 @@
-# 🎬 Cinexium
+# Cinexium
 
-> Discover your next favorite movie or TV series
+Discover your next favorite movie or TV series with chat, collections, social activity, and smart notifications.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-cinexium.site-blue?style=for-the-badge)](https://cinexium.site)
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://cinexium.vercel.app)
+[Live Demo](https://cinexium.site)
 
----
+## What You Can Do
 
-## ✨ What You Can Do
+- Smart discovery across movies and series
+- Powerful search and detailed title pages
+- Direct, group, and community chat
+- Comments, replies, and likes
+- Collections and content sharing
+- In-app notifications and unread indicators
+- Web push notifications with Firebase Cloud Messaging
 
-- **🎯 Smart Discovery** - Browse millions of movies and TV shows from around the world
-- **🔍 Powerful Search** - Find exactly what you're looking for with advanced filters
-- **⭐ Detailed Information** - Get cast, crew, ratings, reviews, and recommendations
-- **💬 Connect & Chat** - Join our community and discuss movies and shows in real-time
-- **❤️ Watchlist & Favorites** - Save your favorites and track what you want to watch
-- **🌟 Trending & Popular** - Stay updated with what's hot right now
+## Push Notification Highlights
 
----
+- Supports desktop and Android browsers
+- Uses Firebase Cloud Messaging for delivery
+- Stores multiple devices per user
+- Tracks platform, browser, `createdAt`, and `lastSeenAt`
+- Removes invalid tokens automatically
+- Suppresses push only when the recipient is actively viewing the exact related resource
+- Keeps the existing in-app notification system unchanged
 
-## 🚀 Get Started in 3 Steps
+## Getting Started
 
-### 1. Clone the Repository
 ```bash
 git clone https://github.com/Krutarth-Raval/Cinexium.git
-cd Cinexium
-```
-
-### 2. Install Dependencies
-```bash
+cd Cinexium/cinexium
 npm install
-```
-
-### 3. Setup & Run
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your TMDb API Key (get one free at [tmdb.org](https://www.themoviedb.org/settings/api)):
-```env
-NEXT_PUBLIC_TMDB_API_KEY=your_tmdb_api_key_here
-NEXT_PUBLIC_TMDB_BASE_URL=https://api.themoviedb.org/3
-```
-
-Start the development server:
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. That's it! 🎉
+## Main Environment Variables
 
----
-
-## 📁 Project Structure
-
+```env
+NEXT_PUBLIC_TMDB_API_KEY=
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
 ```
-Cinexium/
-├── app/              # Application pages
-├── components/       # React components
-├── lib/              # Utilities & helpers
-├── public/           # Images & assets
-├── styles/           # Global styling
-└── package.json
-```
 
----
+## Tech Stack
 
-## 🌍 Live Demo
+- Next.js App Router
+- TypeScript
+- Prisma
+- Firebase Cloud Messaging
+- Vercel
 
-**Ready to explore?** Visit [cinexium.site](https://cinexium.site) to see Cinexium in action with real data from the world's largest movie database.
+## Author
 
----
-
-## 🚀 Deploy Your Own
-
-Deploying Cinexium is simple with Vercel:
-
-1. Push your code to GitHub
-2. Connect your repo to Vercel
-3. Add your TMDb API Key in environment variables
-4. Deploy with one click!
-
-**[Deploy to Vercel →](https://vercel.com/new)**
-
----
-
-## 🤝 Contribute
-
-Have ideas to make Cinexium better? We'd love your help!
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'Add your feature'`
-4. Push and open a Pull Request
-
----
-
-## 📚 Resources
-
-- [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js
-- [TMDb API Docs](https://developer.themoviedb.org/docs) - API reference
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/) - TypeScript guide
-
----
-
-## 📄 License
-
-Open source and free to use for personal and commercial projects.
-
----
-
-## 👨‍💻 Author
-
-**Krutarth Raval**  
+Krutarth Raval  
 GitHub: [@Krutarth-Raval](https://github.com/Krutarth-Raval)
-
----
-
-## ⭐ Show Your Support
-
-If you love Cinexium, help us grow:
-- ⭐ Star this repository on GitHub
-- 📢 Share it with friends
-- 💬 Send feedback and suggestions
-- 🐛 Report any issues you find
-
----
-
-<div align="center">
-
-Made with ❤️ by [Krutarth Raval](https://github.com/Krutarth-Raval)
-
-**[🌐 Visit Cinexium](https://cinexium.site)** | **[⭐ Star on GitHub](https://github.com/Krutarth-Raval/Cinexium)**
-
-</div>

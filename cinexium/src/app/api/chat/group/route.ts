@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { createPushNotification } from '@/lib/push/service';
 import cloudinary from '@/lib/cloudinary';
 import { applyRateLimit, enforceSameOrigin, generateInviteCode, getClientIp, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
 import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
@@ -121,6 +122,25 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    await Promise.all(
+      group.members
+        .filter((member) => member.userId !== user.id)
+        .map((member) =>
+          createPushNotification({
+            userId: member.userId,
+            actorId: user.id,
+            type: group.isCommunity ? 'COMMUNITY_INVITE' : 'GROUP_INVITE',
+            title: `${refreshedUser.name} added you to ${group.name}`,
+            body: group.isCommunity ? 'Open the community to join the conversation.' : 'Open the group to start chatting.',
+            deepLink: `/chat/group/${group.id}`,
+            image: group.avatar || null,
+            eventKey: `group-created:${group.id}:${member.userId}`,
+            tag: `invite:${group.id}`,
+            createInApp: false,
+          })
+        )
+    );
 
     return NextResponse.json(group);
   } catch (error) {

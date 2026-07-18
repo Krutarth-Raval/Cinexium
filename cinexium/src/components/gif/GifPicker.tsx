@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useDragControls } from 'framer-motion';
+import type { FormEvent } from 'react';
 import {
   getGifDimensions,
   GIPHY_PAGE_SIZE,
@@ -166,25 +167,36 @@ function GifPickerContent({
             <div className="h-1.5 w-12 rounded-full bg-white/20" />
           </div>
         )}
-        <div className={`flex items-center gap-2 ${isCommentVariant ? '' : 'block'}`}>
+        <form
+          className={`flex items-center gap-2 ${isCommentVariant ? 'w-full' : 'block w-full'}`}
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            onSearchSubmit();
+          }}
+        >
           <div className="relative flex-1">
-          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSearchSubmit();
-              }
-            }}
-            placeholder="Search GIFs"
-            className="h-11 w-full rounded-2xl border border-white/10 bg-[#111318] pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          />
-        </div>
+            <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              enterKeyHint="search"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Search GIFs"
+              className="h-11 w-full rounded-2xl border border-white/10 bg-[#111318] pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="flex h-11 shrink-0 items-center justify-center rounded-2xl bg-primary-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-primary-600 lg:hidden"
+            aria-label="Search GIFs"
+          >
+            Search
+          </button>
           {isCommentVariant && (
             <button
               type="button"
@@ -197,7 +209,7 @@ function GifPickerContent({
               </svg>
             </button>
           )}
-        </div>
+        </form>
       </div>
 
       <div

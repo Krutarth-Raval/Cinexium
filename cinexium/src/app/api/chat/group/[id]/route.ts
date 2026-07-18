@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import prisma from '@/lib/prisma';
+import { createPushNotification } from '@/lib/push/service';
 import { enforceSameOrigin, MAX_GROUP_NAME_LENGTH, normalizeText } from '@/lib/security';
 import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
@@ -224,6 +225,23 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         await prisma.groupMember.createMany({
           data: newIds.map((newId: string) => ({ groupId: id, userId: newId, role: 'MEMBER' }))
         });
+
+        await Promise.all(
+          newIds.map((newId) =>
+            createPushNotification({
+              userId: newId,
+              actorId: user.id,
+              type: group.isCommunity ? 'COMMUNITY_INVITE' : 'GROUP_INVITE',
+              title: `${group.name}`,
+              body: group.isCommunity ? 'You were added to a community.' : 'You were added to a group chat.',
+              deepLink: `/chat/group/${id}`,
+              image: group.avatar || null,
+              eventKey: `group-add:${id}:${newId}`,
+              tag: `invite:${id}`,
+              createInApp: false,
+            })
+          )
+        );
       }
       return NextResponse.json({ success: true });
     }

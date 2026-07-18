@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { createPushNotification } from '@/lib/push/service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,12 +31,20 @@ export async function POST(req: NextRequest) {
     });
 
     // Create a new notification for the original requester
-    await prisma.notification.create({
-      data: {
-        userId: actorId,
-        actorId: user.id,
-        type: 'REQUEST_ACCEPTED'
-      }
+    await createPushNotification({
+      userId: actorId,
+      actor: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        avatar: user.avatar,
+      },
+      actorId: user.id,
+      type: 'REQUEST_ACCEPTED',
+      title: `${user.name} accepted your follow request`,
+      body: 'Open their profile to start chatting or explore their activity.',
+      deepLink: `/profile/${user.username}`,
+      eventKey: `follow-accepted:${notificationId}:${actorId}`,
     });
 
     return NextResponse.json({ success: true });

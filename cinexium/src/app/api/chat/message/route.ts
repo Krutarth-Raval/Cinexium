@@ -3,10 +3,28 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getUserChannelName, pusherServer } from '@/lib/pusher';
+import { logPushDebug } from '@/lib/push/debug';
+import { clearPushNotificationsForUser, createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
 const normalizeGifField = (value: unknown) =>
   typeof value === 'string' ? value.trim().slice(0, 2048) : '';
+
+function parseStructuredMessage(content: string) {
+  const match = content.match(/^\[([A-Z_]+)\]:([\s\S]+)$/);
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return {
+      kind: match[1],
+      meta: JSON.parse(match[2]),
+    };
+  } catch {
+    return null;
+  }
+}
 
 async function emitReceiptUpdate(params: {
   recipientUserId: string;
@@ -117,6 +135,121 @@ export async function POST(req: NextRequest) {
       await pusherServer.trigger(getUserChannelName(targetUserId), 'receiveMessage', { message });
       await pusherServer.trigger(getUserChannelName(senderId), 'messageSent', { message });
 
+      const structured = parseStructuredMessage(content);
+      const dmTag = `chat:dm:${conversation.id}`;
+      const baseEventKey = structured?.kind === 'GROUP_INVITE' && structured.meta?.groupId
+        ? `invite:${message.id}:${targetUserId}`
+        : structured?.kind === 'COLLECTION_SHARE' && structured.meta?.collectionId
+          ? `collection-share:${message.id}:${targetUserId}`
+          : `dm:${message.id}:${targetUserId}`;
+
+      logPushDebug({
+        eventKey: baseEventKey,
+        source: 'message',
+        type: structured?.kind === 'GROUP_INVITE'
+          ? 'GROUP_INVITE'
+          : structured?.kind === 'COLLECTION_SHARE'
+            ? 'COLLECTION_SHARE'
+            : 'DIRECT_MESSAGE',
+        userId: targetUserId,
+        step: 'message_created',
+        data: {
+          messageId: message.id,
+          conversationId: conversation.id,
+          senderId: senderId,
+          targetUserId,
+          structuredKind: structured?.kind ?? null,
+        },
+      });
+
+      if (!(
+        (conversation.user1Id === targetUserId && conversation.isMutedByUser1) ||
+        (conversation.user2Id === targetUserId && conversation.isMutedByUser2)
+      )) {
+        if (structured?.kind === 'GROUP_INVITE' && structured.meta?.groupId) {
+          const targetGroup = await prisma.groupChat.findUnique({
+            where: { id: String(structured.meta.groupId) },
+            select: { isCommunity: true, name: true },
+          });
+
+          const inviteKind = targetGroup?.isCommunity ? 'COMMUNITY_INVITE' : 'GROUP_INVITE';
+          const inviteLabel = targetGroup?.isCommunity ? 'community' : 'group';
+
+          await createPushNotification({
+            userId: targetUserId,
+            actor: user,
+            actorId: user.id,
+            type: inviteKind,
+            title: `${user.name} invited you`,
+            body: `Open the ${inviteLabel} ${targetGroup?.name || structured.meta.groupName || ''}`.trim(),
+            deepLink: `/chat/group/${structured.meta.groupId}`,
+            image: structured.meta.groupAvatar || null,
+            eventKey: `invite:${message.id}:${targetUserId}`,
+            tag: `invite:${structured.meta.groupId}`,
+            createInApp: false,
+            debugSource: 'message',
+            suppressWhenActive: {
+              pageType: 'group',
+              pageTargetId: String(structured.meta.groupId),
+            },
+          });
+        } else if (structured?.kind === 'COLLECTION_SHARE' && structured.meta?.collectionId) {
+          await createPushNotification({
+            userId: targetUserId,
+            actor: user,
+            actorId: user.id,
+            type: 'COLLECTION_SHARE',
+            title: `${user.name} shared a collection`,
+            body: structured.meta.collectionName || 'Open the shared collection',
+            deepLink: structured.meta.shareUrlPath || `/collection/${structured.meta.collectionId}`,
+            image: structured.meta.collectionThumbnail || null,
+            eventKey: `collection-share:${message.id}:${targetUserId}`,
+            tag: `collection:${structured.meta.collectionId}`,
+            createInApp: false,
+            debugSource: 'message',
+            suppressWhenActive: {
+              pageType: 'collection',
+              pageTargetId: String(structured.meta.collectionId),
+            },
+          });
+        } else {
+          await createPushNotification({
+            userId: targetUserId,
+            actor: user,
+            actorId: user.id,
+            type: 'DIRECT_MESSAGE',
+            title: user.name || `@${user.username}`,
+            body: content || (gifUrl ? 'Sent you a GIF' : 'Sent you a message'),
+            deepLink: `/chat/${user.username}`,
+            image: null,
+            eventKey: `dm:${message.id}:${targetUserId}`,
+            tag: dmTag,
+            createInApp: false,
+            debugSource: 'message',
+            suppressWhenActive: {
+              pageType: 'chat',
+              pageTargetId: user.username,
+            },
+          });
+        }
+      } else {
+        logPushDebug({
+          eventKey: baseEventKey,
+          source: 'message',
+          type: structured?.kind === 'GROUP_INVITE'
+            ? 'GROUP_INVITE'
+            : structured?.kind === 'COLLECTION_SHARE'
+              ? 'COLLECTION_SHARE'
+              : 'DIRECT_MESSAGE',
+          userId: targetUserId,
+          step: 'push_skipped',
+          data: {
+            reason: 'conversation_muted',
+            conversationId: conversation.id,
+          },
+        });
+      }
+
       return NextResponse.json({ success: true, message });
     }
 
@@ -164,6 +297,13 @@ export async function POST(req: NextRequest) {
         deliveredAt: nextMessage.deliveredAt?.toISOString() ?? null,
         isRead: nextMessage.isRead,
       });
+
+      if (action === 'markRead') {
+        await clearPushNotificationsForUser({
+          userId: user.id,
+          tag: `chat:dm:${existingMessage.conversationId}`,
+        });
+      }
 
       return NextResponse.json({ success: true, message: nextMessage });
     }

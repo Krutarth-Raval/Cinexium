@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COMMENT_LENGTH, normalizeText } from '@/lib/security';
 
 const normalizeGifField = (value: unknown) =>
@@ -140,28 +141,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ med
     }
 
     if (targetUserId && targetUserId !== user.id) {
-      await prisma.notification.create({
-        data: {
-          userId: targetUserId,
-          actorId: user.id,
-          type: 'COMMENT_REPLY',
-          referenceId: mediaId,
-          referenceType: mediaType || 'movie'
-        }
+      await createPushNotification({
+        userId: targetUserId,
+        actor: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          avatar: user.avatar,
+        },
+        actorId: user.id,
+        type: 'COMMENT_REPLY',
+        title: `${user.name} replied to your comment`,
+        body: normalizedContent || 'Open the discussion to view the reply.',
+        deepLink: `/${normalizedMediaType === 'tv' || normalizedMediaType === 'series' ? 'series' : 'movie'}/${mediaId}#comment-${comment.id}`,
+        referenceId: mediaId,
+        referenceType: normalizedMediaType === 'series' ? 'tv' : normalizedMediaType,
+        eventKey: `comment-reply:${comment.id}:${targetUserId}`,
+        suppressWhenActive: {
+          pageType: normalizedMediaType === 'tv' || normalizedMediaType === 'series' ? 'series' : 'movie',
+          pageTargetId: mediaId,
+        },
       });
-      
-      // Notify via Pusher directly since we're on the server
-      const { getUserChannelName, pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(
-        getUserChannelName(targetUserId),
-        'receiveNotification',
-        {
-          type: 'COMMENT_REPLY',
-          actor: { username: user.username },
-          referenceId: mediaId,
-          referenceType: normalizedMediaType === 'series' ? 'tv' : normalizedMediaType
-        }
-      );
     }
 
     return NextResponse.json(comment);

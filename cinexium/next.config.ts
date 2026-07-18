@@ -11,11 +11,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.youtube.com https://vercel.live https://cdn.paddle.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.youtube.com https://vercel.live https://cdn.paddle.com https://www.gstatic.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com",
+              "connect-src 'self' https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com",
               "frame-src 'self' https://accounts.google.com https://www.youtube.com https://www.youtube-nocookie.com https://vercel.live https://*.paddle.com",
               "media-src 'self' blob: https:",
               "object-src 'none'",

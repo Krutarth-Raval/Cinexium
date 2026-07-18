@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { createPushNotification } from '@/lib/push/service';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -74,12 +75,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       });
 
       // Send notification
-      await prisma.notification.create({
-        data: {
-          userId: targetUser.id,
-          actorId: currentUser.id,
-          type: isPrivate ? 'FOLLOW_REQUEST' : 'FOLLOW',
-        }
+      await createPushNotification({
+        userId: targetUser.id,
+        actor: {
+          id: currentUser.id,
+          username: currentUser.username,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+        },
+        actorId: currentUser.id,
+        type: isPrivate ? 'FOLLOW_REQUEST' : 'FOLLOW',
+        title: isPrivate ? `${currentUser.name} requested to follow you` : `${currentUser.name} started following you`,
+        body: isPrivate ? 'Review the request from your notifications.' : 'Open their profile to follow back or start chatting.',
+        deepLink: `/profile/${currentUser.username}`,
+        eventKey: `follow:${currentUser.id}:${targetUser.id}:${status}`,
       });
 
       revalidatePath(`/profile/${username}`);

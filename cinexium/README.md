@@ -1,48 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cinexium
 
-## Getting Started
+Cinexium is a Next.js App Router application for movie and series discovery, chat, collections, comments, and social activity.
 
-First, run the development server:
+## Core Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Direct, group, and community chat
+- Comments, replies, and comment likes
+- Collections and content sharing
+- In-app notifications and unread indicators
+- Firebase Cloud Messaging web push notifications
+- Per-device push token storage with Prisma
+- User presence tracking for exact-page push suppression
+
+## Push Notification Model
+
+Cinexium now supports web push notifications on desktop and Android browsers with Firebase Cloud Messaging.
+
+- Push is additive and does not replace the existing notification panel
+- Notifications are suppressed only when the recipient is connected, the tab is visible, the window is focused, and the user is viewing the exact related resource
+- Each user can have multiple push devices
+- Invalid or expired tokens are removed automatically
+- Notification preferences are configurable in Settings
+
+### Supported Push Categories
+
+- Direct messages
+- Group messages
+- Community mentions
+- Comment replies
+- Comment likes
+- Group invites
+- Community invites
+- Follow notifications
+- Collection shares
+- Watchlist releases
+- Admin announcements
+
+## Environment Variables
+
+### App
+
+```env
+NEXT_PUBLIC_TMDB_API_KEY=
+NEXT_PUBLIC_TMDB_BASE_URL=https://api.themoviedb.org/3
 ```
 
-Open the local development URL shown by `npm run dev` in your browser to see the result.
+### Firebase Web
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Firebase Admin
 
-## Manual Premium Requests
+```env
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+```
 
-Cinexium Premium now uses a manual request workflow instead of a third-party payment gateway.
+### Optional Premium Request Support
 
-Set these environment variables to support request emails and admin payment collection:
-
-```bash
+```env
 EMAIL_USER=
 EMAIL_PASS=
 UPI_ID=
 ```
 
-## Learn More
+## Development
 
-To learn more about Next.js, take a look at the following resources:
+Install dependencies:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Start the development server:
 
-## Deploy on Vercel
+```bash
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Run a production build:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+```
+
+Run a standalone TypeScript check:
+
+```bash
+npx tsc --noEmit
+```
+
+## Database Notes
+
+The push notification system adds Prisma models for:
+
+- `PushDevice`
+- `PresenceSession`
+- `NotificationPreference`
+
+The migration is non-destructive and is designed to work alongside the existing notification system.

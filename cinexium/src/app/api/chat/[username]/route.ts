@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getUserChannelName, pusherServer } from '@/lib/pusher';
+import { clearPushNotificationsForUser } from '@/lib/push/service';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -98,6 +99,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
           messageIds: unreadMessages.map((message) => message.id),
           deliveredAt: new Date().toISOString(),
           isRead: true,
+        });
+
+        await clearPushNotificationsForUser({
+          userId: user.id,
+          tag: `chat:dm:${conversation.id}`,
         });
       }
     }

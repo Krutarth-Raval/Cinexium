@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { clearPushNotificationsForUser } from '@/lib/push/service';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -55,10 +56,26 @@ export async function PATCH(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
+    const unreadNotifications = await prisma.notification.findMany({
+      where: { userId: user.id, isRead: false },
+      select: { id: true, eventKey: true },
+    });
+
     await prisma.notification.updateMany({
       where: { userId: user.id, isRead: false },
-      data: { isRead: true },
+      data: { isRead: true, handledAt: new Date() },
     });
+
+    await Promise.all(
+      unreadNotifications.map((notification) =>
+        clearPushNotificationsForUser({
+          userId: user.id,
+          notificationId: notification.id,
+          eventKey: notification.eventKey,
+          tag: notification.eventKey,
+        })
+      )
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

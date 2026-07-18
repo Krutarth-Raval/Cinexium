@@ -3,11 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getGroupChannelName, pusherServer } from '@/lib/pusher';
+import { logPushDebug } from '@/lib/push/debug';
+import { createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 const normalizeGifField = (value: unknown) =>
   typeof value === 'string' ? value.trim().slice(0, 2048) : '';
+
+function extractMentions(content: string) {
+  const matches = content.matchAll(/@([a-z0-9_.]{3,24})/gi);
+  return new Set(Array.from(matches, (match) => match[1].toLowerCase()));
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -96,6 +103,82 @@ export async function POST(req: NextRequest) {
       });
       
       await pusherServer.trigger(getGroupChannelName(groupId), 'receiveGroupMessage', { message });
+
+      const fullGroup = await prisma.groupChat.findUnique({
+        where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          isCommunity: true,
+          members: {
+            select: {
+              userId: true,
+              user: { select: { username: true } },
+            },
+          },
+        },
+      });
+
+      if (fullGroup) {
+        const mentions = extractMentions(content);
+        const recipients = fullGroup.members.filter((member) => member.userId !== refreshedUser.id);
+
+        await Promise.all(
+          recipients.map(async (member) => {
+            const username = member.user.username.toLowerCase();
+            const isMention = mentions.has(username);
+
+            if (fullGroup.isCommunity && !isMention) {
+              return;
+            }
+
+            const eventKey = `group:${message.id}:${member.userId}`;
+            logPushDebug({
+              eventKey,
+              source: 'message',
+              type: fullGroup.isCommunity
+                ? 'COMMUNITY_MENTION'
+                : isMention
+                  ? 'GROUP_MENTION'
+                  : 'GROUP_MESSAGE',
+              userId: member.userId,
+              step: 'message_created',
+              data: {
+                messageId: message.id,
+                groupId,
+                senderId: refreshedUser.id,
+                recipientUserId: member.userId,
+                isMention,
+                isCommunity: fullGroup.isCommunity,
+              },
+            });
+
+            await createPushNotification({
+              userId: member.userId,
+              actor: refreshedUser,
+              actorId: refreshedUser.id,
+              type: fullGroup.isCommunity
+                ? 'COMMUNITY_MENTION'
+                : isMention
+                  ? 'GROUP_MENTION'
+                  : 'GROUP_MESSAGE',
+              title: fullGroup.isCommunity
+                ? `${refreshedUser.name} mentioned you in ${fullGroup.name}`
+                : `${fullGroup.name}`,
+              body: content || (gifUrl ? 'Sent a GIF' : 'Sent a message'),
+              deepLink: `/chat/group/${groupId}`,
+              eventKey,
+              tag: `chat:group:${groupId}`,
+              createInApp: false,
+              debugSource: 'message',
+              suppressWhenActive: {
+                pageType: 'group',
+                pageTargetId: groupId,
+              },
+            });
+          })
+        );
+      }
       
       return NextResponse.json({ success: true, message });
     }

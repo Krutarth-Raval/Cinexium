@@ -26,6 +26,18 @@ model User {
   isPrivate            Boolean   @default(true)
   chatNotifications    Boolean   @default(true)
   appNotifications     Boolean   @default(true)
+  pushNotificationsEnabled Boolean @default(true)
+  directMessagePush    Boolean   @default(true)
+  groupMessagePush     Boolean   @default(true)
+  communityMentionPush Boolean   @default(true)
+  commentReplyPush     Boolean   @default(true)
+  commentLikePush      Boolean   @default(true)
+  groupInvitePush      Boolean   @default(true)
+  communityInvitePush  Boolean   @default(true)
+  followPush           Boolean   @default(true)
+  collectionSharePush  Boolean   @default(true)
+  watchlistReleasePush Boolean   @default(true)
+  adminAnnouncementPush Boolean  @default(true)
   lastSeen             DateTime?
 
   // Premium Features
@@ -58,6 +70,8 @@ model User {
   // Notifications
   receivedNotifications Notification[] @relation("receivedNotifications")
   sentNotifications     Notification[] @relation("sentNotifications")
+  pushDevices           PushDevice[]
+  presenceSessions      PresenceSession[]
 
   // Chat
   conversations1        Conversation[] @relation("ConversationUser1")
@@ -269,11 +283,58 @@ model Notification {
   type      String   // "FOLLOW", "FOLLOW_REQUEST", "REQUEST_ACCEPTED", "COMMENT_REPLY"
   referenceId String? // e.g. mediaId
   referenceType String? // e.g. "movie", "tv"
+  title     String?
+  body      String?
+  image     String?
+  icon      String?
+  badge     String?
+  deepLink  String?
+  eventKey  String?  @unique
+  handledAt DateTime?
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user      User     @relation("receivedNotifications", fields: [userId], references: [id], onDelete: Cascade)
   actor     User     @relation("sentNotifications", fields: [actorId], references: [id], onDelete: Cascade)
+}
+
+model PushDevice {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String
+  token      String   @unique
+  platform   String?
+  browser    String?
+  userAgent  String?
+  isActive   Boolean  @default(true)
+  permission String   @default("default")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId, token])
+  @@index([userId, isActive])
+}
+
+model PresenceSession {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceId     String
+  pathname     String
+  pageType     String?
+  pageTargetId String?
+  isVisible    Boolean  @default(false)
+  isFocused    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastSeenAt   DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId, lastSeenAt])
 }
 
 model SubscriptionRequest {

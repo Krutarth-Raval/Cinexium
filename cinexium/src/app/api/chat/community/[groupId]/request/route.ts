@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { getUserChannelName, pusherServer } from '@/lib/pusher';
+import { createPushNotification } from '@/lib/push/service';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ groupId: string }> }) {
   try {
@@ -42,17 +42,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ gro
     });
 
     // Notify the community admin
-    const notification = await prisma.notification.create({
-      data: {
-        userId: group.ownerId,
-        actorId: user.id,
-        type: 'COMMUNITY_JOIN_REQUEST',
-        referenceId: group.id,
-        referenceType: 'community'
-      }
+    await createPushNotification({
+      userId: group.ownerId,
+      actor: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        avatar: user.avatar,
+      },
+      actorId: user.id,
+      type: 'COMMUNITY_JOIN_REQUEST',
+      title: `${user.name} requested to join ${group.name}`,
+      body: 'Review the request from your notifications.',
+      deepLink: '/notifications',
+      referenceId: group.id,
+      referenceType: 'community',
+      eventKey: `community-request:${request.id}:${group.ownerId}`,
     });
-
-    await pusherServer.trigger(getUserChannelName(group.ownerId), 'receiveNotification', notification);
 
     return NextResponse.json({ success: true, request });
   } catch (error) {

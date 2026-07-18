@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { createPushNotification } from '@/lib/push/service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,14 +52,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Notify user that request was accepted
-    await prisma.notification.create({
-      data: {
-        userId: actorId,
-        actorId: user.id,
-        type: 'COMMUNITY_JOIN_ACCEPTED',
-        referenceId: communityId,
-        referenceType: 'community'
-      }
+    await createPushNotification({
+      userId: actorId,
+      actor: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        avatar: user.avatar,
+      },
+      actorId: user.id,
+      type: 'COMMUNITY_JOIN_ACCEPTED',
+      title: `${group.name} invited you in`,
+      body: 'Your community request was accepted.',
+      deepLink: `/chat/group/${communityId}`,
+      referenceId: communityId,
+      referenceType: 'community',
+      eventKey: `community-accepted:${communityId}:${actorId}`,
+      createInApp: false,
     });
 
     return NextResponse.json({ success: true });
