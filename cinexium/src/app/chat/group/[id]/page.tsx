@@ -50,6 +50,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
   const [reactionModalData, setReactionModalData] = useState<{ isOpen: boolean; reactions: any[] }>({ isOpen: false, reactions: [] });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const preserveScrollPosition = useRef(false);
   const previousScrollHeight = useRef(0);
   const previousScrollTop = useRef(0);
@@ -264,6 +265,9 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     setInput('');
     setSelectedGif(null);
     setIsGifPickerOpen(false);
+    requestAnimationFrame(() => {
+      messageInputRef.current?.focus();
+    });
 
     if (editingMessageId) {
       fetch('/api/chat/group/message', {
@@ -897,6 +901,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       }`}
                     >
                       <textarea 
+                        ref={messageInputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
@@ -947,6 +952,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
 
                     <button 
                       type="submit"
+                      onMouseDown={(e) => e.preventDefault()}
                       disabled={!canSendMessage}
                       className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >

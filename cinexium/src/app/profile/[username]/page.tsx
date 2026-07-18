@@ -89,10 +89,41 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     notFound(); // Hide profile completely if they blocked us
   }
 
-  const visibleCollections = user.collections.filter(c => c.isPublic || isOwnProfile);
-  const visibleSavedCollections = user.collectionSaves
-    .map(s => s.collection)
-    .filter(c => c.isPublic || isOwnProfile);
+  const canViewPrivateContent = isOwnProfile || followStatus === 'ACCEPTED';
+  const canViewProtectedSections = !user.isPrivate || canViewPrivateContent;
+
+  const visibleCollections = canViewProtectedSections
+    ? user.collections.filter(c => c.isPublic || canViewPrivateContent)
+    : [];
+  const visibleSavedCollections = canViewProtectedSections
+    ? user.collectionSaves
+        .map(s => s.collection)
+        .filter(c => c.isPublic || canViewPrivateContent)
+    : [];
+
+  const desktopFollowersStat = canViewProtectedSections ? (
+    <Link href="?follows=followers" className="text-left hover:opacity-80 transition-opacity">
+      <span className="font-bold text-white block text-lg">{user._count.followers}</span>
+      <span className="text-gray-400 text-sm">followers</span>
+    </Link>
+  ) : (
+    <div className="text-left opacity-70 cursor-not-allowed">
+      <span className="font-bold text-white block text-lg">{user._count.followers}</span>
+      <span className="text-gray-400 text-sm">followers</span>
+    </div>
+  );
+
+  const desktopFollowingStat = canViewProtectedSections ? (
+    <Link href="?follows=following" className="text-left hover:opacity-80 transition-opacity">
+      <span className="font-bold text-white block text-lg">{user._count.following}</span>
+      <span className="text-gray-400 text-sm">following</span>
+    </Link>
+  ) : (
+    <div className="text-left opacity-70 cursor-not-allowed">
+      <span className="font-bold text-white block text-lg">{user._count.following}</span>
+      <span className="text-gray-400 text-sm">following</span>
+    </div>
+  );
 
   return (
     <div className="min-h-screen pt-4 md:pt-24 pb-24 px-4 max-w-4xl mx-auto">
@@ -155,14 +186,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                   <span className="font-bold text-white block text-lg leading-tight">{visibleCollections.length}</span>
                   <span className="text-gray-400 text-xs">collections</span>
                 </div>
-                <Link href="?follows=followers" className="text-center hover:opacity-80 transition-opacity">
-                  <span className="font-bold text-white block text-lg leading-tight">{user._count.followers}</span>
-                  <span className="text-gray-400 text-xs">followers</span>
-                </Link>
-                <Link href="?follows=following" className="text-center hover:opacity-80 transition-opacity">
-                  <span className="font-bold text-white block text-lg leading-tight">{user._count.following}</span>
-                  <span className="text-gray-400 text-xs">following</span>
-                </Link>
+                {canViewProtectedSections ? (
+                  <>
+                    <Link href="?follows=followers" className="text-center hover:opacity-80 transition-opacity">
+                      <span className="font-bold text-white block text-lg leading-tight">{user._count.followers}</span>
+                      <span className="text-gray-400 text-xs">followers</span>
+                    </Link>
+                    <Link href="?follows=following" className="text-center hover:opacity-80 transition-opacity">
+                      <span className="font-bold text-white block text-lg leading-tight">{user._count.following}</span>
+                      <span className="text-gray-400 text-xs">following</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center opacity-70 cursor-not-allowed">
+                      <span className="font-bold text-white block text-lg leading-tight">{user._count.followers}</span>
+                      <span className="text-gray-400 text-xs">followers</span>
+                    </div>
+                    <div className="text-center opacity-70 cursor-not-allowed">
+                      <span className="font-bold text-white block text-lg leading-tight">{user._count.following}</span>
+                      <span className="text-gray-400 text-xs">following</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -188,14 +234,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                 <span className="font-bold text-white block text-lg">{visibleCollections.length}</span>
                 <span className="text-gray-400 text-sm">collections</span>
               </div>
-              <Link href="?follows=followers" className="text-left hover:opacity-80 transition-opacity">
-                <span className="font-bold text-white block text-lg">{user._count.followers}</span>
-                <span className="text-gray-400 text-sm">followers</span>
-              </Link>
-              <Link href="?follows=following" className="text-left hover:opacity-80 transition-opacity">
-                <span className="font-bold text-white block text-lg">{user._count.following}</span>
-                <span className="text-gray-400 text-sm">following</span>
-              </Link>
+              {desktopFollowersStat}
+              {desktopFollowingStat}
             </div>
           </div>
           
@@ -240,14 +280,30 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       </div>
       
       {/* Profile Tabs & Collection Grid */}
-      <ProfileTabs
-        myCollections={visibleCollections}
-        savedCollections={visibleSavedCollections}
-        isOwner={isOwnProfile}
-        canPin={isOwnProfile && user.isPremium}
-      />
+      {canViewProtectedSections ? (
+        <ProfileTabs
+          myCollections={visibleCollections}
+          savedCollections={visibleSavedCollections}
+          isOwner={isOwnProfile}
+          canPin={isOwnProfile && user.isPremium}
+        />
+      ) : (
+        <div className="mt-10 rounded-[28px] border border-white/10 bg-[#1a1d24]/80 px-6 py-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16.5 10.5V7.875a4.5 4.5 0 10-9 0V10.5m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v5.25a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 18v-5.25A2.25 2.25 0 016.75 10.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white">Private profile</h2>
+          <p className="mt-2 text-sm text-gray-400">Follow to see collections and saved content.</p>
+        </div>
+      )}
       <Suspense fallback={null}>
-        <FollowsModal username={user.username} />
+        <FollowsModal
+          username={user.username}
+          isOwnProfile={isOwnProfile}
+          canViewFollows={canViewProtectedSections}
+        />
       </Suspense>
     </div>
   );

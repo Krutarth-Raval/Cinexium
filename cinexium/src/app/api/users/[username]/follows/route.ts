@@ -10,14 +10,45 @@ export async function GET(
   try {
     const { username } = await params;
     const session = await getServerSession(authOptions);
+    let currentUserId: string | null = null;
 
     const targetUser = await prisma.user.findUnique({
       where: { username },
-      select: { id: true }
+      select: { id: true, isPrivate: true, email: true }
     });
 
     if (!targetUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (session?.user?.email) {
+      const currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true }
+      });
+
+      currentUserId = currentUser?.id ?? null;
+    }
+
+    const isOwnProfile = session?.user?.email === targetUser.email;
+    let canViewFollows = !targetUser.isPrivate || isOwnProfile;
+
+    if (!canViewFollows && currentUserId) {
+      const acceptedFollow = await prisma.follows.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: targetUser.id
+          }
+        },
+        select: { status: true }
+      });
+
+      canViewFollows = acceptedFollow?.status === 'ACCEPTED';
+    }
+
+    if (!canViewFollows) {
+      return NextResponse.json({ error: 'This follow list is private.' }, { status: 403 });
     }
 
     // Get followers
@@ -50,16 +81,10 @@ export async function GET(
     let following = followingData.map(f => f.following);
 
     // If logged in, check if current user follows them
-    if (session?.user?.email) {
-      const currentUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true }
-      });
-
-      if (currentUser) {
+    if (currentUserId) {
         const myFollows = await prisma.follows.findMany({
           where: {
-            followerId: currentUser.id,
+            followerId: currentUserId,
           },
           select: { followingId: true, status: true }
         });
@@ -69,15 +94,14 @@ export async function GET(
         followers = followers.map(u => ({
           ...u,
           followStatus: followStatusMap.get(u.id) || 'NONE',
-          isMe: u.id === currentUser.id
+          isMe: u.id === currentUserId
         }));
 
         following = following.map(u => ({
           ...u,
           followStatus: followStatusMap.get(u.id) || 'NONE',
-          isMe: u.id === currentUser.id
+          isMe: u.id === currentUserId
         }));
-      }
     } else {
         followers = followers.map(u => ({ ...u, followStatus: 'NONE', isMe: false }));
         following = following.map(u => ({ ...u, followStatus: 'NONE', isMe: false }));

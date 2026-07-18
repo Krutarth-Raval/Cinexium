@@ -69,6 +69,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
 import { Providers } from "@/components/Providers";
 import { SocketProvider } from "@/components/providers/SocketProvider";
+import { WhatsNewModal } from "@/components/ui/WhatsNewModal";
 
 export default function RootLayout({
   children,
@@ -122,6 +123,7 @@ export default function RootLayout({
             </div>
             <Footer />
             <BottomNav />
+            <WhatsNewModal />
           </SocketProvider>
         </Providers>
       </body>

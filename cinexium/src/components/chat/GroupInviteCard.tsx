@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { MessageReceiptIcon, type MessageReceiptStatus } from './MessageReceiptIcon';
 
 interface GroupInviteMeta {
   groupId: string;
@@ -13,12 +14,14 @@ export const GroupInviteCard = ({
   meta, 
   isMe, 
   timestamp,
+  receiptStatus,
   uniqueReactions = [],
   reactionCount = 0
 }: { 
   meta: any; 
   isMe: boolean; 
   timestamp: string | Date;
+  receiptStatus?: MessageReceiptStatus;
   uniqueReactions?: string[];
   reactionCount?: number;
 }) => {
@@ -91,8 +94,9 @@ export const GroupInviteCard = ({
       </div>
       
       {/* Time */}
-      <div className={`mt-1 text-[10px] text-white/50 px-2 flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+      <div className={`mt-1 text-[10px] text-white/50 px-2 flex items-center gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
         <span>{new Date(timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+        {isMe && receiptStatus ? <MessageReceiptIcon status={receiptStatus} className="shrink-0" /> : null}
       </div>
     </div>
   );

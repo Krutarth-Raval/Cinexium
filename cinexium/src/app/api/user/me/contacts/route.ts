@@ -19,23 +19,55 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const followings = await prisma.follows.findMany({
-      where: { followerId: user.id, status: 'ACCEPTED' },
-      include: {
-        following: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatar: true,
-            isPremium: true,
+    const [followings, followers] = await Promise.all([
+      prisma.follows.findMany({
+        where: { followerId: user.id, status: 'ACCEPTED' },
+        include: {
+          following: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              isPremium: true,
+            }
           }
         }
-      }
+      }),
+      prisma.follows.findMany({
+        where: { followingId: user.id, status: 'ACCEPTED' },
+        include: {
+          follower: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              isPremium: true,
+            }
+          }
+        }
+      })
+    ]);
+
+    const uniqueUsers = new Map<string, {
+      id: string;
+      name: string;
+      username: string;
+      avatar: string | null;
+      isPremium: boolean;
+    }>();
+
+    followings.forEach((follow) => {
+      uniqueUsers.set(follow.following.id, follow.following);
     });
 
-    // Map `following` to `follower` to match the old expected structure by frontend
-    const mapped = followings.map(f => ({ follower: f.following }));
+    followers.forEach((follow) => {
+      uniqueUsers.set(follow.follower.id, follow.follower);
+    });
+
+    // Keep returning `follower` for compatibility with existing chat UIs.
+    const mapped = Array.from(uniqueUsers.values()).map((contact) => ({ follower: contact }));
 
     return NextResponse.json(mapped);
   } catch (error) {

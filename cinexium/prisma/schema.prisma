@@ -224,6 +224,7 @@ model GroupMember {
   userId      String
   role        String   @default("MEMBER") // "ADMIN", "MEMBER"
   isHidden    Boolean  @default(false)
+  isPinned    Boolean  @default(false)
   joinedAt    DateTime @default(now())
 
   group       GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -308,6 +309,8 @@ model Conversation {
   isHiddenByUser2 Boolean   @default(false)
   isMutedByUser1  Boolean   @default(false)
   isMutedByUser2  Boolean   @default(false)
+  isPinnedByUser1 Boolean   @default(false)
+  isPinnedByUser2 Boolean   @default(false)
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -335,6 +338,7 @@ model Message {
   // Independent deletion
   isDeletedBySender   Boolean  @default(false)
   isDeletedByReceiver Boolean  @default(false)
+  deliveredAt         DateTime?
   
   createdAt           DateTime @default(now())
   

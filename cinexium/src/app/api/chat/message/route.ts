@@ -8,6 +8,23 @@ import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, nor
 const normalizeGifField = (value: unknown) =>
   typeof value === 'string' ? value.trim().slice(0, 2048) : '';
 
+async function emitReceiptUpdate(params: {
+  recipientUserId: string;
+  messageIds: string[];
+  deliveredAt?: string | null;
+  isRead?: boolean;
+}) {
+  if (params.messageIds.length === 0) {
+    return;
+  }
+
+  await pusherServer.trigger(getUserChannelName(params.recipientUserId), 'messageReceiptUpdated', {
+    messageIds: params.messageIds,
+    deliveredAt: params.deliveredAt ?? null,
+    isRead: Boolean(params.isRead),
+  });
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -101,6 +118,54 @@ export async function POST(req: NextRequest) {
       await pusherServer.trigger(getUserChannelName(senderId), 'messageSent', { message });
 
       return NextResponse.json({ success: true, message });
+    }
+
+    if (action === 'markDelivered' || action === 'markRead') {
+      const messageId = normalizeText(data.messageId, 64);
+      if (!messageId) {
+        return NextResponse.json({ error: 'Message ID is required' }, { status: 400 });
+      }
+
+      const existingMessage = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: { conversation: true },
+      });
+
+      if (!existingMessage) {
+        return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+      }
+
+      const isParticipant =
+        existingMessage.conversation.user1Id === user.id || existingMessage.conversation.user2Id === user.id;
+      if (!isParticipant) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      if (existingMessage.senderId === user.id) {
+        return NextResponse.json({ error: 'Cannot update your own receipt status' }, { status: 400 });
+      }
+
+      const deliveredTimestamp = existingMessage.deliveredAt ?? new Date();
+      const nextMessage = await prisma.message.update({
+        where: { id: messageId },
+        data: action === 'markRead'
+          ? {
+              deliveredAt: deliveredTimestamp,
+              isRead: true,
+            }
+          : {
+              deliveredAt: deliveredTimestamp,
+            },
+      });
+
+      await emitReceiptUpdate({
+        recipientUserId: existingMessage.senderId,
+        messageIds: [existingMessage.id],
+        deliveredAt: nextMessage.deliveredAt?.toISOString() ?? null,
+        isRead: nextMessage.isRead,
+      });
+
+      return NextResponse.json({ success: true, message: nextMessage });
     }
 
     if (action === 'editMessage') {

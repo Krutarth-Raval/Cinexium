@@ -10,6 +10,7 @@ import { SelectedGifPreview } from '@/components/gif/SelectedGifPreview';
 import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
 import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
 import { MediaShareCard } from '@/components/chat/MediaShareCard';
+import { MessageReceiptIcon, getMessageReceiptStatus } from '@/components/chat/MessageReceiptIcon';
 import { getUserChannelName } from '@/lib/pusher';
 import type { GifSelection } from '@/lib/giphy';
 
@@ -69,6 +70,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   const [reactionModalData, setReactionModalData] = useState<{ isOpen: boolean; reactions: any[] }>({ isOpen: false, reactions: [] });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const isInitialScroll = useRef(true);
   const preserveScrollPosition = useRef(false);
   const previousScrollHeight = useRef(0);
@@ -101,6 +103,21 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       }
     } catch (error) {
       console.error('Failed to sync conversation read state:', error);
+    }
+  };
+
+  const markMessageAsRead = async (messageId: string) => {
+    try {
+      await fetch('/api/chat/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'markRead',
+          messageId,
+        })
+      });
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
     }
   };
 
@@ -228,6 +245,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
             gifHeight: data.message.gifHeight ?? matchingTemp?.gifHeight ?? null,
           }];
         });
+        void markMessageAsRead(data.message.id);
         void syncConversationReadState();
       }
     };
@@ -264,6 +282,25 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
       }
     };
 
+    const handleMessageReceiptUpdated = (data: any) => {
+      const receiptIds = Array.isArray(data?.messageIds) ? new Set(data.messageIds) : null;
+      if (!receiptIds || receiptIds.size === 0) {
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((message) =>
+          receiptIds.has(message.id)
+            ? {
+                ...message,
+                deliveredAt: data.deliveredAt ?? message.deliveredAt ?? null,
+                isRead: Boolean(data.isRead) || message.isRead,
+              }
+            : message
+        )
+      );
+    };
+
     const handleBlockStatusChanged = (data: any) => {
       if (data.blockerId === targetUser.id || data.blockedId === targetUser.id) {
         setTargetUser((prev: any) => {
@@ -281,12 +318,14 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
     channel.bind('receiveMessage', handleMessage);
     channel.bind('messageSent', handleMessageSent);
     channel.bind('messageUpdated', handleMessageUpdated);
+    channel.bind('messageReceiptUpdated', handleMessageReceiptUpdated);
     channel.bind('blockStatusChanged', handleBlockStatusChanged);
     
     return () => {
       channel?.unbind('receiveMessage', handleMessage);
       channel?.unbind('messageSent', handleMessageSent);
       channel?.unbind('messageUpdated', handleMessageUpdated);
+      channel?.unbind('messageReceiptUpdated', handleMessageReceiptUpdated);
       channel?.unbind('blockStatusChanged', handleBlockStatusChanged);
     };
   }, [pusherClient, targetUser, currentUser, settings]);
@@ -300,6 +339,9 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
     setInput('');
     setSelectedGif(null);
     setIsGifPickerOpen(false);
+    requestAnimationFrame(() => {
+      messageInputRef.current?.focus();
+    });
 
     if (editingMessageId) {
       try {
@@ -603,15 +645,18 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                             {isGroupInvite ? (() => {
                                     try {
                                       const meta = JSON.parse(msg.content.substring(15));
-                                      return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
+                                      return <GroupInviteCard meta={meta} isMe={isMe} timestamp={msg.createdAt} receiptStatus={isMe ? getMessageReceiptStatus(msg) : undefined} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
                                     } catch(e) {
                                       return (
                                         <div className={`flex min-w-0 ${shouldUsePosterWidthForText ? 'w-[180px] max-w-[180px]' : 'max-w-[180px]'} flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
                                           <div className={`relative ${shouldUsePosterWidthForText ? 'w-full' : 'w-auto'} max-w-full min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5'}`}>
                                             <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                                           </div>
-                                          <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                          <div className={`mt-1 flex items-center gap-1 px-0.5 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
                                             <span>{new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                                            {isMe ? (
+                                              <MessageReceiptIcon status={getMessageReceiptStatus(msg)} className="shrink-0" />
+                                            ) : null}
                                           </div>
                                         </div>
                                       );
@@ -621,17 +666,20 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                                       const meta = JSON.parse(msg.content.substring(19));
                                       const isMedia = meta.creatorUsername?.startsWith('Cinexium') && meta.itemCount === 0;
                                       if (isMedia) {
-                                        return <MediaShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
+                                        return <MediaShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} receiptStatus={isMe ? getMessageReceiptStatus(msg) : undefined} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
                                       }
-                                      return <CollectionShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
+                                      return <CollectionShareCard meta={meta} isMe={isMe} timestamp={msg.createdAt} receiptStatus={isMe ? getMessageReceiptStatus(msg) : undefined} uniqueReactions={uniqueReactions} reactionCount={reactionCount} />;
                                     } catch(e) {
                                       return (
                                         <div className={`flex min-w-0 ${shouldUsePosterWidthForText ? 'w-[180px] max-w-[180px]' : 'max-w-[180px]'} flex-col ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
                                           <div className={`relative ${shouldUsePosterWidthForText ? 'w-full' : 'w-auto'} max-w-full min-w-0 px-4 py-2 rounded-2xl ${isMe ? 'bg-primary-600 text-white rounded-br-none' : 'bg-[#252a34] text-white rounded-bl-none border border-white/5'}`}>
                                             <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                                           </div>
-                                          <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                          <div className={`mt-1 flex items-center gap-1 px-0.5 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
                                             <span>{new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                                            {isMe ? (
+                                              <MessageReceiptIcon status={getMessageReceiptStatus(msg)} className="shrink-0" />
+                                            ) : null}
                                           </div>
                                         </div>
                                       );
@@ -674,13 +722,16 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                                           </div>
                                         )}
                                       </div>
-                                      <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                      <div className={`mt-1 flex items-center gap-1 px-0.5 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
                                         {msg.isEdited && !isDeleted && (
                                           <span>Edited</span>
                                         )}
                                         <span>
                                           {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                                         </span>
+                                        {isMe ? (
+                                          <MessageReceiptIcon status={getMessageReceiptStatus(msg)} className="shrink-0" />
+                                        ) : null}
                                       </div>
                                     </div>
                                   ) : (
@@ -711,13 +762,16 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                                         )}
                                       </div>
 
-                                      <div className={`mt-1 flex items-center gap-4 px-2 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
+                                      <div className={`mt-1 flex items-center gap-1 px-0.5 text-[10px] text-white/50 ${isMe ? 'self-end justify-end' : 'self-start justify-start'}`}>
                                         {msg.isEdited && !isDeleted && (
                                           <span>Edited</span>
                                         )}
                                         <span>
                                           {new Date(msg.createdAt || Date.now()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                                         </span>
+                                        {isMe ? (
+                                          <MessageReceiptIcon status={getMessageReceiptStatus(msg)} className="shrink-0" />
+                                        ) : null}
                                       </div>
                                     </div>
                                   )}
@@ -799,6 +853,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                   }`}
                 >
                   <textarea 
+                    ref={messageInputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -849,6 +904,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
                 <button 
                   type="submit"
+                  onMouseDown={(e) => e.preventDefault()}
                   disabled={!canSendMessage}
                   className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >

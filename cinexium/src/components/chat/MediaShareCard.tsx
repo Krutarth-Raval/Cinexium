@@ -1,17 +1,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { getMediaDetailHref, normalizeMediaDetailPath } from '@/lib/media';
+import { MessageReceiptIcon, type MessageReceiptStatus } from './MessageReceiptIcon';
 
 export const MediaShareCard = ({ 
   meta, 
   isMe, 
   timestamp,
+  receiptStatus,
   uniqueReactions = [],
   reactionCount = 0
 }: { 
   meta: any; 
   isMe: boolean; 
   timestamp: string | Date;
+  receiptStatus?: MessageReceiptStatus;
   uniqueReactions?: string[];
   reactionCount?: number;
 }) => {
@@ -49,8 +52,9 @@ export const MediaShareCard = ({
       </div>
       
       {/* Time */}
-      <div className={`mt-1 text-[10px] text-white/50 px-2 flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+      <div className={`mt-1 text-[10px] text-white/50 px-2 flex items-center gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
         <span>{new Date(timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+        {isMe && receiptStatus ? <MessageReceiptIcon status={receiptStatus} className="shrink-0" /> : null}
       </div>
     </div>
   );

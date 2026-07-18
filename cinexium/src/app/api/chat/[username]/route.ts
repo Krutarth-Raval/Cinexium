@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { getUserChannelName, pusherServer } from '@/lib/pusher';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
   try {
@@ -73,14 +74,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
 
     // Mark unread messages from target user as read
     if (!before) {
+      const unreadMessages = await prisma.message.findMany({
+        where: {
+          conversationId: conversation.id,
+          senderId: targetUser.id,
+          isRead: false,
+          isDeletedByReceiver: false,
+        },
+        select: { id: true },
+      });
+
       await prisma.message.updateMany({
         where: {
           conversationId: conversation.id,
           senderId: targetUser.id,
-          isRead: false
+          isRead: false,
         },
-        data: { isRead: true }
+        data: { isRead: true, deliveredAt: new Date() }
       });
+
+      if (unreadMessages.length > 0) {
+        await pusherServer.trigger(getUserChannelName(targetUser.id), 'messageReceiptUpdated', {
+          messageIds: unreadMessages.map((message) => message.id),
+          deliveredAt: new Date().toISOString(),
+          isRead: true,
+        });
+      }
     }
 
     // Fetch messages
@@ -154,7 +173,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
       return NextResponse.json({ error: 'Cannot send message to this user' }, { status: 403 });
     }
 
-    const { content } = await req.json();
+    const body = await req.json();
+    const action = typeof body?.action === 'string' ? body.action : '';
+    const content = typeof body?.content === 'string' ? body.content : '';
 
     // Get or create conversation
     let conversation = await prisma.conversation.findFirst({
@@ -183,6 +204,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         isHiddenByUser2: false
       }
     });
+
+    if (action === 'ensureConversation') {
+      return NextResponse.json({ success: true, conversationId: conversation.id });
+    }
+
+    if (!content.trim()) {
+      return NextResponse.json({ error: 'Message content is required' }, { status: 400 });
+    }
 
     const message = await prisma.message.create({
       data: {
