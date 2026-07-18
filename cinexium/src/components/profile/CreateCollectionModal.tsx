@@ -113,7 +113,7 @@ export const CreateCollectionModal = ({
                 </div>
               ) : canCreate === false ? (
                 <PremiumUpgradeBanner 
-                  message="Free users can only create up to 3 collections. Upgrade to Pro for unlimited collections!"
+                  message="Free users can only create up to 2 collections. Upgrade to Pro for unlimited collections!"
                   onCancel={() => setIsOpen(false)}
                 />
               ) : (

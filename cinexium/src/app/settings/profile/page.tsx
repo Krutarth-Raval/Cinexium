@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebounce } from 'use-debounce';
+import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
@@ -138,7 +139,7 @@ export default function ProfileSettingsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return <SettingsPageBoneyard />;
   }
 
   return (
@@ -154,7 +155,7 @@ export default function ProfileSettingsPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden shadow-lg border-2 border-white/10 group-hover:border-primary-500 transition-colors">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden shadow-lg border-2 border-white/10 group-hover:border-primary-500 transition-colors">
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (

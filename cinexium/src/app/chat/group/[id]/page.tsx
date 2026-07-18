@@ -7,6 +7,7 @@ import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { GifPicker } from '@/components/gif/GifPicker';
 import { SelectedGifPreview } from '@/components/gif/SelectedGifPreview';
+import { ChatPageBoneyard } from '@/components/skeleton/Boneyard';
 import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
 import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
 import { MediaShareCard } from '@/components/chat/MediaShareCard';
@@ -483,7 +484,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (loading) return <div className="flex-1 flex items-center justify-center bg-[#1a1d24]"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+  if (loading) return <ChatPageBoneyard />;
   if (error || !group) return <div className="flex-1 flex items-center justify-center text-red-500 bg-[#1a1d24]">{error}</div>;
 
 
@@ -563,7 +564,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
         )}
         {!group.isMember ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-black/40 backdrop-blur-sm z-10">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-red-800 mb-6 flex items-center justify-center shadow-xl">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 mb-6 flex items-center justify-center shadow-xl">
               {group.avatar ? <img src={group.avatar} className="w-full h-full object-cover rounded-full" /> : <span className="text-4xl text-white font-bold">{group.name.charAt(0)}</span>}
             </div>
             <div className="flex items-center gap-2 mb-2">
@@ -599,7 +600,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                     </Link>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {group.avatar ? (
                       <img src={group.avatar} alt={group.name} className="w-full h-full object-cover" />
                     ) : (
@@ -671,7 +672,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                         return (
                           <div key={msg.id} className={`flex group ${isMe ? 'justify-end' : 'justify-start'} gap-2`}>
                             {!isMe && (
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex-shrink-0 overflow-hidden self-end mb-5 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex-shrink-0 overflow-hidden self-end mb-5 flex items-center justify-center">
                                 {!msg.sender?.isBlocked && msg.sender?.avatar ? (
                                   <img src={msg.sender.avatar} className="w-full h-full object-cover" />
                                 ) : (
@@ -857,7 +858,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
                             </div>
 
                             {isMe && (
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex-shrink-0 overflow-hidden self-end mb-1 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex-shrink-0 overflow-hidden self-end mb-1 flex items-center justify-center">
                                 {currentUser?.avatar ? (
                                   <img src={currentUser.avatar} className="w-full h-full object-cover" />
                                 ) : (
@@ -983,7 +984,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
           <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
             <div className="flex flex-col items-center">
               <div 
-                className={`relative w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-4 shadow-xl ${isAdmin ? 'cursor-pointer group' : ''}`}
+                className={`relative w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden mb-4 shadow-xl ${isAdmin ? 'cursor-pointer group' : ''}`}
                 onClick={() => isAdmin && fileInputRef.current?.click()}
               >
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />

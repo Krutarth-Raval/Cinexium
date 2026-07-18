@@ -4,21 +4,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const WHATS_NEW_VERSION = '2026-07-social-chat-upgrade';
+const WHATS_NEW_VERSION = '2026-07-movable-edge-and-loading-upgrade';
 const STORAGE_KEY = 'cinexium:whats-new:last-seen';
 
 const FEATURES = [
   {
-    title: 'Private profiles feel sharper',
-    description: 'Followers, following, and collections now respect private profile access much more clearly.',
+    title: 'Move your region edge',
+    description: 'The region edge can now be placed where it feels best for you, including either side of the screen.',
   },
   {
-    title: 'Chat now feels more alive',
-    description: 'Delivery ticks, read ticks, faster typing flow, and smoother one-to-one chat starts are live.',
+    title: 'Loading previews across the app',
+    description: 'More pages now introduce content with polished skeleton previews while everything loads in.',
   },
   {
-    title: 'Manage chats faster',
-    description: 'You can now select chats in bulk, pin or unpin them instantly, and clean up your list in a few taps.',
+    title: 'More personal color expression',
+    description: 'Theme styling now flows through more parts of the experience for a more connected feel across the app.',
   },
 ];
 
@@ -76,9 +76,9 @@ export function WhatsNewModal() {
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary-500">New In Cinexium</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">A better social and chat experience is here.</h2>
+                <h2 className="mt-2 text-2xl font-bold text-white">Fresh ways to personalize and explore are here.</h2>
                 <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  Your profile privacy, chat control, and messaging flow just got smoother across the app.
+                  Discover a moveable region edge, richer loading previews, and a more connected themed experience.
                 </p>
               </div>
               <button

@@ -268,7 +268,7 @@ export const FollowsModal = ({ username, isOwnProfile, canViewFollows }: Follows
             currentList.map(user => (
               <div key={user.id} className="flex items-center justify-between gap-3">
                 <Link href={`/profile/${user.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0 group">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex-shrink-0 flex items-center justify-center overflow-hidden">
                     {user.avatar ? (
                       <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
                     ) : (

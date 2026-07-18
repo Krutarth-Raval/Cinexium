@@ -46,7 +46,7 @@ export const GroupInviteCard = ({
         >
           {/* Header */}
           <div className="flex items-center gap-3 p-4 pb-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-red-800 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-white/10">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-white/10">
               {meta.groupAvatar ? (
                 <img src={meta.groupAvatar} alt={meta.groupName} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ) : (

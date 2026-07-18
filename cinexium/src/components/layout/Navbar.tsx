@@ -10,6 +10,7 @@ import { NotificationBell } from './NotificationBell';
 import { RegionEdgePanel } from './RegionEdgePanel';
 import { useSocket } from '../providers/SocketProvider';
 import { Logo } from '../ui/Logo';
+import { VALID_THEME_IDS, getThemeDefinition } from '@/lib/themes';
 
 export const Navbar = () => {
   const { data: session, status } = useSession();
@@ -26,19 +27,25 @@ export const Navbar = () => {
   const [loadingText, setLoadingText] = useState('');
 
   const applyTheme = (themePref: string | null | undefined, isPrem: boolean) => {
-    let themeToApply = 'theme-default';
+    let finalThemeId = themePref;
     if (isPrem) {
       if (!themePref || themePref === 'default') {
-        themeToApply = 'theme-neon-purple';
-      } else {
-        themeToApply = `theme-${themePref}`;
+        finalThemeId = 'neon-purple';
+      } else if (!VALID_THEME_IDS.includes(themePref as any)) {
+        finalThemeId = 'neon-purple';
       }
+    } else {
+      finalThemeId = 'default';
     }
 
+    const themeDef = getThemeDefinition(finalThemeId);
+    
+    // Apply CSS variables globally
+    document.documentElement.style.setProperty('--color-primary-500', themeDef.primary500);
+    document.documentElement.style.setProperty('--color-primary-600', themeDef.primary600);
+    
+    // Also clean up old classes just in case
     document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
-    if (themeToApply !== 'theme-default') {
-      document.body.classList.add(themeToApply);
-    }
   };
 
   useEffect(() => {
@@ -69,6 +76,13 @@ export const Navbar = () => {
         if (data.user) {
           setUserData(data.user);
           applyTheme(data.user.themePreference, data.user.isPremium);
+
+          if (data.user.premiumExpiringSoon) {
+            window.alert(
+              `Your premium will expire within 24 hours. After it ends, you will not lose any existing data, but you will not be able to create more than ${data.user.freeCollectionLimit} collections, add more than ${data.user.freeCollectionItemLimit} items to a collection, or use premium themes.`
+            );
+          }
+
           return;
         }
 
@@ -175,7 +189,7 @@ export const Navbar = () => {
       const avatarUrl = userData?.avatar;
 
       return (
-        <Link href="/profile" className={`flex items-center justify-center ${avatarUrl ? 'bg-[#1a1d24]' : 'bg-gradient-to-br from-primary-500 to-red-800'} text-white font-bold rounded-full transition-transform hover:scale-105 overflow-hidden border border-white/20 ${isMobile ? 'w-12 h-12 text-base' : 'w-12 h-12 text-lg'}`}>
+        <Link href="/profile" className={`flex items-center justify-center ${avatarUrl ? 'bg-[#1a1d24]' : 'bg-gradient-to-br from-primary-500 to-primary-600'} text-white font-bold rounded-full transition-transform hover:scale-105 overflow-hidden border border-white/20 ${isMobile ? 'w-12 h-12 text-base' : 'w-12 h-12 text-lg'}`}>
           {avatarUrl ? (
             <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover bg-white/5" />
           ) : (
@@ -203,7 +217,7 @@ export const Navbar = () => {
       {isPending && (
         <div className="fixed inset-0 z-[200] bg-[#0f1115] flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-4xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-red-800 tracking-widest scale-up-center mb-4">
+            <h1 className="text-4xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-600 tracking-widest scale-up-center mb-4">
               {loadingText}
             </h1>
             <div className="flex justify-center gap-2">

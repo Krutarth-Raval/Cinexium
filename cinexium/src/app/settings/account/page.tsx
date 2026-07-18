@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { PrivacyToggle } from '@/components/profile/PrivacyToggle';
+import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
+import { getThemeDefinition, THEME_DEFINITIONS, type ThemeDefinition } from '@/lib/themes';
 
 type AccountUser = {
   role?: string | null;
@@ -16,12 +18,6 @@ type AccountUser = {
   premiumType?: string | null;
   premiumUntil?: string | null;
   themePreference?: string | null;
-};
-
-type ThemeOption = {
-  id: string;
-  name: string;
-  colorClass: string;
 };
 
 export default function AccountSettingsPage() {
@@ -38,7 +34,7 @@ export default function AccountSettingsPage() {
   const [isSendingDeleteOtp, setIsSendingDeleteOtp] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isThemeSelectionOpen, setIsThemeSelectionOpen] = useState(false);
-  const [themeToConfirm, setThemeToConfirm] = useState<ThemeOption | null>(null);
+  const [themeToConfirm, setThemeToConfirm] = useState<ThemeDefinition | null>(null);
   const [isMobileThemeDrawer, setIsMobileThemeDrawer] = useState(false);
   const [themeDrawerHeight, setThemeDrawerHeight] = useState<'half' | 'full'>('half');
 
@@ -49,15 +45,10 @@ export default function AccountSettingsPage() {
     }
     return user.themePreference || 'default';
   };
-
-  const themes: ThemeOption[] = [
-    { id: 'default', name: 'Default', colorClass: 'bg-[#e50914]' }, // For Free Users
-    { id: 'neon-purple', name: 'Neon Purple', colorClass: 'bg-purple-500' },
-    { id: 'red', name: 'Classic Red', colorClass: 'bg-[#e50914]' }, // For Premium Users wanting red
-    { id: 'emerald', name: 'Emerald', colorClass: 'bg-emerald-500' },
-    { id: 'sapphire', name: 'Sapphire', colorClass: 'bg-blue-500' },
-    { id: 'amber', name: 'Amber', colorClass: 'bg-amber-500' },
-  ];
+  const activeTheme = getThemeDefinition(getActiveThemeId());
+  const visibleThemes = user?.isPremium
+    ? THEME_DEFINITIONS.filter((theme) => theme.id !== 'default')
+    : THEME_DEFINITIONS.filter((theme) => !theme.premiumOnly);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -156,7 +147,7 @@ export default function AccountSettingsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return <SettingsPageBoneyard />;
   }
 
   return (
@@ -235,9 +226,9 @@ export default function AccountSettingsPage() {
                 >
                   <span className="text-white font-medium group-hover:text-primary-400 transition-colors">Theme Preference</span>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-gray-400 text-sm">
-                      {themes.find(t => t.id === getActiveThemeId())?.name || 'Default'}
-                      <div className={`w-4 h-4 rounded-full ${themes.find(t => t.id === getActiveThemeId())?.colorClass || 'bg-[#e50914]'}`} />
+                      <div className="flex items-center gap-2 text-gray-400 text-sm">
+                      {activeTheme.name}
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: activeTheme.primary500 }} />
                     </div>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -385,7 +376,7 @@ export default function AccountSettingsPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-                  {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
+                  {visibleThemes.map(theme => {
                     const isLocked = !user?.isPremium && theme.id !== 'default';
                     const isSelected = getActiveThemeId() === theme.id;
                     
@@ -405,7 +396,7 @@ export default function AccountSettingsPage() {
                         className={`flex items-center justify-between rounded-xl border p-4 transition-colors cursor-pointer ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${theme.colorClass} shadow-lg`}>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full shadow-lg" style={{ backgroundColor: theme.primary500 }}>
                             {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
@@ -434,7 +425,7 @@ export default function AccountSettingsPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-                  {themes.filter(t => user?.isPremium ? t.id !== 'default' : t.id === 'default' || t.id !== 'red').map(theme => {
+                  {visibleThemes.map(theme => {
                     const isLocked = !user?.isPremium && theme.id !== 'default';
                     const isSelected = getActiveThemeId() === theme.id;
                     
@@ -454,7 +445,7 @@ export default function AccountSettingsPage() {
                         className={`flex items-center justify-between rounded-xl border p-4 transition-colors cursor-pointer ${isSelected ? 'border-primary-500 bg-primary-500/10' : 'border-white/5 hover:bg-white/5'}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${theme.colorClass} shadow-lg`}>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full shadow-lg" style={{ backgroundColor: theme.primary500 }}>
                             {isSelected && <svg className="w-5 h-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                           </div>
                           <span className={`font-medium ${isSelected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</span>
@@ -476,7 +467,7 @@ export default function AccountSettingsPage() {
       {themeToConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-[#1a1d24] rounded-3xl border border-white/10 w-full max-w-sm overflow-hidden flex flex-col shadow-2xl p-6 text-center">
-             <div className={`w-16 h-16 rounded-full ${themeToConfirm.colorClass} shadow-lg mx-auto mb-4 flex items-center justify-center`}>
+             <div className="w-16 h-16 rounded-full shadow-lg mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: themeToConfirm.primary500 }}>
                 <svg className="w-8 h-8 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
              </div>
              <h3 className="text-xl font-bold text-white mb-2">Change Theme</h3>
@@ -504,7 +495,12 @@ export default function AccountSettingsPage() {
                   } catch (e) {
                     console.error(e);
                   }
-                }} className={`flex-1 py-3 ${themeToConfirm.colorClass} text-white rounded-xl font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:brightness-110`}>Yes, Change</button>
+                }}
+                className="flex-1 py-3 text-white rounded-xl font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:brightness-110"
+                style={{ backgroundColor: themeToConfirm.primary500 }}
+              >
+                Yes, Change
+              </button>
              </div>
           </div>
         </div>

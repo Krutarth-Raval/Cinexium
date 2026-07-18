@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { FREE_COLLECTION_LIMIT, syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       where: { userId: refreshedUser.id }
     });
 
-    if (collectionCount >= 3) {
+    if (collectionCount >= FREE_COLLECTION_LIMIT) {
       return NextResponse.json({ canCreate: false, isPremium: false, reason: 'limit_reached' });
     }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
 
 type AdminUser = {
@@ -211,7 +212,7 @@ export default function UserSubscriptionsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return <SettingsPageBoneyard />;
   }
 
   if (user?.role !== 'admin') {
@@ -271,7 +272,7 @@ export default function UserSubscriptionsPage() {
                   {request.avatar ? (
                     <img src={request.avatar} alt={request.username} className="w-14 h-14 rounded-full object-cover" />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-xl">
                       {request.username.charAt(0).toUpperCase()}
                     </div>
                   )}

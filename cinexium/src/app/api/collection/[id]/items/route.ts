@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { FREE_COLLECTION_ITEM_LIMIT, syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Check limits before adding
       if (!refreshedUser.isPremium) {
         const count = await prisma.collectionItem.count({ where: { collectionId: id } });
-        if (count >= 20) {
-          return NextResponse.json({ error: 'Free tier limit reached: Maximum 20 items per collection.', premiumRequired: true }, { status: 403 });
+        if (count >= FREE_COLLECTION_ITEM_LIMIT) {
+          return NextResponse.json({ error: `Free tier limit reached: Maximum ${FREE_COLLECTION_ITEM_LIMIT} items per collection.`, premiumRequired: true }, { status: 403 });
         }
       }
     }

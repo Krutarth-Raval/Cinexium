@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { VALID_THEME_IDS } from '@/lib/themes';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,20 +27,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    await syncExpiredSubscriptionForUser(user.id);
+
+    const refreshedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+
+    if (!refreshedUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // Validate theme choice
-    const validThemes = ['default', 'red', 'neon-purple', 'emerald', 'sapphire', 'amber'];
-    if (!validThemes.includes(themePreference)) {
+    if (!VALID_THEME_IDS.includes(themePreference)) {
       return NextResponse.json({ error: 'Invalid theme' }, { status: 400 });
     }
 
     // Ensure free users can only use default
-    if (!user.isPremium && themePreference !== 'default') {
+    if (!refreshedUser.isPremium && themePreference !== 'default') {
       return NextResponse.json({ error: 'Premium required for custom themes' }, { status: 403 });
     }
 
     // Update user
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: refreshedUser.id },
       data: { themePreference },
     });
 

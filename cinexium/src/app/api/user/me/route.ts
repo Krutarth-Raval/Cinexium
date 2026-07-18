@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { FREE_COLLECTION_ITEM_LIMIT, FREE_COLLECTION_LIMIT, getPremiumExpiryWarning, syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 import { headers } from 'next/headers';
 
@@ -140,11 +140,17 @@ export async function GET() {
 
     const headersList = await headers();
     const ipCountry = headersList.get('x-vercel-ip-country');
+    const premiumWarning = getPremiumExpiryWarning(refreshedUser.premiumUntil, refreshedUser.isPremium);
 
     return NextResponse.json({ 
       user: {
         ...refreshedUser,
-        country: refreshedUser.country || ipCountry || 'US'
+        country: refreshedUser.country || ipCountry || 'US',
+        premiumExpiringSoon: premiumWarning.isExpiringSoon,
+        premiumExpiresInMs: premiumWarning.expiresInMs,
+        premiumWarningWindowHours: 24,
+        freeCollectionLimit: FREE_COLLECTION_LIMIT,
+        freeCollectionItemLimit: FREE_COLLECTION_ITEM_LIMIT,
       }
     });
   } catch (error) {

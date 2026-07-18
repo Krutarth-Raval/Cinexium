@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { PremiumPayBoneyard } from '@/components/skeleton/Boneyard';
 
 function buildUpiUrl(params: {
   pa: string;
@@ -116,14 +117,7 @@ export default function PremiumPayPage() {
   }, [paymentData]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0f1115] text-white flex items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#1a1d24] p-8 text-center">
-          <h1 className="text-2xl font-bold mb-3">Loading Payment Link</h1>
-          <p className="text-gray-400">Checking whether this payment link is still active.</p>
-        </div>
-      </div>
-    );
+    return <PremiumPayBoneyard />;
   }
 
   if (!paymentData || isExpired) {

@@ -22,6 +22,28 @@ function formatTimeAgo(date: Date) {
   return Math.floor(seconds) + "s";
 }
 
+function PinnedItemBadge() {
+  return (
+    <div className="absolute top-2 left-2 z-10 w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-4 h-4 text-white rotate-[-25deg]"
+      >
+        <path d="M12 17v5" />
+        <path d="M9 3h6l-1 5 3 3v1H7v-1l3-3-1-5Z" />
+      </svg>
+    </div>
+  );
+}
+
 export function CollectionItemsGrid({ 
   initialItems, 
   collectionId, 
@@ -120,11 +142,7 @@ export function CollectionItemsGrid({
           <Link href={`/${item.type}/${item.id}`} key={`${item.type}-${item.id}`} className="group cursor-pointer flex flex-col gap-2">
             <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg border border-white/5 transition-transform duration-300 group-hover:scale-105 group-hover:border-primary-500/50 bg-[#1a1d24]">
               {item.pinnedAt && (
-                <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-md px-1.5 py-1 rounded text-[10px] font-medium text-white flex items-center gap-1 border border-white/10 shadow-lg">
-                  <svg className="w-2.5 h-2.5 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22 12l-4-4v3H3v2h15v3z" transform="rotate(-45 12 12)" />
-                  </svg>
-                </div>
+                <PinnedItemBadge />
               )}
               <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute top-2 right-2 z-10">
@@ -280,11 +298,7 @@ function CollectionGridItem({ item, isSelectMode, isSelected, onToggle, onLongPr
         <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" loading="lazy" draggable={false} />
         
         {item.pinnedAt && !isSelectMode && (
-          <div className="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-md px-1.5 py-1 rounded text-[10px] font-medium text-white flex items-center gap-1 border border-white/10 shadow-lg">
-            <svg className="w-2.5 h-2.5 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M22 12l-4-4v3H3v2h15v3z" transform="rotate(-45 12 12)" />
-            </svg>
-          </div>
+          <PinnedItemBadge />
         )}
         
         <div className="absolute top-2 right-2 z-10">

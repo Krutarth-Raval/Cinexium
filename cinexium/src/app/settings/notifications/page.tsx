@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
 
 export default function NotificationsSettingsPage() {
@@ -61,7 +62,7 @@ export default function NotificationsSettingsPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return <SettingsPageBoneyard />;
   }
 
   return (

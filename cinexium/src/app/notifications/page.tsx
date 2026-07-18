@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSocket } from '@/components/providers/SocketProvider';
+import { NotificationsPageBoneyard } from '@/components/skeleton/Boneyard';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { pusherClient } = useSocket();
 
@@ -30,6 +32,8 @@ export default function NotificationsPage() {
       if (res.ok) setNotifications(await res.json());
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,6 +121,10 @@ export default function NotificationsPage() {
     }
   };
 
+  if (loading) {
+    return <NotificationsPageBoneyard />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0c] pt-8 pb-24 px-4 max-w-lg mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -143,7 +151,7 @@ export default function NotificationsPage() {
                 {n.actor.avatar ? (
                   <img src={n.actor.avatar} alt={n.actor.username} className="w-12 h-12 rounded-full object-cover" />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-lg">
                     {n.actor.name.charAt(0).toUpperCase()}
                   </div>
                 )}

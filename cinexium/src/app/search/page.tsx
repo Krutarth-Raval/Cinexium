@@ -10,6 +10,7 @@ import { SearchHistoryDrawer, renderHistoryText } from '@/components/ui/SearchHi
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { UsernameDisplay } from '@/components/profile/UsernameDisplay';
 import { CommunityBadge } from '@/components/chat/CommunityBadge';
+import { Bone } from '@/components/skeleton/Boneyard';
 
 // ---------------- Helper for Spellcheck ----------------
 const getLevenshteinDistance = (a: string, b: string): number => {
@@ -347,11 +348,24 @@ export default function SearchPage() {
 
       {/* Results Container */}
       <div className="w-full max-w-full mx-auto pb-20 relative z-30">
-        {loading && !results && (
-          <div className="flex justify-center mt-20">
-            <div className="w-10 h-10 border-4 border-white/10 border-t-primary-500 rounded-full animate-spin" />
-          </div>
-        )}
+          {loading && !results && (
+            <div className="mt-10 space-y-8">
+              {Array.from({ length: 3 }).map((_, rowIndex) => (
+                <div key={rowIndex}>
+                  <Bone className="mb-4" height={24} width={160} />
+                  <div className="flex gap-4 overflow-hidden">
+                    {Array.from({ length: 5 }).map((__, cardIndex) => (
+                      <div key={cardIndex} className="w-[150px] flex-none sm:w-[180px]">
+                        <Bone className="aspect-[2/3] w-full rounded-2xl" />
+                        <Bone className="mt-3" height={16} width="80%" />
+                        <Bone className="mt-2" height={14} width="55%" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
         {results && (
           <div className="flex flex-col gap-8">
@@ -467,7 +481,7 @@ const ResultRow = ({ title, items }: { title: string, items: SearchResultItem[] 
                   ) : (
                     <div className={`w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs text-center ${isCircular ? '' : 'p-2'}`}>
                       {item.type === 'user' && (
-                        <div className="w-full h-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center text-white text-3xl font-bold">
+                        <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-3xl font-bold">
                           {item.title.charAt(0).toUpperCase()}
                         </div>
                       )}

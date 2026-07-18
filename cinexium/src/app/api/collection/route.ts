@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COLLECTION_DESCRIPTION_LENGTH, MAX_COLLECTION_NAME_LENGTH, normalizeText } from '@/lib/security';
-import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { FREE_COLLECTION_LIMIT, syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,9 +56,9 @@ export async function POST(req: NextRequest) {
         where: { userId: refreshedUser.id }
       });
 
-      if (collectionCount >= 2) {
+      if (collectionCount >= FREE_COLLECTION_LIMIT) {
         return NextResponse.json({ 
-          error: 'Free users can only create up to 2 collections. Upgrade to Pro for unlimited collections!' 
+          error: `Free users can only create up to ${FREE_COLLECTION_LIMIT} collections. Upgrade to Pro for unlimited collections!`
         }, { status: 403 });
       }
     }

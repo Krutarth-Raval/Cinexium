@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma';
 export const SUBSCRIPTION_REQUEST_NOTIFICATION = 'SUBSCRIPTION_REQUEST';
 export const SUBSCRIPTION_REQUEST_COOLDOWN_MS = 3 * 60 * 60 * 1000;
 export const SUBSCRIPTION_PAYMENT_LINK_TTL_MS = 10 * 60 * 1000;
+export const PREMIUM_EXPIRY_WARNING_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const FREE_COLLECTION_LIMIT = 2;
+export const FREE_COLLECTION_ITEM_LIMIT = 20;
 
 export const subscriptionRequestStatusLabel = {
   PENDING: 'Pending Request',
@@ -103,6 +106,33 @@ export function calculateRequestCooldownExpiry(requestedAt: Date | string) {
 
 export function calculatePaymentLinkExpiry(sentAt = new Date()) {
   return new Date(sentAt.getTime() + SUBSCRIPTION_PAYMENT_LINK_TTL_MS);
+}
+
+export function getPremiumExpiryWarning(premiumUntil: Date | string | null | undefined, isPremium: boolean) {
+  if (!isPremium || !premiumUntil) {
+    return {
+      isExpiringSoon: false,
+      expiresInMs: null,
+      premiumEndsAt: null,
+    };
+  }
+
+  const premiumEndsAt = new Date(premiumUntil);
+  const expiresInMs = premiumEndsAt.getTime() - Date.now();
+
+  if (Number.isNaN(premiumEndsAt.getTime()) || expiresInMs <= 0) {
+    return {
+      isExpiringSoon: false,
+      expiresInMs: expiresInMs > 0 ? expiresInMs : 0,
+      premiumEndsAt: null,
+    };
+  }
+
+  return {
+    isExpiringSoon: expiresInMs <= PREMIUM_EXPIRY_WARNING_WINDOW_MS,
+    expiresInMs,
+    premiumEndsAt,
+  };
 }
 
 export async function syncSubscriptionRequestLifecycle() {

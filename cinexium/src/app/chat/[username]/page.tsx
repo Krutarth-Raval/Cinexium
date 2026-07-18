@@ -7,6 +7,7 @@ import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { GifPicker } from '@/components/gif/GifPicker';
 import { SelectedGifPreview } from '@/components/gif/SelectedGifPreview';
+import { ChatPageBoneyard } from '@/components/skeleton/Boneyard';
 import { GroupInviteCard } from '@/components/chat/GroupInviteCard';
 import { CollectionShareCard } from '@/components/chat/CollectionShareCard';
 import { MediaShareCard } from '@/components/chat/MediaShareCard';
@@ -464,7 +465,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
   };
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-gray-500">Loading chat...</div>;
+    return <ChatPageBoneyard />;
   }
 
   if (error || !targetUser) {
@@ -526,7 +527,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                 </Link>
               </div>
               <div onClick={e => e.stopPropagation()} className="flex items-center">
-                <Link href={`/profile/${targetUser.username}`} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <Link href={`/profile/${targetUser.username}`} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {targetUser.avatar ? (
                     <img src={targetUser.avatar} alt={targetUser.username} className="w-full h-full object-cover" />
                   ) : (
@@ -599,7 +600,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                     return (
                       <div key={msg.id} className={`flex group items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         {!isMe && (
-                          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
+                          <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
                             {displayTargetUser?.avatar ? (
                               <img src={displayTargetUser.avatar} alt={displayTargetUser.name || displayTargetUser.username} className="w-full h-full object-cover" />
                             ) : (
@@ -792,7 +793,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
                     </div>
 
                     {isMe && (
-                      <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
+                      <div className="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden mb-5 shadow-sm">
                         {currentUser?.avatar ? (
                           <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
                         ) : (
@@ -932,7 +933,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
           
           <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-8">
             <div className="flex flex-col items-center text-center">
-              <Link href={`/profile/${displayTargetUser?.username}`} className="w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden mb-4 shadow-xl hover:scale-105 transition-transform pointer-events-none">
+              <Link href={`/profile/${displayTargetUser?.username}`} className="w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden mb-4 shadow-xl hover:scale-105 transition-transform pointer-events-none">
                 {displayTargetUser?.avatar ? (
                   <img src={displayTargetUser.avatar} alt={displayTargetUser.username} className="w-full h-full object-cover" />
                 ) : (

@@ -476,7 +476,7 @@ export default function ChatSidebar() {
                 </div>
               ) : null}
               <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
                   {!conv.isBlocked && conv.user.avatar ? (
                     <img src={conv.user.avatar} alt={conv.user.username} className="w-full h-full object-cover" />
                   ) : (
@@ -561,7 +561,7 @@ export default function ChatSidebar() {
                     key={contact.id}
                     className="flex items-center gap-3 rounded-xl border border-white/5 p-3 transition-all hover:bg-white/5 hover:border-white/10"
                   >
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
                       {contact.avatar ? (
                         <img src={contact.avatar} alt={contact.username} className="w-full h-full object-cover" />
                       ) : (
@@ -588,7 +588,7 @@ export default function ChatSidebar() {
         )}
       </div>
       {selectMode && (
-        <div className="sticky bottom-4 z-20 mt-auto flex justify-center px-4 pb-4">
+        <div className="fixed bottom-24 left-1/2 z-[60] mt-auto flex w-[90%] -translate-x-1/2 justify-center px-4 md:sticky md:bottom-4 md:left-auto md:w-auto md:translate-x-0 md:px-0 md:pb-4">
           <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#1a1d24]/95 px-3 py-2 shadow-2xl backdrop-blur-xl">
             <button
               type="button"

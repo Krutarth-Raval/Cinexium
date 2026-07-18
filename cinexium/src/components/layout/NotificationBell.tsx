@@ -182,7 +182,7 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                       {n.actor.avatar ? (
                         <img src={n.actor.avatar} alt={n.actor.username} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold">
                           {n.actor.name.charAt(0).toUpperCase()}
                         </div>
                       )}

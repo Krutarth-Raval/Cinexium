@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 
 export default function BlockedUsersPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function BlockedUsersPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return <SettingsPageBoneyard />;
   }
 
   return (
@@ -67,7 +68,7 @@ export default function BlockedUsersPage() {
             {blockedUsers.map(user => (
               <div key={user.id} className="flex items-center justify-between bg-[#1a1d24] p-4 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-red-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {user.avatar ? (
                       <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
                     ) : (

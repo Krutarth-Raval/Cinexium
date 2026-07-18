@@ -145,7 +145,7 @@ export default function CreateGroupModal({ isOpen, onClose, mode = 'group' }: Cr
           <div className="flex gap-4 items-center">
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary-600 to-red-800 flex flex-col items-center justify-center shrink-0 cursor-pointer overflow-hidden group shadow-lg"
+              className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex flex-col items-center justify-center shrink-0 cursor-pointer overflow-hidden group shadow-lg"
             >
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
               {avatarPreview ? (
