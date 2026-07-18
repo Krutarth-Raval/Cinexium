@@ -70,17 +70,27 @@ function ToggleRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 py-4">
-      <div>
+      <div className="min-w-0 flex-1">
         <h2 className="text-base font-bold text-white mb-1">{title}</h2>
         <p className="text-sm text-gray-400">{description}</p>
       </div>
       <button
+        type="button"
         onClick={onToggle}
         disabled={disabled}
-        className={`w-14 h-8 rounded-full transition-colors relative ${enabled ? 'bg-primary-500' : 'bg-gray-600'} disabled:opacity-50`}
+        className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1d24] ${
+          enabled
+            ? 'border-primary-400/40 bg-primary-500 shadow-[0_0_20px_rgba(236,72,153,0.22)]'
+            : 'border-white/10 bg-white/12'
+        } ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'}`}
         aria-pressed={enabled}
+        aria-label={`${enabled ? 'Disable' : 'Enable'} ${title}`}
       >
-        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-transform ${enabled ? 'translate-x-7' : 'translate-x-1'}`} />
+        <span
+          className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-[0_4px_12px_rgba(15,23,42,0.35)] transition-transform duration-200 ${
+            enabled ? 'translate-x-7' : 'translate-x-1'
+          }`}
+        />
       </button>
     </div>
   );
@@ -141,21 +151,26 @@ export default function NotificationsSettingsPage() {
     setSettings((current) => ({ ...current, ...patch }));
 
     try {
-      await fetch('/api/user/me', {
+      const response = await fetch('/api/user/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       });
+      if (!response.ok) {
+        throw new Error(`Failed to update notification settings (${response.status})`);
+      }
       router.refresh();
+      return true;
     } catch (error) {
       console.error(error);
       setSettings(previous);
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const syncPushPermission = async (nextPermission: NotificationPermission) => {
+  const syncPushPermission = async (nextPermission: NotificationPermission, enabled: boolean) => {
     setPermission(nextPermission);
 
     const deviceId = window.localStorage.getItem('cinexium_push_device_id');
@@ -167,7 +182,7 @@ export default function NotificationsSettingsPage() {
       await fetch('/api/push/devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId, permission: nextPermission }),
+        body: JSON.stringify({ deviceId, permission: nextPermission, enabled }),
       });
       return;
     }
@@ -201,6 +216,7 @@ export default function NotificationsSettingsPage() {
       body: JSON.stringify({
         deviceId,
         permission: nextPermission,
+        enabled,
         token,
         platform,
         browser,
@@ -212,15 +228,24 @@ export default function NotificationsSettingsPage() {
   const togglePushEnabled = async () => {
     const nextValue = !settings.pushNotificationsEnabled;
 
+    if (nextValue && permission === 'denied') {
+      return;
+    }
+
     if (nextValue && pushSupported && permission === 'default') {
       const nextPermission = await Notification.requestPermission();
-      await syncPushPermission(nextPermission);
+      await syncPushPermission(nextPermission, true);
       if (nextPermission !== 'granted') {
         return;
       }
     }
 
-    await updateSettings({ pushNotificationsEnabled: nextValue });
+    const didSave = await updateSettings({ pushNotificationsEnabled: nextValue });
+
+    if (didSave && pushSupported) {
+      const browserPermission = typeof Notification === 'undefined' ? 'default' : Notification.permission;
+      await syncPushPermission(browserPermission, nextValue);
+    }
   };
 
   const permissionMessage =
@@ -278,7 +303,7 @@ export default function NotificationsSettingsPage() {
             title="General Push Notifications"
             description="Master switch for push delivery on desktop and Android browsers."
             enabled={settings.pushNotificationsEnabled}
-            disabled={saving || !pushSupported || permission === 'denied'}
+            disabled={saving || !pushSupported}
             onToggle={togglePushEnabled}
           />
 
@@ -288,7 +313,7 @@ export default function NotificationsSettingsPage() {
                 key={row.key}
                 title={row.title}
                 description={row.description}
-                enabled={settings[row.key]}
+                enabled={settings.pushNotificationsEnabled && settings[row.key]}
                 disabled={saving || !settings.pushNotificationsEnabled}
                 onToggle={() => updateSettings({ [row.key]: !settings[row.key] } as Partial<NotificationSettings>)}
               />

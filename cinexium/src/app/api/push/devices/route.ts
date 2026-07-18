@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, pushNotificationsEnabled: true },
     });
 
     if (!user) {
@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
     const platform = typeof body.platform === 'string' ? body.platform.slice(0, 64) : 'web';
     const browser = typeof body.browser === 'string' ? body.browser.slice(0, 64) : null;
     const userAgent = typeof body.userAgent === 'string' ? body.userAgent.slice(0, 512) : '';
+    const enabled = typeof body.enabled === 'boolean' ? body.enabled : user.pushNotificationsEnabled;
+    const isActive = permission === 'granted' && enabled;
 
     if (!deviceId) {
       return NextResponse.json({ error: 'Missing deviceId' }, { status: 400 });
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
         where: { userId: user.id, deviceId },
         data: {
           permission,
-          isActive: permission === 'granted',
+          isActive,
           lastSeenAt: new Date(),
         },
       });
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
         platform,
         browser,
         userAgent,
-        isActive: permission === 'granted',
+        isActive,
         lastSeenAt: new Date(),
       },
       create: {
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
         platform,
         browser,
         userAgent,
-        isActive: permission === 'granted',
+        isActive,
       },
     });
 

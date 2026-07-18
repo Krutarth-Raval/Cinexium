@@ -168,7 +168,7 @@ function GifPickerContent({
           </div>
         )}
         <form
-          className={`flex items-center gap-2 ${isCommentVariant ? 'w-full' : 'block w-full'}`}
+          className={`flex items-center gap-2 ${isCommentVariant ? 'w-full' : 'w-full'}`}
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
             onSearchSubmit();
@@ -190,13 +190,6 @@ function GifPickerContent({
               className="h-11 w-full rounded-2xl border border-white/10 bg-[#111318] pl-10 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </div>
-          <button
-            type="submit"
-            className="flex h-11 shrink-0 items-center justify-center rounded-2xl bg-primary-500 px-3 text-xs font-semibold text-white transition-colors hover:bg-primary-600 lg:hidden"
-            aria-label="Search GIFs"
-          >
-            Search
-          </button>
           {isCommentVariant && (
             <button
               type="button"

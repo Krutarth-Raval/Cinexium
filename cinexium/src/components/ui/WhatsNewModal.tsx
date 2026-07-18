@@ -4,10 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const WHATS_NEW_VERSION = '2026-07-movable-edge-and-loading-upgrade';
+const WHATS_NEW_VERSION = '2026-07-notification-controls-and-loading-upgrade';
 const STORAGE_KEY = 'cinexium:whats-new:last-seen';
 
 const FEATURES = [
+  {
+    title: 'Notification controls are now clearer',
+    description: 'Push and in-app notification preferences are easier to review, with a cleaner master switch and better per-alert controls.',
+  },
   {
     title: 'Move your region edge',
     description: 'The region edge can now be placed where it feels best for you, including either side of the screen.',
@@ -76,9 +80,9 @@ export function WhatsNewModal() {
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary-500">New In Cinexium</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Fresh ways to personalize and explore are here.</h2>
+                <h2 className="mt-2 text-2xl font-bold text-white">Fresh ways to personalize, explore, and stay updated are here.</h2>
                 <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  Discover a moveable region edge, richer loading previews, and a more connected themed experience.
+                  Discover clearer notification controls, a moveable region edge, richer loading previews, and a more connected themed experience.
                 </p>
               </div>
               <button
@@ -113,7 +117,7 @@ export function WhatsNewModal() {
                 onClick={closeModal}
                 className="flex-1 rounded-2xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_22px_rgba(229,9,20,0.22)] transition-colors hover:bg-primary-600"
               >
-                Explore What’s New
+                Explore What's New
               </button>
               <button
                 type="button"
