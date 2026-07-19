@@ -187,32 +187,6 @@ async function sendPushPayloadToUser(
   }
 
   const tokens = eligibleDevices.map((device) => device.token);
-  const absoluteDeepLink = payload.deepLink
-    ? new URL(payload.deepLink, process.env.NEXTAUTH_URL || 'http://localhost:3000').toString()
-    : undefined;
-  const multicastMessage = {
-    tokens,
-    data: payload,
-    webpush: {
-      data: payload,
-      notification: payload.op === 'show'
-        ? {
-            title: payload.title || 'Cinexium',
-            body: payload.body || '',
-            icon: payload.icon || PUSH_ICON_URL,
-            badge: payload.badge || PUSH_BADGE_URL,
-            image: payload.image || undefined,
-            tag: payload.tag || payload.eventKey || undefined,
-          }
-        : undefined,
-      fcmOptions: absoluteDeepLink
-        ? {
-            link: absoluteDeepLink,
-          }
-        : undefined,
-    },
-  };
-
   logPushDebug({
     eventKey: debug.eventKey,
     source: debug.source,
@@ -222,17 +196,16 @@ async function sendPushPayloadToUser(
     data: {
       payloadTitle: payload.title || '',
       payloadBody: payload.body || '',
-      multicastTitle: multicastMessage.webpush.notification?.title || '',
-      multicastBody: multicastMessage.webpush.notification?.body || '',
+      multicastTitle: payload.title || '',
+      multicastBody: payload.body || '',
       deepLink: payload.deepLink || '',
-      absoluteDeepLink: absoluteDeepLink || '',
     },
   });
   console.debug('[Cinexium Push Debug] Firebase multicast built', {
     eventKey: debug.eventKey,
-    title: multicastMessage.webpush.notification?.title || '',
-    body: multicastMessage.webpush.notification?.body || '',
-    deepLink: absoluteDeepLink || payload.deepLink || '',
+    title: payload.title || '',
+    body: payload.body || '',
+    deepLink: payload.deepLink || '',
   });
 
   logPushDebug({
@@ -247,7 +220,10 @@ async function sendPushPayloadToUser(
     },
   });
 
-  const response = await messaging.sendEachForMulticast(multicastMessage);
+  const response = await messaging.sendEachForMulticast({
+    tokens,
+    data: payload,
+  });
 
   logPushDebug({
     eventKey: debug.eventKey,
