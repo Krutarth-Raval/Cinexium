@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { getMessagePreview } from '@/lib/push/message-preview';
 import { createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_COMMENT_LENGTH, normalizeText } from '@/lib/security';
 
@@ -152,14 +153,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ med
         actorId: user.id,
         type: 'COMMENT_REPLY',
         title: `${user.name} replied to your comment`,
-        body: normalizedContent || 'Open the discussion to view the reply.',
+        body: getMessagePreview({ content: normalizedContent, gifUrl: normalizedGifUrl }),
         deepLink: `/${normalizedMediaType === 'tv' || normalizedMediaType === 'series' ? 'series' : 'movie'}/${mediaId}#comment-${comment.id}`,
         referenceId: mediaId,
         referenceType: normalizedMediaType === 'series' ? 'tv' : normalizedMediaType,
         eventKey: `comment-reply:${comment.id}:${targetUserId}`,
         suppressWhenActive: {
-          pageType: normalizedMediaType === 'tv' || normalizedMediaType === 'series' ? 'series' : 'movie',
-          pageTargetId: mediaId,
+          pageType: 'comment',
+          pageTargetId: comment.id,
         },
       });
     }

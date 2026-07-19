@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getGroupChannelName, pusherServer } from '@/lib/pusher';
 import { logPushDebug } from '@/lib/push/debug';
+import { getMessagePreview, parseStructuredMessage } from '@/lib/push/message-preview';
 import { createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 import { syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
@@ -121,16 +122,18 @@ export async function POST(req: NextRequest) {
 
       if (fullGroup) {
         const mentions = extractMentions(content);
+        const structured = parseStructuredMessage(content);
+        const messagePreview = getMessagePreview({
+          content,
+          gifUrl,
+          structured,
+        });
         const recipients = fullGroup.members.filter((member) => member.userId !== refreshedUser.id);
 
         await Promise.all(
           recipients.map(async (member) => {
             const username = member.user.username.toLowerCase();
             const isMention = mentions.has(username);
-
-            if (fullGroup.isCommunity && !isMention) {
-              return;
-            }
 
             const eventKey = `group:${message.id}:${member.userId}`;
             logPushDebug({
@@ -162,10 +165,8 @@ export async function POST(req: NextRequest) {
                 : isMention
                   ? 'GROUP_MENTION'
                   : 'GROUP_MESSAGE',
-              title: fullGroup.isCommunity
-                ? `${refreshedUser.name} mentioned you in ${fullGroup.name}`
-                : `${fullGroup.name}`,
-              body: content || (gifUrl ? 'Sent a GIF' : 'Sent a message'),
+              title: fullGroup.name,
+              body: `${refreshedUser.name || `@${refreshedUser.username}`}: ${messagePreview}`,
               deepLink: `/chat/group/${groupId}`,
               eventKey,
               tag: `chat:group:${groupId}`,

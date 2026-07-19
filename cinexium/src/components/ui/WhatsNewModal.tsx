@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const WHATS_NEW_VERSION = '2026-07-notification-controls-and-loading-upgrade';
+const WHATS_NEW_VERSION = '2026-07-whats-new-compact';
 const STORAGE_KEY = 'cinexium:whats-new:last-seen';
 
 const FEATURES = [
@@ -13,16 +13,8 @@ const FEATURES = [
     description: 'Push and in-app notification preferences are easier to review, with a cleaner master switch and better per-alert controls.',
   },
   {
-    title: 'Move your region edge',
-    description: 'The region edge can now be placed where it feels best for you, including either side of the screen.',
-  },
-  {
     title: 'Loading previews across the app',
     description: 'More pages now introduce content with polished skeleton previews while everything loads in.',
-  },
-  {
-    title: 'More personal color expression',
-    description: 'Theme styling now flows through more parts of the experience for a more connected feel across the app.',
   },
 ];
 
@@ -74,21 +66,21 @@ export function WhatsNewModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 24 }}
             transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-            className="fixed left-1/2 top-1/2 z-[150] w-[calc(100%-1.5rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[32px] border border-white/10 bg-[#12161f]/96 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_24px_80px_rgba(0,0,0,0.5)] md:px-6 md:pb-6 md:pt-5"
+            className="fixed left-1/2 top-1/2 z-[150] w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/10 bg-[#12161f]/96 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_24px_80px_rgba(0,0,0,0.5)] md:px-5 md:pb-5"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-4 flex items-start justify-between gap-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary-500">New In Cinexium</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Fresh ways to personalize, explore, and stay updated are here.</h2>
-                <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  Discover clearer notification controls, a moveable region edge, richer loading previews, and a more connected themed experience.
+                <h2 className="mt-1.5 text-xl font-bold leading-tight text-white">A quicker, cleaner update summary.</h2>
+                <p className="mt-1.5 text-sm leading-relaxed text-gray-400">
+                  Only the latest improvements are shown here, with a maximum of two highlights at a time.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Close what's new"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,11 +89,11 @@ export function WhatsNewModal() {
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {FEATURES.map((feature, index) => (
-                <div key={feature.title} className="rounded-2xl border border-white/8 bg-white/5 p-4">
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-500/15 text-sm font-bold text-primary-500">
+                <div key={feature.title} className="rounded-2xl border border-white/8 bg-white/5 p-3.5">
+                  <div className="mb-1.5 flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-500/15 text-xs font-bold text-primary-500">
                       {index + 1}
                     </div>
                     <h3 className="text-sm font-semibold text-white">{feature.title}</h3>
@@ -111,18 +103,18 @@ export function WhatsNewModal() {
               ))}
             </div>
 
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex-1 rounded-2xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_0_22px_rgba(229,9,20,0.22)] transition-colors hover:bg-primary-600"
+                className="flex-1 rounded-2xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_22px_rgba(229,9,20,0.22)] transition-colors hover:bg-primary-600"
               >
                 Explore What's New
               </button>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Later
               </button>

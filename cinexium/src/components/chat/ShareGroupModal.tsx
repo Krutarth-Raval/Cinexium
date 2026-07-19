@@ -9,6 +9,7 @@ export default function ShareGroupModal({
   onClose, 
   groupId,
   groupName,
+  isCommunity = false,
   groupAvatar,
   memberAvatars,
 }: { 
@@ -16,6 +17,7 @@ export default function ShareGroupModal({
   onClose: () => void;
   groupId: string;
   groupName: string;
+  isCommunity?: boolean;
   groupAvatar?: string;
   memberAvatars?: string[];
 }) {
@@ -67,6 +69,7 @@ export default function ShareGroupModal({
       type: 'GROUP_INVITE',
       groupId,
       groupName,
+      isCommunity,
       groupAvatar: groupAvatar || '',
       memberAvatars: memberAvatars || []
     };

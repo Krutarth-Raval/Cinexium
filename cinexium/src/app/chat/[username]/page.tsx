@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSocket } from '@/components/providers/SocketProvider';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -18,6 +18,7 @@ import type { GifSelection } from '@/lib/giphy';
 export default function ChatRoom({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const { pusherClient } = useSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
@@ -109,7 +110,7 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
 
   const markMessageAsRead = async (messageId: string) => {
     try {
-      await fetch('/api/chat/message', {
+      const response = await fetch('/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,9 +118,53 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
           messageId,
         })
       });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (data?.message?.id) {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === data.message.id
+              ? {
+                  ...message,
+                  deliveredAt: data.message.deliveredAt ?? message.deliveredAt ?? null,
+                  isRead: Boolean(data.message.isRead),
+                }
+              : message
+          )
+        );
+      }
     } catch (error) {
       console.error('Failed to mark message as read:', error);
     }
+  };
+
+  const isConversationForegroundActive = () =>
+    document.visibilityState === 'visible' &&
+    document.hasFocus() &&
+    pathname === `/chat/${username}`;
+
+  const syncVisibleUnreadMessagesAsRead = async () => {
+    if (!targetUser || !isConversationForegroundActive()) {
+      return;
+    }
+
+    const unreadMessages = messages.filter(
+      (message) =>
+        message.senderId === targetUser.id &&
+        !message.isRead &&
+        !String(message.id).startsWith('temp-')
+    );
+
+    if (unreadMessages.length === 0) {
+      return;
+    }
+
+    await Promise.all(unreadMessages.map((message) => markMessageAsRead(message.id)));
+    void syncConversationReadState();
   };
 
   const fetchChat = async (before?: string) => {
@@ -152,6 +197,24 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
     isInitialScroll.current = true;
     fetchChat();
   }, [username]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      void syncVisibleUnreadMessagesAsRead();
+    };
+
+    window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('pageshow', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    void syncVisibleUnreadMessagesAsRead();
+
+    return () => {
+      window.removeEventListener('focus', handleVisibilityChange);
+      window.removeEventListener('pageshow', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [messages, pathname, targetUser, username]);
 
   useEffect(() => {
     const handleTouchCleanup = () => {
@@ -246,8 +309,10 @@ export default function ChatRoom({ params }: { params: Promise<{ username: strin
             gifHeight: data.message.gifHeight ?? matchingTemp?.gifHeight ?? null,
           }];
         });
-        void markMessageAsRead(data.message.id);
-        void syncConversationReadState();
+        if (isConversationForegroundActive()) {
+          void markMessageAsRead(data.message.id);
+          void syncConversationReadState();
+        }
       }
     };
 

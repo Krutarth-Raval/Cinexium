@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getUserChannelName, pusherServer } from '@/lib/pusher';
 import { logPushDebug } from './debug';
 import { getFirebaseAdminMessaging } from './firebase-admin';
+import { sanitizeNotificationText } from './message-preview';
 import {
   PUSH_ACTIVE_WINDOW_MS,
   PUSH_BADGE_URL,
@@ -465,8 +466,8 @@ export async function createPushNotification(input: CreatePushNotificationInput)
 
   await sendPushPayloadToUser(input.userId, {
     op: 'show',
-    title: input.title,
-    body: input.body,
+    title: sanitizeNotificationText(input.title) || 'Cinexium',
+    body: sanitizeNotificationText(input.body),
     icon: toAbsolutePath(input.icon) || PUSH_ICON_URL,
     image: toAbsolutePath(input.image) || PUSH_DEFAULT_IMAGE,
     badge: toAbsolutePath(input.badge) || PUSH_BADGE_URL,

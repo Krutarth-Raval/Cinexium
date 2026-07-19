@@ -86,7 +86,7 @@ export const ShareCollectionModal = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'sendMessage',
+          action: 'sendGroupMessage',
           groupId: contact.id,
           content
         })

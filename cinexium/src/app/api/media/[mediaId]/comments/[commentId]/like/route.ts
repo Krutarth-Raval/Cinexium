@@ -66,19 +66,19 @@ export async function POST(
             avatar: user.avatar,
           },
           actorId: user.id,
-          type: 'COMMENT_LIKE',
-          title: `${user.name} liked your comment`,
-          body: 'Open the discussion to see the activity.',
-          deepLink: `/${comment.mediaType === 'tv' || comment.mediaType === 'series' ? 'series' : 'movie'}/${comment.mediaId}#comment-${comment.id}`,
-          referenceId: comment.mediaId,
-          referenceType: comment.mediaType === 'series' ? 'tv' : comment.mediaType,
-          eventKey: `comment-like:${commentId}:${user.id}:${comment.userId}`,
-          suppressWhenActive: {
-            pageType: comment.mediaType === 'tv' || comment.mediaType === 'series' ? 'series' : 'movie',
-            pageTargetId: comment.mediaId,
-          },
-        });
-      }
+        type: 'COMMENT_LIKE',
+        title: `${user.name} liked your comment`,
+        body: 'Open the discussion to see the activity.',
+        deepLink: `/${comment.mediaType === 'tv' || comment.mediaType === 'series' ? 'series' : 'movie'}/${comment.mediaId}#comment-${comment.id}`,
+        referenceId: comment.mediaId,
+        referenceType: comment.mediaType === 'series' ? 'tv' : comment.mediaType,
+        eventKey: `comment-like:${commentId}:${user.id}:${comment.userId}`,
+        suppressWhenActive: {
+          pageType: 'comment',
+          pageTargetId: comment.id,
+        },
+      });
+    }
 
       return NextResponse.json({ success: true, action: 'liked' });
     }

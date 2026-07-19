@@ -38,6 +38,14 @@ export async function GET() {
 
         if (data.op !== 'show') return;
 
+        const existingNotifications = await self.registration.getNotifications();
+        const hasMatchingEventKey = existingNotifications.some(
+          (notification) => notification.data?.eventKey && notification.data.eventKey === data.eventKey
+        );
+        if (hasMatchingEventKey) {
+          return;
+        }
+
         await self.registration.showNotification(data.title || 'Cinexium', {
           body: data.body || '',
           icon: data.icon || '/icon-192.png',
@@ -76,6 +84,15 @@ export async function GET() {
         }
 
         const clientsList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const preferredClient = clientsList.find((client) => client.url.startsWith(self.location.origin)) || clientsList[0];
+        if (preferredClient && 'focus' in preferredClient) {
+          await preferredClient.focus();
+          if ('navigate' in preferredClient) {
+            await preferredClient.navigate(deepLink);
+          }
+          return;
+        }
+
         for (const client of clientsList) {
           if ('focus' in client) {
             await client.focus();

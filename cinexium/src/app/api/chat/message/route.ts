@@ -4,27 +4,12 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { getUserChannelName, pusherServer } from '@/lib/pusher';
 import { logPushDebug } from '@/lib/push/debug';
+import { getMessagePreview, parseStructuredMessage } from '@/lib/push/message-preview';
 import { clearPushNotificationsForUser, createPushNotification } from '@/lib/push/service';
 import { applyRateLimit, enforceSameOrigin, getClientIp, MAX_MESSAGE_LENGTH, normalizeText } from '@/lib/security';
 
 const normalizeGifField = (value: unknown) =>
   typeof value === 'string' ? value.trim().slice(0, 2048) : '';
-
-function parseStructuredMessage(content: string) {
-  const match = content.match(/^\[([A-Z_]+)\]:([\s\S]+)$/);
-  if (!match) {
-    return null;
-  }
-
-  try {
-    return {
-      kind: match[1],
-      meta: JSON.parse(match[2]),
-    };
-  } catch {
-    return null;
-  }
-}
 
 async function emitReceiptUpdate(params: {
   recipientUserId: string;
@@ -136,6 +121,11 @@ export async function POST(req: NextRequest) {
       await pusherServer.trigger(getUserChannelName(senderId), 'messageSent', { message });
 
       const structured = parseStructuredMessage(content);
+      const messagePreview = getMessagePreview({
+        content,
+        gifUrl,
+        structured,
+      });
       const dmTag = `chat:dm:${conversation.id}`;
       const baseEventKey = structured?.kind === 'GROUP_INVITE' && structured.meta?.groupId
         ? `invite:${message.id}:${targetUserId}`
@@ -173,15 +163,15 @@ export async function POST(req: NextRequest) {
           });
 
           const inviteKind = targetGroup?.isCommunity ? 'COMMUNITY_INVITE' : 'GROUP_INVITE';
-          const inviteLabel = targetGroup?.isCommunity ? 'community' : 'group';
+          const invitePreview = targetGroup?.isCommunity ? 'Shared a community' : 'Shared a group';
 
           await createPushNotification({
             userId: targetUserId,
             actor: user,
             actorId: user.id,
             type: inviteKind,
-            title: `${user.name} invited you`,
-            body: `Open the ${inviteLabel} ${targetGroup?.name || structured.meta.groupName || ''}`.trim(),
+            title: user.name || `@${user.username}`,
+            body: invitePreview,
             deepLink: `/chat/group/${structured.meta.groupId}`,
             image: structured.meta.groupAvatar || null,
             eventKey: `invite:${message.id}:${targetUserId}`,
@@ -199,8 +189,8 @@ export async function POST(req: NextRequest) {
             actor: user,
             actorId: user.id,
             type: 'COLLECTION_SHARE',
-            title: `${user.name} shared a collection`,
-            body: structured.meta.collectionName || 'Open the shared collection',
+            title: user.name || `@${user.username}`,
+            body: messagePreview,
             deepLink: structured.meta.shareUrlPath || `/collection/${structured.meta.collectionId}`,
             image: structured.meta.collectionThumbnail || null,
             eventKey: `collection-share:${message.id}:${targetUserId}`,
@@ -219,7 +209,7 @@ export async function POST(req: NextRequest) {
             actorId: user.id,
             type: 'DIRECT_MESSAGE',
             title: user.name || `@${user.username}`,
-            body: content || (gifUrl ? 'Sent you a GIF' : 'Sent you a message'),
+            body: messagePreview,
             deepLink: `/chat/${user.username}`,
             image: null,
             eventKey: `dm:${message.id}:${targetUserId}`,

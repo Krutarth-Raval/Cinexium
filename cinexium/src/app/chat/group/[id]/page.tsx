@@ -1208,6 +1208,7 @@ export default function GroupChatRoom({ params }: { params: Promise<{ id: string
         onClose={() => setIsShareModalOpen(false)}
         groupId={group?.id}
         groupName={group?.name}
+        isCommunity={Boolean(group?.isCommunity)}
         groupAvatar={group?.avatar}
         memberAvatars={group?.members?.slice(0, 3).map((m: any) => m.user?.avatar).filter(Boolean) || []}
       />

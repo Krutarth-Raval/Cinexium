@@ -45,14 +45,15 @@ function ensureDeviceId() {
 }
 
 async function sendPresence(deviceId: string, pathname: string) {
-  const { pageType, pageTargetId } = getPageContext(pathname);
+  const locationPath = `${pathname}${window.location.hash || ''}`;
+  const { pageType, pageTargetId } = getPageContext(locationPath);
 
   await fetch('/api/push/presence', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       deviceId,
-      pathname,
+      pathname: locationPath,
       pageType,
       pageTargetId,
       isVisible: document.visibilityState === 'visible',
@@ -104,12 +105,14 @@ export function usePushNotifications() {
     window.addEventListener('focus', handlePresence);
     window.addEventListener('visibilitychange', handlePresence);
     window.addEventListener('pageshow', handlePresence);
+    window.addEventListener('hashchange', handlePresence);
 
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener('focus', handlePresence);
       window.removeEventListener('visibilitychange', handlePresence);
       window.removeEventListener('pageshow', handlePresence);
+      window.removeEventListener('hashchange', handlePresence);
     };
   }, [pathname, status]);
 
@@ -119,6 +122,7 @@ export function usePushNotifications() {
     }
 
     let cancelled = false;
+    let unsubscribeFromMessages: (() => void) | null = null;
     const deviceId = ensureDeviceId();
 
     const initMessaging = async () => {
@@ -128,9 +132,14 @@ export function usePushNotifications() {
         return;
       }
 
-      onMessage(messaging, (payload) => {
+      unsubscribeFromMessages = onMessage(messaging, (payload) => {
         window.dispatchEvent(new CustomEvent('push:payload', { detail: payload }));
       });
+
+      if (cancelled) {
+        unsubscribeFromMessages?.();
+        return;
+      }
 
       if (Notification.permission === 'granted') {
         const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
@@ -148,6 +157,7 @@ export function usePushNotifications() {
 
     return () => {
       cancelled = true;
+      unsubscribeFromMessages?.();
     };
   }, [pathname, status]);
 

@@ -1,6 +1,16 @@
 import type { PresencePageType } from './constants';
 
-export function getPageContext(pathname: string) {
+export function getPageContext(pathWithHash: string) {
+  const [pathname, hashFragment = ''] = pathWithHash.split('#');
+  const hash = hashFragment.trim();
+
+  if (hash.startsWith('comment-')) {
+    return {
+      pageType: 'comment' as PresencePageType,
+      pageTargetId: hash.replace(/^comment-/, ''),
+    };
+  }
+
   if (pathname.startsWith('/chat/group/')) {
     const id = pathname.split('/')[3] || '';
     return {
