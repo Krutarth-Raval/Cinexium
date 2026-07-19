@@ -155,6 +155,30 @@ export async function POST(req: NextRequest) {
                 isCommunity: fullGroup.isCommunity,
               },
             });
+            logPushDebug({
+              eventKey,
+              source: 'message',
+              type: fullGroup.isCommunity
+                ? 'COMMUNITY_MENTION'
+                : isMention
+                  ? 'GROUP_MENTION'
+                  : 'GROUP_MESSAGE',
+              userId: member.userId,
+              step: 'message_preview_resolved',
+              data: {
+                rawContent: content,
+                gifUrl,
+                structuredKind: structured?.kind ?? null,
+                previewTitle: fullGroup.name,
+                previewBody: `${refreshedUser.name || `@${refreshedUser.username}`}: ${messagePreview}`,
+              },
+            });
+            console.debug('[Cinexium Push Debug] Group preview resolved', {
+              eventKey,
+              title: fullGroup.name,
+              body: `${refreshedUser.name || `@${refreshedUser.username}`}: ${messagePreview}`,
+              rawContent: content,
+            });
 
             await createPushNotification({
               userId: member.userId,

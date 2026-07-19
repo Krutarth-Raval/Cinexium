@@ -1,6 +1,8 @@
 export const PUSH_BADGE_URL = '/icon-192.png';
 export const PUSH_ICON_URL = '/icon-192.png';
 export const PUSH_DEFAULT_IMAGE = '/og-image.png';
+export const PUSH_SERVICE_WORKER_VERSION = '2026-07-19-debug-1';
+export const PUSH_SERVICE_WORKER_URL = `/firebase-messaging-sw.js?v=${PUSH_SERVICE_WORKER_VERSION}`;
 export const PUSH_HEARTBEAT_MS = 30000;
 export const PUSH_ACTIVE_WINDOW_MS = 75000;
 export const PUSH_PROMPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;

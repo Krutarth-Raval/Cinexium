@@ -151,6 +151,30 @@ export async function POST(req: NextRequest) {
           structuredKind: structured?.kind ?? null,
         },
       });
+      logPushDebug({
+        eventKey: baseEventKey,
+        source: 'message',
+        type: structured?.kind === 'GROUP_INVITE'
+          ? 'GROUP_INVITE'
+          : structured?.kind === 'COLLECTION_SHARE'
+            ? 'COLLECTION_SHARE'
+            : 'DIRECT_MESSAGE',
+        userId: targetUserId,
+        step: 'message_preview_resolved',
+        data: {
+          rawContent: content,
+          gifUrl,
+          structuredKind: structured?.kind ?? null,
+          previewTitle: user.name || `@${user.username}`,
+          previewBody: messagePreview,
+        },
+      });
+      console.debug('[Cinexium Push Debug] DM preview resolved', {
+        eventKey: baseEventKey,
+        title: user.name || `@${user.username}`,
+        body: messagePreview,
+        rawContent: content,
+      });
 
       if (!(
         (conversation.user1Id === targetUserId && conversation.isMutedByUser1) ||

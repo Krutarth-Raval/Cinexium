@@ -6,6 +6,7 @@ import { getToken } from 'firebase/messaging';
 import { SettingsPageBoneyard } from '@/components/skeleton/Boneyard';
 import { ClientBackButton } from '@/components/ui/ClientBackButton';
 import { getFirebaseMessagingClient, hasFirebaseMessagingConfig } from '@/lib/push/client';
+import { PUSH_SERVICE_WORKER_URL } from '@/lib/push/constants';
 
 type NotificationSettings = {
   chatNotifications: boolean;
@@ -187,7 +188,8 @@ export default function NotificationsSettingsPage() {
       return;
     }
 
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const registration = await navigator.serviceWorker.register(PUSH_SERVICE_WORKER_URL);
+    await registration.update().catch(() => {});
     const messaging = await getFirebaseMessagingClient();
     const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
     const token = messaging && vapidKey

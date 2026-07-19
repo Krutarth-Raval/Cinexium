@@ -8,6 +8,7 @@ import { getFirebaseMessagingClient, hasFirebaseMessagingConfig } from '@/lib/pu
 import {
   PUSH_HEARTBEAT_MS,
   PUSH_PROMPT_COOLDOWN_MS,
+  PUSH_SERVICE_WORKER_URL,
 } from '@/lib/push/constants';
 import { getPageContext, isForegroundVisible } from '@/lib/push/presence';
 
@@ -126,7 +127,8 @@ export function usePushNotifications() {
     const deviceId = ensureDeviceId();
 
     const initMessaging = async () => {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const registration = await navigator.serviceWorker.register(PUSH_SERVICE_WORKER_URL);
+      await registration.update().catch(() => {});
       const messaging = await getFirebaseMessagingClient();
       if (!messaging || cancelled) {
         return;

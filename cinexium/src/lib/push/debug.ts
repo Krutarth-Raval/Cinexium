@@ -2,13 +2,19 @@ import 'server-only';
 
 type PushDebugStep =
   | 'message_created'
+  | 'message_preview_resolved'
   | 'push_event_generated'
+  | 'push_input_resolved'
   | 'suppression_decision'
   | 'device_scan'
   | 'device_skipped'
   | 'fcm_request_sent'
+  | 'firebase_multicast_built'
   | 'firebase_response'
   | 'invalid_tokens_removed'
+  | 'sw_background_message_received'
+  | 'sw_show_notification_called'
+  | 'sw_notification_displayed'
   | 'push_skipped'
   | 'push_completed';
 

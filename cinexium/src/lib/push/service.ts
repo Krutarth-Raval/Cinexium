@@ -187,6 +187,54 @@ async function sendPushPayloadToUser(
   }
 
   const tokens = eligibleDevices.map((device) => device.token);
+  const absoluteDeepLink = payload.deepLink
+    ? new URL(payload.deepLink, process.env.NEXTAUTH_URL || 'http://localhost:3000').toString()
+    : undefined;
+  const multicastMessage = {
+    tokens,
+    data: payload,
+    webpush: {
+      data: payload,
+      notification: payload.op === 'show'
+        ? {
+            title: payload.title || 'Cinexium',
+            body: payload.body || '',
+            icon: payload.icon || PUSH_ICON_URL,
+            badge: payload.badge || PUSH_BADGE_URL,
+            image: payload.image || undefined,
+            tag: payload.tag || payload.eventKey || undefined,
+          }
+        : undefined,
+      fcmOptions: absoluteDeepLink
+        ? {
+            link: absoluteDeepLink,
+          }
+        : undefined,
+    },
+  };
+
+  logPushDebug({
+    eventKey: debug.eventKey,
+    source: debug.source,
+    type: debug.type,
+    userId,
+    step: 'firebase_multicast_built',
+    data: {
+      payloadTitle: payload.title || '',
+      payloadBody: payload.body || '',
+      multicastTitle: multicastMessage.webpush.notification?.title || '',
+      multicastBody: multicastMessage.webpush.notification?.body || '',
+      deepLink: payload.deepLink || '',
+      absoluteDeepLink: absoluteDeepLink || '',
+    },
+  });
+  console.debug('[Cinexium Push Debug] Firebase multicast built', {
+    eventKey: debug.eventKey,
+    title: multicastMessage.webpush.notification?.title || '',
+    body: multicastMessage.webpush.notification?.body || '',
+    deepLink: absoluteDeepLink || payload.deepLink || '',
+  });
+
   logPushDebug({
     eventKey: debug.eventKey,
     source: debug.source,
@@ -199,10 +247,7 @@ async function sendPushPayloadToUser(
     },
   });
 
-  const response = await messaging.sendEachForMulticast({
-    tokens,
-    data: payload,
-  });
+  const response = await messaging.sendEachForMulticast(multicastMessage);
 
   logPushDebug({
     eventKey: debug.eventKey,
@@ -424,6 +469,28 @@ export async function createPushNotification(input: CreatePushNotificationInput)
       });
     }
   }
+
+  logPushDebug({
+    eventKey: input.eventKey,
+    source: debugSource,
+    type: input.type,
+    userId: input.userId,
+    step: 'push_input_resolved',
+    data: {
+      rawTitle: input.title,
+      rawBody: input.body,
+      sanitizedTitle: sanitizeNotificationText(input.title) || 'Cinexium',
+      sanitizedBody: sanitizeNotificationText(input.body),
+      deepLink: input.deepLink,
+    },
+  });
+  console.debug('[Cinexium Push Debug] Push input resolved', {
+    eventKey: input.eventKey,
+    title: input.title,
+    body: input.body,
+    sanitizedTitle: sanitizeNotificationText(input.title) || 'Cinexium',
+    sanitizedBody: sanitizeNotificationText(input.body),
+  });
 
   logPushDebug({
     eventKey: input.eventKey,

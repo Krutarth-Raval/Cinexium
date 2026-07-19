@@ -17,12 +17,67 @@ export async function GET() {
     const firebaseConfig = ${JSON.stringify(firebaseConfig)};
     const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId && firebaseConfig.appId;
 
+    self.addEventListener('install', (event) => {
+      self.skipWaiting();
+    });
+
+    self.addEventListener('activate', (event) => {
+      event.waitUntil(self.clients.claim());
+    });
+
+    async function reportPushDebug(step, payload) {
+      const eventKey = payload?.eventKey || payload?.data?.eventKey || '';
+      if (!eventKey) return;
+
+      const body = {
+        source: 'service-worker',
+        step,
+        eventKey,
+        type: payload?.type || payload?.data?.type || payload?.notification?.type || 'UNKNOWN',
+        data: payload,
+      };
+
+      try {
+        await fetch('/api/push/debug', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+      } catch (error) {
+        console.debug('[Cinexium Push Debug] Failed to report', step, error);
+      }
+    }
+
     if (hasConfig) {
       firebase.initializeApp(firebaseConfig);
       const messaging = firebase.messaging();
 
       messaging.onBackgroundMessage(async (payload) => {
         const data = payload?.data || {};
+        const notificationPayload = payload?.notification || {};
+        const resolvedTitle = data.title || notificationPayload.title || 'Cinexium';
+        const resolvedBody = data.body || notificationPayload.body || '';
+
+        console.debug('[Cinexium Push Debug] SW background payload', {
+          eventKey: data.eventKey || '',
+          dataTitle: data.title || '',
+          dataBody: data.body || '',
+          notificationTitle: notificationPayload.title || '',
+          notificationBody: notificationPayload.body || '',
+          resolvedTitle,
+          resolvedBody,
+        });
+        await reportPushDebug('sw_background_message_received', {
+          eventKey: data.eventKey || '',
+          type: data.type || 'UNKNOWN',
+          dataTitle: data.title || '',
+          dataBody: data.body || '',
+          notificationTitle: notificationPayload.title || '',
+          notificationBody: notificationPayload.body || '',
+          resolvedTitle,
+          resolvedBody,
+        });
 
         if (data.op === 'clear') {
           const notifications = await self.registration.getNotifications({ tag: data.tag || undefined });
@@ -46,8 +101,15 @@ export async function GET() {
           return;
         }
 
-        await self.registration.showNotification(data.title || 'Cinexium', {
-          body: data.body || '',
+        await reportPushDebug('sw_show_notification_called', {
+          eventKey: data.eventKey || '',
+          type: data.type || 'UNKNOWN',
+          title: resolvedTitle,
+          body: resolvedBody,
+        });
+
+        await self.registration.showNotification(resolvedTitle, {
+          body: resolvedBody,
           icon: data.icon || '/icon-192.png',
           image: data.image || undefined,
           badge: data.badge || '/icon-192.png',
@@ -60,6 +122,18 @@ export async function GET() {
             notificationId: data.notificationId || '',
             tag: data.tag || data.eventKey || '',
           },
+        });
+
+        console.debug('[Cinexium Push Debug] SW displayed notification', {
+          eventKey: data.eventKey || '',
+          title: resolvedTitle,
+          body: resolvedBody,
+        });
+        await reportPushDebug('sw_notification_displayed', {
+          eventKey: data.eventKey || '',
+          type: data.type || 'UNKNOWN',
+          title: resolvedTitle,
+          body: resolvedBody,
         });
       });
     }
