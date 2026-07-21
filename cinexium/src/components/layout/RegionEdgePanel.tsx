@@ -9,6 +9,7 @@ const TOP_SAFE_ZONE = 80;
 const BOTTOM_SAFE_ZONE = 150;
 const LONG_PRESS_MS = 260;
 const DRAG_CANCEL_DISTANCE = 14;
+const EDGE_TOUCH_WIDTH = 24;
 
 type EdgeSide = 'left' | 'right';
 
@@ -214,12 +215,19 @@ export const RegionEdgePanel = () => {
   };
 
   useEffect(() => {
-    const isWithinHandleBand = (_x: number, y: number) => {
-      const { minTop, maxTop } = getViewportBounds();
-      if (y < minTop || y > maxTop + HANDLE_HEIGHT) {
+    const isWithinHandleBand = (x: number, y: number) => {
+      const top = edgePosition.top;
+      const bottom = edgePosition.top + HANDLE_HEIGHT;
+
+      if (y < top || y > bottom) {
         return false;
       }
-      return true;
+
+      if (edgePosition.side === 'right') {
+        return x >= window.innerWidth - EDGE_TOUCH_WIDTH;
+      }
+
+      return x <= EDGE_TOUCH_WIDTH;
     };
 
     const handleTouchStart = (event: TouchEvent) => {
