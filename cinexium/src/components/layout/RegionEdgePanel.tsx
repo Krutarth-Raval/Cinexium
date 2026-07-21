@@ -497,23 +497,23 @@ export const RegionEdgePanel = () => {
           <div
             className={`bg-[#0f1115]/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-300 ease-out flex items-center ${
               isLeft ? 'border-l-0 rounded-r-2xl' : 'border-r-0 rounded-l-2xl'
-            }`}
+            } select-none`}
             style={{ touchAction: 'none' }}
           >
-            <div className="flex flex-col gap-2 p-2">
+            <div className="flex flex-col gap-2 p-2 select-none">
               {regions.map((r) => {
                 const isActive = region === r.id;
                 return (
                   <button
                     key={r.id}
                     onClick={() => handleRegionChange(r.id)}
-                    className={`flex items-center justify-center rounded-xl px-3 py-2 transition-all duration-300 ${
+                    className={`flex items-center justify-center rounded-xl px-3 py-2 transition-all duration-300 select-none ${
                       isActive
                         ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/40 scale-105'
                         : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <span className="text-xs font-black tracking-widest">{r.label}</span>
+                    <span className="text-xs font-black tracking-widest select-none">{r.label}</span>
                   </button>
                 );
               })}
