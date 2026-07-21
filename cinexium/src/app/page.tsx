@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import type { Session } from 'next-auth';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { MediaCarousel } from '@/components/home/MediaCarousel';
+import { ToggleMediaCarousel } from '@/components/home/ToggleMediaCarousel';
 import { ClientHistoryCarousel } from '@/components/home/ClientHistoryCarousel';
 import { HomeBoneyard } from '@/components/skeleton/Boneyard';
 import { tmdb } from '@/lib/tmdb';
@@ -169,12 +170,9 @@ async function HomePublicContent({
       <HeroBanner items={featuredItems} />
 
       <div className="flex flex-col gap-2 mt-4 sm:mt-8">
-        <MediaCarousel title="Now Playing Movies" items={moviesNowPlaying} />
-        <MediaCarousel title="Now Playing Series" items={seriesNowPlaying} />
-        <MediaCarousel title="Popular Movies" items={moviesPopular} />
-        <MediaCarousel title="Popular Series" items={seriesPopular} />
-        <MediaCarousel title="Top Rated Movies" items={moviesTopRated} />
-        <MediaCarousel title="Top Rated Series" items={seriesTopRated} />
+        <ToggleMediaCarousel title="Now Playing" movies={moviesNowPlaying} series={seriesNowPlaying} />
+        <ToggleMediaCarousel title="Popular" movies={moviesPopular} series={seriesPopular} />
+        <ToggleMediaCarousel title="Top Rated" movies={moviesTopRated} series={seriesTopRated} />
         {trendingCountryData.length > 0 && (
           <MediaCarousel title={`Trending: ${viewer.userCountry} Top 20`} items={trendingCountryData} />
         )}

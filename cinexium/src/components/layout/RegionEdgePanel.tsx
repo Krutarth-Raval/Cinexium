@@ -8,8 +8,9 @@ const HANDLE_HEIGHT = 128;
 const TOP_SAFE_ZONE = 80;
 const BOTTOM_SAFE_ZONE = 150;
 const LONG_PRESS_MS = 260;
-const DRAG_CANCEL_DISTANCE = 14;
-const EDGE_TOUCH_WIDTH = 24;
+const CLOSED_DRAG_CANCEL_DISTANCE = 14;
+const OPEN_DRAG_CANCEL_DISTANCE = 28;
+const EDGE_TOUCH_WIDTH = 40;
 
 type EdgeSide = 'left' | 'right';
 
@@ -58,10 +59,12 @@ export const RegionEdgePanel = () => {
     pointerId: number | null;
     offsetY: number;
   }>({ pointerId: null, offsetY: 0 });
+  const pointerCaptureRef = useRef<HTMLElement | null>(null);
   const pointerStartRef = useRef<{
     x: number;
     y: number;
   } | null>(null);
+  const isLongPressArmedRef = useRef(false);
   const swipeStateRef = useRef<{
     startX: number;
     startY: number;
@@ -136,6 +139,7 @@ export const RegionEdgePanel = () => {
       window.clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    isLongPressArmedRef.current = false;
   };
 
   const beginPointerDrag = useCallback((clientY: number, pointerId: number) => {
@@ -152,14 +156,22 @@ export const RegionEdgePanel = () => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     clearLongPress();
+    pointerCaptureRef.current = event.currentTarget;
     pointerStartRef.current = {
       x: event.clientX,
       y: event.clientY,
     };
 
+    if (typeof event.currentTarget.setPointerCapture === 'function') {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {}
+    }
+
     const startPointerDrag = () => beginPointerDrag(event.clientY, event.pointerId);
 
     if (event.pointerType === 'touch') {
+      isLongPressArmedRef.current = true;
       longPressTimerRef.current = window.setTimeout(startPointerDrag, LONG_PRESS_MS);
       return;
     }
@@ -171,8 +183,9 @@ export const RegionEdgePanel = () => {
     if (!isPointerDragging && event.pointerType === 'touch' && longPressTimerRef.current !== null && pointerStartRef.current) {
       const moveX = event.clientX - pointerStartRef.current.x;
       const moveY = event.clientY - pointerStartRef.current.y;
+      const cancelDistance = isOpen ? OPEN_DRAG_CANCEL_DISTANCE : CLOSED_DRAG_CANCEL_DISTANCE;
 
-      if (Math.hypot(moveX, moveY) > DRAG_CANCEL_DISTANCE) {
+      if (Math.hypot(moveX, moveY) > cancelDistance) {
         clearLongPress();
       }
     }
@@ -182,6 +195,7 @@ export const RegionEdgePanel = () => {
     }
 
     event.preventDefault();
+    event.stopPropagation();
 
     const { minTop, maxTop } = getViewportBounds();
     const nextTop = clamp(event.clientY - pointerDragRef.current.offsetY, minTop, maxTop);
@@ -196,6 +210,13 @@ export const RegionEdgePanel = () => {
   const endPointerDrag = (pointerId: number) => {
     clearLongPress();
     pointerStartRef.current = null;
+
+    if (pointerCaptureRef.current && typeof pointerCaptureRef.current.releasePointerCapture === 'function') {
+      try {
+        pointerCaptureRef.current.releasePointerCapture(pointerId);
+      } catch {}
+    }
+    pointerCaptureRef.current = null;
 
     if (!isPointerDragging || pointerDragRef.current.pointerId !== pointerId) {
       return;
@@ -215,7 +236,7 @@ export const RegionEdgePanel = () => {
   };
 
   useEffect(() => {
-    const isWithinHandleBand = (x: number, y: number) => {
+    const isWithinClosedHandleBand = (x: number, y: number) => {
       const top = edgePosition.top;
       const bottom = edgePosition.top + HANDLE_HEIGHT;
 
@@ -230,7 +251,26 @@ export const RegionEdgePanel = () => {
       return x <= EDGE_TOUCH_WIDTH;
     };
 
+    const isWithinOpenPanelBand = (x: number, y: number) => {
+      const top = edgePosition.top;
+      const bottom = edgePosition.top + HANDLE_HEIGHT;
+
+      if (y < top || y > bottom) {
+        return false;
+      }
+
+      if (edgePosition.side === 'right') {
+        return x >= window.innerWidth - 160;
+      }
+
+      return x <= 160;
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
+      if (isPointerDragging || isLongPressArmedRef.current) {
+        return;
+      }
+
       const touch = event.changedTouches[0];
       swipeStateRef.current = {
         startX: touch.clientX,
@@ -243,7 +283,7 @@ export const RegionEdgePanel = () => {
     const handleTouchMove = (event: TouchEvent) => {
       const touch = event.changedTouches[0];
       const swipeState = swipeStateRef.current;
-      if (!swipeState.active || isPointerDragging) return;
+      if (!swipeState.active || isPointerDragging || isLongPressArmedRef.current) return;
 
       swipeState.lastX = touch.clientX;
 
@@ -255,7 +295,7 @@ export const RegionEdgePanel = () => {
       }
 
       if (!isOpen) {
-        if (!isWithinHandleBand(swipeState.startX, swipeState.startY)) {
+        if (!isWithinClosedHandleBand(swipeState.startX, swipeState.startY)) {
           return;
         }
 
@@ -264,6 +304,10 @@ export const RegionEdgePanel = () => {
           setIsSwipeDragging(true);
           setDragOffset(clamp(openingDelta * 0.55, 0, 32));
         }
+        return;
+      }
+
+      if (!isWithinOpenPanelBand(swipeState.startX, swipeState.startY)) {
         return;
       }
 
@@ -281,7 +325,7 @@ export const RegionEdgePanel = () => {
       const deltaX = swipeState.lastX - swipeState.startX;
 
       if (!isOpen) {
-        if (isWithinHandleBand(swipeState.startX, swipeState.startY)) {
+        if (isWithinClosedHandleBand(swipeState.startX, swipeState.startY)) {
           const openingDelta = edgePosition.side === 'right' ? -deltaX : deltaX;
           if (openingDelta > 40) {
             setIsOpen(true);
@@ -289,7 +333,7 @@ export const RegionEdgePanel = () => {
         }
       } else {
         const closingDelta = edgePosition.side === 'right' ? deltaX : -deltaX;
-        if (closingDelta > 40) {
+        if (isWithinOpenPanelBand(swipeState.startX, swipeState.startY) && closingDelta > 40) {
           setIsOpen(false);
         }
       }
@@ -451,7 +495,7 @@ export const RegionEdgePanel = () => {
             className={`bg-[#0f1115]/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-300 ease-out flex items-center ${
               isLeft ? 'border-l-0 rounded-r-2xl' : 'border-r-0 rounded-l-2xl'
             }`}
-            style={{ touchAction: isPointerDragging ? 'none' : 'pan-x pan-y' }}
+            style={{ touchAction: isPointerDragging ? 'none' : 'manipulation' }}
           >
             <div className="flex flex-col gap-2 p-2">
               {regions.map((r) => {
