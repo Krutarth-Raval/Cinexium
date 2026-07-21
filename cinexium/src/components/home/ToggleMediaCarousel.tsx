@@ -23,7 +23,6 @@ export const ToggleMediaCarousel: React.FC<ToggleMediaCarouselProps> = ({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const items = selectedType === 'movie' ? movies : series;
-  const selectedLabel = selectedType === 'movie' ? 'Movies' : 'TV Shows';
 
   const checkScroll = () => {
     if (scrollRef.current) {
@@ -61,15 +60,23 @@ export const ToggleMediaCarousel: React.FC<ToggleMediaCarouselProps> = ({
   return (
     <section className="py-6 sm:py-8 pl-4 sm:pl-6 lg:pl-8">
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4 pr-4 sm:pr-6 lg:pr-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-white">{title} {selectedLabel}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-white">{title}</h2>
 
-        <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs sm:text-sm">
+        <div className="relative inline-grid grid-cols-2 items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs sm:text-sm overflow-hidden">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1 bottom-1 rounded-full bg-primary-500 shadow-lg shadow-primary-500/30 transition-all duration-300 ease-out"
+            style={{
+              width: 'calc(50% - 0.25rem)',
+              left: selectedType === 'movie' ? '0.25rem' : 'calc(50%)',
+            }}
+          />
           <button
             type="button"
             onClick={() => setSelectedType('movie')}
-            className={`rounded-full px-3 py-1.5 text-sm font-black transition-all ${
+            className={`relative z-10 min-w-[86px] rounded-full px-3 py-1.5 text-sm font-black transition-colors duration-300 ${
               selectedType === 'movie'
-                ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                ? 'text-white'
                 : 'text-gray-400 hover:text-white'
             }`}
             style={{ WebkitTextStroke: '0.45px rgba(255,255,255,0.95)' }}
@@ -79,9 +86,9 @@ export const ToggleMediaCarousel: React.FC<ToggleMediaCarouselProps> = ({
           <button
             type="button"
             onClick={() => setSelectedType('series')}
-            className={`rounded-full px-3 py-1.5 text-sm font-black transition-all ${
+            className={`relative z-10 min-w-[86px] rounded-full px-3 py-1.5 text-sm font-black transition-colors duration-300 ${
               selectedType === 'series'
-                ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                ? 'text-white'
                 : 'text-gray-400 hover:text-white'
             }`}
             style={{ WebkitTextStroke: '0.45px rgba(255,255,255,0.95)' }}
