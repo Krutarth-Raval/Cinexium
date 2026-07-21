@@ -438,7 +438,10 @@ export const RegionEdgePanel = () => {
       <div
         ref={panelRef}
         className={`xl:hidden fixed z-[100] flex items-center ${isSwipeDragging || isPointerDragging ? '' : 'transition-all duration-300 ease-out'}`}
-        style={containerStyle}
+        style={{
+          ...containerStyle,
+          touchAction: isOpen ? 'none' : 'auto',
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -495,7 +498,7 @@ export const RegionEdgePanel = () => {
             className={`bg-[#0f1115]/95 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-300 ease-out flex items-center ${
               isLeft ? 'border-l-0 rounded-r-2xl' : 'border-r-0 rounded-l-2xl'
             }`}
-            style={{ touchAction: isPointerDragging ? 'none' : 'manipulation' }}
+            style={{ touchAction: 'none' }}
           >
             <div className="flex flex-col gap-2 p-2">
               {regions.map((r) => {
