@@ -6,7 +6,11 @@ const TMDB_BASE_URL = process.env.TMDB_BASE_URL || 'https://api.themoviedb.org/3
 
 type Category = 'now_playing' | 'popular' | 'top_rated';
 
-async function fetchTmdbJson<T>(url: string, revalidate = 3600, timeoutMs = 3500): Promise<T> {
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+async function fetchTmdbJson<T>(url: string, revalidate = 3600, timeoutMs = 10000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -89,7 +93,11 @@ const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, re
       }))
       .slice(0, 20);
   } catch (error) {
-    console.error(`Error in fetchMediaList (${type}, ${category}):`, error);
+    if (isAbortError(error)) {
+      console.warn(`TMDB request timed out in fetchMediaList (${type}, ${category})`);
+    } else {
+      console.error(`Error in fetchMediaList (${type}, ${category}):`, error);
+    }
     return [];
   }
 });
@@ -114,7 +122,11 @@ export const tmdb = {
         }))
         .slice(0, 20);
     } catch (error) {
-      console.error(`Error in getTrendingByCountry (${countryCode}):`, error);
+      if (isAbortError(error)) {
+        console.warn(`TMDB request timed out in getTrendingByCountry (${countryCode})`);
+      } else {
+        console.error(`Error in getTrendingByCountry (${countryCode}):`, error);
+      }
       return [];
     }
   }),
@@ -137,7 +149,11 @@ export const tmdb = {
         }))
         .slice(0, 20);
     } catch (error) {
-      console.error(`Error in getGlobalTop20:`, error);
+      if (isAbortError(error)) {
+        console.warn(`TMDB request timed out in getGlobalTop20`);
+      } else {
+        console.error(`Error in getGlobalTop20:`, error);
+      }
       return [];
     }
   }),
@@ -170,7 +186,7 @@ export const tmdb = {
           const data = await fetchTmdbJson<{ videos?: { results?: any[] } }>(
             `${TMDB_BASE_URL}/${typePath}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`,
             3600,
-            1200
+            4000
           );
           const videos = data.videos?.results || [];
           const trailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube') || videos.find((v: any) => v.site === 'YouTube');
@@ -178,7 +194,9 @@ export const tmdb = {
             return { ...item, trailerKey: trailer.key };
           }
         } catch (e) {
-          console.error(`Failed to fetch trailer for ${item.id}`, e);
+          if (!isAbortError(e)) {
+            console.error(`Failed to fetch trailer for ${item.id}`, e);
+          }
         }
         return item;
       })

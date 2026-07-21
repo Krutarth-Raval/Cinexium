@@ -119,7 +119,8 @@ export const Navbar = () => {
     };
   }, [userData?.isPremium]);
 
-  const hasAuthenticatedUser = Boolean(session && userData);
+  const hasSessionUser = Boolean(session?.user);
+  const hasAuthenticatedUser = hasSessionUser;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -177,7 +178,7 @@ export const Navbar = () => {
   }
 
   const renderAuthSection = (isMobile = false) => {
-    if (status === 'loading' || isResolvingUser) {
+    if (status === 'loading') {
       return null;
     }
 
@@ -309,7 +310,7 @@ export const Navbar = () => {
                   ))}
                 </div>
 
-                {hasAuthenticatedUser && <NotificationBell />}
+                {hasSessionUser && <NotificationBell />}
 
                 {/* Auth Buttons / Profile Circle */}
                 {renderAuthSection(false)}
@@ -317,7 +318,7 @@ export const Navbar = () => {
 
               {/* Mobile Actions */}
               <div className="flex md:hidden items-center gap-3">
-                {hasAuthenticatedUser && <NotificationBell isMobile={true} />}
+                {hasSessionUser && <NotificationBell isMobile={true} />}
 
                 {/* Mobile Auth Buttons / Profile Circle */}
                 {renderAuthSection(true)}

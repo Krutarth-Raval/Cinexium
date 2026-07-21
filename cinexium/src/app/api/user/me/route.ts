@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { FREE_COLLECTION_ITEM_LIMIT, FREE_COLLECTION_LIMIT, getPremiumExpiryWarning, syncExpiredSubscriptionForUser } from '@/lib/subscriptions';
+import { FREE_COLLECTION_ITEM_LIMIT, FREE_COLLECTION_LIMIT, getPremiumExpiryWarning } from '@/lib/subscriptions';
 
 import { headers } from 'next/headers';
 
@@ -172,28 +172,46 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await getUserProfileByEmail(session.user.email);
+    let user = await getUserProfileByEmail(session.user.email);
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    try {
-      await syncExpiredSubscriptionForUser(user.id);
-    } catch (error) {
-      console.warn('User subscription expiry sync failed during profile fetch.', error);
+    const premiumEndsAt = user.premiumUntil ? new Date(user.premiumUntil) : null;
+    const premiumExpired =
+      Boolean(user.isPremium && premiumEndsAt) &&
+      !Number.isNaN(premiumEndsAt?.getTime()) &&
+      premiumEndsAt!.getTime() <= Date.now();
+
+    if (premiumExpired) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            isPremium: false,
+            premiumType: null,
+            premiumUntil: null,
+          },
+        });
+
+        user = {
+          ...user,
+          isPremium: false,
+          premiumType: null,
+          premiumUntil: null,
+        };
+      } catch (error) {
+        console.warn('User premium expiry update failed during profile fetch.', error);
+      }
     }
-
-    const refreshedUser = await getUserProfileByEmail(session.user.email);
-
-    if (!refreshedUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const headersList = await headers();
     const ipCountry = headersList.get('x-vercel-ip-country');
-    const premiumWarning = getPremiumExpiryWarning(refreshedUser.premiumUntil, refreshedUser.isPremium);
+    const premiumWarning = getPremiumExpiryWarning(user.premiumUntil, user.isPremium);
 
     return NextResponse.json({ 
       user: {
-        ...refreshedUser,
-        country: refreshedUser.country || ipCountry || 'US',
+        ...user,
+        country: user.country || ipCountry || 'US',
         premiumExpiringSoon: premiumWarning.isExpiringSoon,
         premiumExpiresInMs: premiumWarning.expiresInMs,
         premiumWarningWindowHours: 24,

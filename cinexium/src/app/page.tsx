@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
+import type { Session } from 'next-auth';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { MediaCarousel } from '@/components/home/MediaCarousel';
 import { ClientHistoryCarousel } from '@/components/home/ClientHistoryCarousel';
@@ -33,7 +34,7 @@ const getCountryName = (code: string) => {
 };
 
 type ViewerContext = {
-  session: any;
+  session: Session | null;
   userId: string | undefined;
   isPremium: boolean;
   countryCode: string;
@@ -41,7 +42,20 @@ type ViewerContext = {
 };
 
 async function getViewerContext(): Promise<ViewerContext> {
-  const session = await getServerSession(authOptions);
+  let session: Session | null = null;
+
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.toLowerCase().includes('decryption operation failed')) {
+      console.warn('Skipping invalid NextAuth session cookie while rendering home page.');
+    } else {
+      throw error;
+    }
+  }
+
   const userId = (session?.user as any)?.id as string | undefined;
 
   let userCountry = '';

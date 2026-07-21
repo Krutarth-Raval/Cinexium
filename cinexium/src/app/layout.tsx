@@ -88,9 +88,7 @@ export default function RootLayout({
       }
       suppressHydrationWarning
     >
-      <head>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5947969510780238" crossOrigin="anonymous"></script>
-      </head>
+      <head />
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <script
           type="application/ld+json"
