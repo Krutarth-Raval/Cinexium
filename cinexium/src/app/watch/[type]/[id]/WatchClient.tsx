@@ -119,6 +119,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
               allowFullScreen
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
               referrerPolicy={region === 'anime' ? "origin" : "same-origin"}
+              sandbox={region === 'anime' ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined}
             />
           ) : null}
         </div>
