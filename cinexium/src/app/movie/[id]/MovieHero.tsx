@@ -43,6 +43,27 @@ export const MovieHero = ({
   const [savesCount, setSavesCount] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  
+  const [isVideoAvailable, setIsVideoAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAvailability = async () => {
+      try {
+        const regionParam = document.cookie.includes('cinexium_region=anime') ? 'anime' 
+                          : document.cookie.includes('cinexium_region=bollywood') ? 'bollywood' 
+                          : 'hollywood';
+                          
+        const res = await fetch(`/api/check-video?id=${mediaId}&type=${mediaType}&region=${regionParam}`);
+        const data = await res.json();
+        setIsVideoAvailable(data.available);
+      } catch (error) {
+        setIsVideoAvailable(true); // Fallback to available if check fails
+      }
+    };
+    if (mediaId) {
+      checkAvailability();
+    }
+  }, [mediaId, mediaType]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -144,7 +165,11 @@ export const MovieHero = ({
   const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
   
   // Calculate availability and quality
-  const isNotAvailable = releaseDateObj ? releaseDateObj > today : false;
+  let isNotAvailable = releaseDateObj ? releaseDateObj > today : false;
+  
+  if (isVideoAvailable === false) {
+    isNotAvailable = true;
+  }
   
   // For movies, if released within last 45 days, assume watermark/CAM
   const daysAgo = new Date();
@@ -162,7 +187,11 @@ export const MovieHero = ({
     );
     let isDisabled = false;
 
-    if (isNotAvailable) {
+    if (isVideoAvailable === null && !isNotAvailable) {
+      buttonText = 'Loading...';
+      buttonColor = 'bg-gray-700 text-gray-300 cursor-wait';
+      isDisabled = true;
+    } else if (isNotAvailable) {
       buttonText = 'Not Available';
       buttonColor = 'bg-gray-600 text-gray-400 cursor-not-allowed';
       isDisabled = true;

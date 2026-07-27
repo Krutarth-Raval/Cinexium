@@ -11,6 +11,7 @@ interface WatchClientProps {
   region?: string;
 }
 
+// Exclusively using VidLink server as requested
 export default function WatchClient({ mediaId, mediaType, title, seasons = [], region }: WatchClientProps) {
   const router = useRouter();
 
@@ -61,18 +62,11 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     let isMounted = true;
     const generateUrl = async () => {
       setIframeLoading(true);
-
-      let finalUrl = '';
-      if (region === 'anime') {
-        finalUrl = mediaType === 'movie'
-          ? `https://vidsrc.to/embed/movie/${mediaId}`
-          : `https://vidsrc.to/embed/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
-      } else {
-        finalUrl = mediaType === 'movie'
-          ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
-          : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
-      }
       
+      let finalUrl = mediaType === 'movie'
+        ? `https://vidlink.pro/movie/${mediaId}?primaryColor=a855f7&secondaryColor=a855f7&iconColor=ffffff&title=false`
+        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?primaryColor=a855f7&secondaryColor=a855f7&iconColor=ffffff&title=false`;
+
       if (isMounted) {
         setIframeUrl(finalUrl);
       }
@@ -88,16 +82,23 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
       {/* Main Content Area */}
       <div className="flex-1 relative w-full h-full flex flex-col">
         {/* Top Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-50 flex items-center gap-4 pointer-events-none transition-opacity duration-300">
-          <button onClick={() => router.back()} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors pointer-events-auto backdrop-blur-md">
+        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-50 flex items-center gap-2 md:gap-4 pointer-events-none transition-opacity duration-300">
+          <button onClick={() => router.back()} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors pointer-events-auto backdrop-blur-md shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <h1 className="text-xl md:text-2xl font-bold truncate text-shadow pointer-events-auto">
+          
+          <h1 className="text-lg md:text-xl font-bold truncate text-shadow pointer-events-auto flex-1 min-w-0">
             {mediaType === 'tv' ? `${title} (S${selectedSeason} E${selectedEpisode})` : title}
           </h1>
-          {mediaType === 'tv' && (
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="ml-auto pointer-events-auto p-2 px-4 bg-primary-600 hover:bg-primary-500 rounded-full text-sm font-bold shadow-lg">Episodes</button>
-          )}
+          
+          <div className="pointer-events-auto ml-auto flex items-center gap-2 shrink-0">
+            {mediaType === 'tv' && (
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 px-3 md:px-4 bg-primary-600 hover:bg-primary-500 rounded-lg text-xs md:text-sm font-bold shadow-lg transition-colors flex items-center gap-1.5">
+                <svg className="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                Episodes
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Video Player Iframe */}
@@ -118,8 +119,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
               className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
               allowFullScreen
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              referrerPolicy={region === 'anime' ? "origin" : "same-origin"}
-              sandbox={region === 'anime' ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined}
+              referrerPolicy="origin"
             />
           ) : null}
         </div>
@@ -127,7 +127,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
 
       {/* Sidebar for TV Episodes */}
       {mediaType === 'tv' && (
-        <div className={`absolute md:relative right-0 top-0 bottom-0 w-80 bg-[#12141c]/95 backdrop-blur-xl border-l border-white/5 shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} pt-20 md:pt-0`}>
+        <div className={`absolute md:relative right-0 top-0 bottom-0 w-72 md:w-80 bg-[#12141c]/95 backdrop-blur-xl border-l border-white/5 shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} pt-20 md:pt-0`}>
           {/* Close button for mobile */}
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden absolute top-4 right-4 p-2 bg-white/10 rounded-full">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -136,7 +136,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
           <div className="p-4 border-b border-white/5 md:mt-20">
             <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Select Season</h3>
             <select
-              className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-primary-500"
+              className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-primary-500 cursor-pointer"
               value={selectedSeason}
               onChange={(e) => {
                 setSelectedSeason(Number(e.target.value));
@@ -180,3 +180,4 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     </div>
   );
 }
+
