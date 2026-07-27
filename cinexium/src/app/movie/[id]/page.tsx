@@ -60,6 +60,21 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
   const videos = details.videos?.results || [];
   const trailer = videos.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube') || videos.find((v: any) => v.site === 'YouTube');
 
+  const session = await getServerSession(authOptions);
+  let isPremium = false;
+  if (session?.user?.email) {
+    const user = await prisma.user.findUnique({ 
+      where: { email: session.user.email },
+      select: { isPremium: true, premiumUntil: true }
+    });
+    if (user?.isPremium) {
+      const premiumEndsAt = user.premiumUntil ? new Date(user.premiumUntil) : null;
+      if (!premiumEndsAt || premiumEndsAt.getTime() > Date.now()) {
+        isPremium = true;
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0f1115] pb-24">
       <MovieHero 
@@ -71,6 +86,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         backdropPath={details.backdrop_path}
         posterPath={details.poster_path}
         trailerKey={trailer?.key}
+        isPremium={isPremium}
       />
       
       <MovieBentoGrid details={details} region={region} />

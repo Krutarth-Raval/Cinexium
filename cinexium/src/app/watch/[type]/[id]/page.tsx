@@ -1,6 +1,9 @@
 import { tmdb } from '@/lib/tmdb';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
 import WatchClient from './WatchClient';
 
 export async function generateMetadata({ params }: { params: Promise<{ type: string; id: string }> }) {
@@ -27,6 +30,26 @@ export default async function WatchPage({ params }: { params: Promise<{ type: st
   const cookieStore = await cookies();
   const regionCookie = cookieStore.get('cinexium_region');
   const region = regionCookie?.value || 'hollywood';
+
+  // Check Premium Access
+  const session = await getServerSession(authOptions);
+  let isPremium = false;
+  if (session?.user?.email) {
+    const user = await prisma.user.findUnique({ 
+      where: { email: session.user.email },
+      select: { isPremium: true, premiumUntil: true }
+    });
+    if (user?.isPremium) {
+      const premiumEndsAt = user.premiumUntil ? new Date(user.premiumUntil) : null;
+      if (!premiumEndsAt || premiumEndsAt.getTime() > Date.now()) {
+        isPremium = true;
+      }
+    }
+  }
+
+  if (!isPremium) {
+    redirect('/premium');
+  }
 
   return (
     <WatchClient

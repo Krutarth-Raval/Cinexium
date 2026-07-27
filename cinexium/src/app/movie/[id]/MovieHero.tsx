@@ -21,7 +21,8 @@ export const MovieHero = ({
   backdropPath,
   posterPath,
   trailerKey,
-  seasons
+  seasons,
+  isPremium
 }: any) => {
   const router = useRouter();
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
@@ -141,11 +142,23 @@ export const MovieHero = ({
   const ActionButtons = ({ isMobile = false }) => (
     <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-4 lg:gap-5'} flex-wrap`}>
       <button
-        onClick={() => router.push(`/watch/${publicMediaType}/${mediaId}`)}
-        className={`flex items-center justify-center gap-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-500 transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0`}
+        onClick={() => {
+          if (isPremium) {
+            router.push(`/watch/${publicMediaType}/${mediaId}`);
+          } else {
+            router.push(`/premium`);
+          }
+        }}
+        className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${isPremium ? 'bg-primary-600 text-white hover:bg-primary-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black hover:from-yellow-400 hover:to-amber-400'}`}
       >
-        <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-        <span>Watch Now</span>
+        <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
+          {isPremium ? (
+            <path d="M8 5v14l11-7z" />
+          ) : (
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" /> // Shield icon
+          )}
+        </svg>
+        <span>{isPremium ? 'Watch Now' : 'Subscribe to Watch'}</span>
       </button>
 
       {trailerKey && (
