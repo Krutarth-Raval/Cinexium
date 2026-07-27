@@ -88,6 +88,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         trailerKey={trailer?.key}
         seasons={details.seasons}
         isPremium={isPremium}
+        releaseDate={details.first_air_date}
       />
       
       <TvBentoGrid details={details} region={region} />

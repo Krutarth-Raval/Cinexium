@@ -661,9 +661,9 @@ export const MovieBentoGrid = ({ details, region }: { details: any, region?: str
                 className="flex gap-6 overflow-x-auto custom-scrollbar pb-6 snap-x scroll-smooth"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                {cast.map((actor: any) => (
+                {cast.map((actor: any, index: number) => (
                   <button
-                    key={actor.id}
+                    key={`${actor.id}-${index}`}
                     onClick={() => setSelectedCastId(actor.id.toString())}
                     className="min-w-[100px] max-w-[100px] flex flex-col items-center gap-3 group snap-start text-left"
                   >

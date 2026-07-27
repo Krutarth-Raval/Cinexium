@@ -87,6 +87,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         posterPath={details.poster_path}
         trailerKey={trailer?.key}
         isPremium={isPremium}
+        releaseDate={details.release_date}
       />
       
       <MovieBentoGrid details={details} region={region} />

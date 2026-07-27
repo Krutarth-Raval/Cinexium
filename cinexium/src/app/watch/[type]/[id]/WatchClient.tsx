@@ -11,7 +11,7 @@ interface WatchClientProps {
   region?: string;
 }
 
-export default function WatchClient({ mediaId, mediaType, title, seasons = [] }: WatchClientProps) {
+export default function WatchClient({ mediaId, mediaType, title, seasons = [], region }: WatchClientProps) {
   const router = useRouter();
 
   const [selectedSeason, setSelectedSeason] = useState<number>(
@@ -55,9 +55,32 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
   }, [mediaType, mediaId, selectedSeason]);
 
   const validSeasons = seasons?.filter(s => s.season_number > 0) || [];
-  const iframeUrl = mediaType === 'movie'
-    ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
-    : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
+  const [iframeUrl, setIframeUrl] = useState<string>('');
+
+  useEffect(() => {
+    let isMounted = true;
+    const generateUrl = async () => {
+      setIframeLoading(true);
+
+      let finalUrl = '';
+      if (region === 'anime') {
+        finalUrl = mediaType === 'movie'
+          ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
+          : `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
+      } else {
+        finalUrl = mediaType === 'movie'
+          ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
+          : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
+      }
+      
+      if (isMounted) {
+        setIframeUrl(finalUrl);
+      }
+    };
+
+    generateUrl();
+    return () => { isMounted = false; };
+  }, [mediaType, mediaId, selectedSeason, selectedEpisode, title, region]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black text-white flex flex-col md:flex-row overflow-hidden">
@@ -87,15 +110,17 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
             </div>
           )}
 
-          <iframe
-            key={iframeUrl}
-            src={iframeUrl}
-            onLoad={() => setIframeLoading(false)}
-            className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
-            allowFullScreen
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            referrerPolicy="same-origin"
-          />
+          {iframeUrl ? (
+            <iframe
+              key={iframeUrl}
+              src={iframeUrl}
+              onLoad={() => setIframeLoading(false)}
+              className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
+              allowFullScreen
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+              referrerPolicy="same-origin"
+            />
+          ) : null}
         </div>
       </div>
 

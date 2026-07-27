@@ -22,7 +22,8 @@ export const MovieHero = ({
   posterPath,
   trailerKey,
   seasons,
-  isPremium
+  isPremium,
+  releaseDate
 }: any) => {
   const router = useRouter();
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
@@ -139,23 +140,59 @@ export const MovieHero = ({
     </div>
   );
 
-  const ActionButtons = ({ isMobile = false }) => (
-    <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-4 lg:gap-5'} flex-wrap`}>
-      <button
-        onClick={() => {
-          if (isPremium) {
-            router.push(`/watch/${publicMediaType}/${mediaId}`);
-          } else {
-            router.push(`/premium`);
-          }
-        }}
-        className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${isPremium ? 'bg-primary-600 text-white hover:bg-primary-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black hover:from-yellow-400 hover:to-amber-400'}`}
-      >
-        <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M8 5v14l11-7z" />
+  const today = new Date();
+  const releaseDateObj = releaseDate ? new Date(releaseDate) : null;
+  
+  // Calculate availability and quality
+  const isNotAvailable = releaseDateObj ? releaseDateObj > today : false;
+  
+  // For movies, if released within last 45 days, assume watermark/CAM
+  const daysAgo = new Date();
+  daysAgo.setDate(today.getDate() - 45);
+  const isWatermark = mediaType === 'movie' && releaseDateObj ? (releaseDateObj <= today && releaseDateObj > daysAgo) : false;
+
+  const ActionButtons = ({ isMobile = false }) => {
+    // Determine button text and styling based on availability
+    let buttonText = isPremium ? 'Watch Now' : 'Subscribe to Watch';
+    let buttonColor = isPremium ? 'bg-primary-600 text-white hover:bg-primary-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black hover:from-yellow-400 hover:to-amber-400';
+    let buttonIcon = (
+      <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
+    );
+    let isDisabled = false;
+
+    if (isNotAvailable) {
+      buttonText = 'Not Available';
+      buttonColor = 'bg-gray-600 text-gray-400 cursor-not-allowed';
+      isDisabled = true;
+      buttonIcon = (
+        <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
-        <span>{isPremium ? 'Watch Now' : 'Subscribe to Watch'}</span>
-      </button>
+      );
+    } else if (isWatermark) {
+      buttonText = isPremium ? 'Watch (CAM/Watermark)' : 'Subscribe to Watch';
+      buttonColor = isPremium ? 'bg-orange-600 text-white hover:bg-orange-500' : buttonColor;
+    }
+
+    return (
+      <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-4 lg:gap-5'} flex-wrap`}>
+        <button
+          onClick={() => {
+            if (isDisabled) return;
+            if (isPremium) {
+              router.push(`/watch/${publicMediaType}/${mediaId}`);
+            } else {
+              router.push(`/premium`);
+            }
+          }}
+          disabled={isDisabled}
+          className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${buttonColor}`}
+        >
+          {buttonIcon}
+          <span>{buttonText}</span>
+        </button>
 
       {trailerKey && (
         <button
@@ -192,6 +229,7 @@ export const MovieHero = ({
       </div>
     </div>
   );
+  };
 
   return (
     <div className="relative w-full flex flex-col md:block md:h-[90vh] bg-[#0f1115] group pt-4 md:pt-0">
