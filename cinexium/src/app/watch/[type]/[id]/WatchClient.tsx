@@ -65,8 +65,8 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
       let finalUrl = '';
       if (region === 'anime') {
         finalUrl = mediaType === 'movie'
-          ? `https://vidsrc.net/embed/movie?tmdb=${mediaId}`
-          : `https://vidsrc.net/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
+          ? `https://vidsrc.to/embed/movie/${mediaId}`
+          : `https://vidsrc.to/embed/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
       } else {
         finalUrl = mediaType === 'movie'
           ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
