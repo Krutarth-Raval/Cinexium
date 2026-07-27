@@ -11,7 +11,6 @@ interface WatchClientProps {
   region?: string;
 }
 
-// Exclusively using VidLink server as requested
 export default function WatchClient({ mediaId, mediaType, title, seasons = [], region }: WatchClientProps) {
   const router = useRouter();
 
@@ -63,9 +62,16 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     const generateUrl = async () => {
       setIframeLoading(true);
       
-      let finalUrl = mediaType === 'movie'
-        ? `https://vidlink.pro/movie/${mediaId}?primaryColor=a855f7&secondaryColor=a855f7&iconColor=ffffff&title=false`
-        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?primaryColor=a855f7&secondaryColor=a855f7&iconColor=ffffff&title=false`;
+      let finalUrl = '';
+      if (region === 'anime') {
+        finalUrl = mediaType === 'movie'
+          ? `https://vidsrc.to/embed/movie/${mediaId}`
+          : `https://vidsrc.to/embed/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
+      } else {
+        finalUrl = mediaType === 'movie'
+          ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
+          : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
+      }
 
       if (isMounted) {
         setIframeUrl(finalUrl);
@@ -119,7 +125,8 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
               className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
               allowFullScreen
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              referrerPolicy="origin"
+              referrerPolicy={region === 'anime' ? "origin" : "same-origin"}
+              sandbox={region === 'anime' ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined}
             />
           ) : null}
         </div>
