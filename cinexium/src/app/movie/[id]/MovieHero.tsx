@@ -20,11 +20,13 @@ export const MovieHero = ({
   overview,
   backdropPath,
   posterPath,
-  trailerKey
+  trailerKey,
+  seasons
 }: any) => {
   const router = useRouter();
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [isTrailerPlaying, setIsTrailerPlaying] = useState(false);
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const playerRef = useRef<CustomTrailerPlayerRef>(null);
 
@@ -137,7 +139,15 @@ export const MovieHero = ({
   );
 
   const ActionButtons = ({ isMobile = false }) => (
-    <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-6'} flex-wrap lg:gap-0`}>
+    <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-4 lg:gap-5'} flex-wrap`}>
+      <button
+        onClick={() => router.push(`/watch/${publicMediaType}/${mediaId}`)}
+        className={`flex items-center justify-center gap-2 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-500 transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0`}
+      >
+        <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+        <span>Watch Now</span>
+      </button>
+
       {trailerKey && (
         <button
           onClick={() => {

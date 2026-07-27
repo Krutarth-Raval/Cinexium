@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs"],
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "@consumet/extensions"],
   async headers() {
     return [
       {
@@ -15,8 +15,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com",
-              "frame-src 'self' https://accounts.google.com https://www.youtube.com https://www.youtube-nocookie.com https://vercel.live https://*.paddle.com",
+              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com",
+              "frame-src *;",
               "media-src 'self' blob: https:",
               "object-src 'none'",
               "base-uri 'self'",

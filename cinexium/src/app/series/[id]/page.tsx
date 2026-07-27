@@ -71,6 +71,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         backdropPath={details.backdrop_path}
         posterPath={details.poster_path}
         trailerKey={trailer?.key}
+        seasons={details.seasons}
       />
       
       <TvBentoGrid details={details} region={region} />

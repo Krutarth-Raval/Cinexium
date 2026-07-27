@@ -10,14 +10,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@consumet/extensions": "^1.8.8",
     "@prisma/client": "^5.21.1",
     "@types/nodemailer": "^8.0.1",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "cloudinary": "^2.10.0",
     "firebase": "^12.16.0",
     "firebase-admin": "^14.2.0",
     "framer-motion": "^12.42.2",
+    "got-scraping": "^4.2.1",
+    "hls.js": "^1.6.16",
     "jsonwebtoken": "^9.0.3",
     "next": "16.2.10",
     "next-auth": "^4.24.14",
