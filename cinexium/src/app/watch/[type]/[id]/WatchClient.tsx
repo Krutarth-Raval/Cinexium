@@ -13,7 +13,7 @@ interface WatchClientProps {
 
 export default function WatchClient({ mediaId, mediaType, title, seasons = [] }: WatchClientProps) {
   const router = useRouter();
-  
+
   const [selectedSeason, setSelectedSeason] = useState<number>(
     seasons && seasons.length > 0 ? (seasons.find(s => s.season_number > 0)?.season_number || 1) : 1
   );
@@ -55,13 +55,13 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
   }, [mediaType, mediaId, selectedSeason]);
 
   const validSeasons = seasons?.filter(s => s.season_number > 0) || [];
-  const iframeUrl = mediaType === 'movie' 
-    ? `https://vidlink.pro/movie/${mediaId}?autoplay=0` 
-    : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?autoplay=0`;
+  const iframeUrl = mediaType === 'movie'
+    ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
+    : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black text-white flex flex-col md:flex-row overflow-hidden">
-      
+
       {/* Main Content Area */}
       <div className="flex-1 relative w-full h-full flex flex-col">
         {/* Top Bar */}
@@ -70,7 +70,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <h1 className="text-xl md:text-2xl font-bold truncate text-shadow pointer-events-auto">
-             {mediaType === 'tv' ? `${title} (S${selectedSeason} E${selectedEpisode})` : title}
+            {mediaType === 'tv' ? `${title} (S${selectedSeason} E${selectedEpisode})` : title}
           </h1>
           {mediaType === 'tv' && (
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="ml-auto pointer-events-auto p-2 px-4 bg-primary-600 hover:bg-primary-500 rounded-full text-sm font-bold shadow-lg">Episodes</button>
@@ -79,23 +79,23 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
 
         {/* Video Player Iframe */}
         <div className="flex-1 w-full h-full bg-black relative flex items-center justify-center">
-           {/* Iframe Loading Spinner */}
-           {iframeLoading && (
-             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
-                <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
-                <p className="font-bold text-white/50 animate-pulse text-lg tracking-wide">Connecting to Secure Server...</p>
-             </div>
-           )}
+          {/* Iframe Loading Spinner */}
+          {iframeLoading && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
+              <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+              <p className="font-bold text-white/50 animate-pulse text-lg tracking-wide">Connecting to Secure Server...</p>
+            </div>
+          )}
 
-           <iframe
-             key={iframeUrl}
-             src={iframeUrl}
-             onLoad={() => setIframeLoading(false)}
-             className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
-             allowFullScreen
-             allow="autoplay; fullscreen; picture-in-picture; encrypted-media;"
-             referrerPolicy="same-origin"
-           />
+          <iframe
+            key={iframeUrl}
+            src={iframeUrl}
+            onLoad={() => setIframeLoading(false)}
+            className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
+            allowFullScreen
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            referrerPolicy="same-origin"
+          />
         </div>
       </div>
 
@@ -104,12 +104,12 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
         <div className={`absolute md:relative right-0 top-0 bottom-0 w-80 bg-[#12141c]/95 backdrop-blur-xl border-l border-white/5 shadow-2xl z-[9999] transform transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} pt-20 md:pt-0`}>
           {/* Close button for mobile */}
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden absolute top-4 right-4 p-2 bg-white/10 rounded-full">
-             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-          
+
           <div className="p-4 border-b border-white/5 md:mt-20">
             <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Select Season</h3>
-            <select 
+            <select
               className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-primary-500"
               value={selectedSeason}
               onChange={(e) => {
@@ -134,11 +134,10 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [] }:
                       setSelectedEpisode(ep.episode_number);
                       if (window.innerWidth < 768) setIsSidebarOpen(false);
                     }}
-                    className={`text-left p-3 rounded-xl transition-all flex flex-col gap-1 border ${
-                      selectedEpisode === ep.episode_number 
-                        ? 'bg-primary-600/20 text-white border-primary-500/50 shadow-inner' 
+                    className={`text-left p-3 rounded-xl transition-all flex flex-col gap-1 border ${selectedEpisode === ep.episode_number
+                        ? 'bg-primary-600/20 text-white border-primary-500/50 shadow-inner'
                         : 'text-gray-400 hover:bg-white/5 border-transparent hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span className="font-bold text-sm">
                       E{ep.episode_number} - {ep.name}
