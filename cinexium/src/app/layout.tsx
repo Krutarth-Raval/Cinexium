@@ -67,6 +67,7 @@ export const metadata: Metadata = {
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
+import { DisclaimerBanner } from "@/components/layout/DisclaimerBanner";
 import { Providers } from "@/components/Providers";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { WhatsNewModal } from "@/components/ui/WhatsNewModal";
@@ -122,6 +123,7 @@ export default function RootLayout({
             <div className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
               {children}
             </div>
+            <DisclaimerBanner />
             <Footer />
             <BottomNav />
             <WhatsNewModal />
