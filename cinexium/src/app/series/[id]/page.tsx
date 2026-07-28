@@ -75,8 +75,32 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
     }
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "TVSeries",
+    "name": details.name || details.title,
+    "description": details.overview,
+    "image": details.backdrop_path ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}` : (details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://cinexium.site/og-image.png'),
+    "url": `https://cinexium.site/series/${id}`,
+    "dateCreated": details.first_air_date,
+    ...(trailer?.key && {
+      "trailer": {
+        "@type": "VideoObject",
+        "name": `${details.name || details.title} Trailer`,
+        "description": `Official trailer for ${details.name || details.title}`,
+        "thumbnailUrl": `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`,
+        "uploadDate": details.first_air_date || new Date().toISOString(),
+        "embedUrl": `https://www.youtube.com/embed/${trailer.key}`
+      }
+    })
+  };
+
   return (
     <div className="min-h-screen bg-[#0f1115] pb-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <MovieHero 
         mediaId={id}
         mediaType="tv"
@@ -88,6 +112,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         trailerKey={trailer?.key}
         seasons={details.seasons}
         isPremium={isPremium}
+        isLoggedIn={!!session?.user}
         releaseDate={details.first_air_date}
       />
       

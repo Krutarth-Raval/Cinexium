@@ -27,6 +27,7 @@ export const MovieHero = ({
   trailerKey,
   seasons,
   isPremium,
+  isLoggedIn,
   releaseDate
 }: any) => {
   const router = useRouter();
@@ -211,21 +212,23 @@ export const MovieHero = ({
 
     return (
       <div className={`flex ${isMobile ? 'flex-col gap-4 w-full' : 'flex-row items-center gap-4 lg:gap-5'} flex-wrap`}>
-        <button
-          onClick={() => {
-            if (isDisabled) return;
-            if (isPremium) {
-              router.push(`/watch/${publicMediaType}/${mediaId}`);
-            } else {
-              router.push(`/premium`);
-            }
-          }}
-          disabled={isDisabled}
-          className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${buttonColor}`}
-        >
-          {buttonIcon}
-          <span>{buttonText}</span>
-        </button>
+        {isLoggedIn && (
+          <button
+            onClick={() => {
+              if (isDisabled) return;
+              if (isPremium) {
+                router.push(`/watch/${publicMediaType}/${mediaId}`);
+              } else {
+                router.push(`/premium`);
+              }
+            }}
+            disabled={isDisabled}
+            className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${buttonColor}`}
+          >
+            {buttonIcon}
+            <span>{buttonText}</span>
+          </button>
+        )}
 
       {trailerKey && (
         <button

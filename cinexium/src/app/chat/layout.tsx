@@ -8,6 +8,7 @@ import { HiddenChatProvider } from '@/components/providers/HiddenChatProvider';
 export const metadata: Metadata = {
   title: 'Messages | Cinexium',
   description: 'Chat with your friends on Cinexium.',
+  robots: { index: false, follow: false },
 };
 
 export default async function ChatLayout({

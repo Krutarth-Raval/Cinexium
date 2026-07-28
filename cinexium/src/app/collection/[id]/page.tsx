@@ -24,6 +24,47 @@ function formatTimeAgo(date: Date) {
   return Math.floor(seconds) + "s";
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const collection = await prisma.collection.findUnique({
+    where: { id },
+    include: { user: true }
+  });
+
+  if (!collection) return { title: 'Not Found' };
+  
+  if (!collection.isPublic) {
+    return {
+      title: `${collection.name} - Cinexium`,
+      robots: { index: false, follow: false }
+    };
+  }
+
+  const title = `${collection.name} by ${collection.user.username} - Cinexium`;
+  const description = collection.description || `View ${collection.user.username}'s collection of movies and TV shows on Cinexium.`;
+  const image = collection.thumbnail || 'https://cinexium.site/og-image.png';
+  const url = `https://cinexium.site/collection/${id}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    }
+  };
+}
+
 export default async function CollectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getServerSession(authOptions);
@@ -79,8 +120,35 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
   const isLiked = currentUser ? currentUser.collectionLikes.length > 0 : false;
   const isSaved = currentUser ? currentUser.collectionSaves.length > 0 : false;
 
+  const jsonLd = collection.isPublic ? {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": collection.name,
+    "description": collection.description || `Collection by ${collection.user.username}`,
+    "url": `https://cinexium.site/collection/${id}`,
+    "image": collection.thumbnail || 'https://cinexium.site/og-image.png',
+    "mainEntity": {
+      "@type": "ItemList",
+      "itemListElement": mediaItems.map((item, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "item": {
+          "@type": item?.type === 'movie' ? 'Movie' : 'TVSeries',
+          "name": item?.title,
+          "url": `https://cinexium.site/${item?.type === 'movie' ? 'movie' : 'series'}/${item?.id}`
+        }
+      }))
+    }
+  } : null;
+
   return (
     <div className="min-h-screen pt-4 md:pt-24 pb-24 px-4 max-w-5xl mx-auto">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
       {/* ===== Mobile Header ===== */}
       <div className="md:hidden mb-8">
         {/* Centered Thumbnail (shrinks on scroll) */}

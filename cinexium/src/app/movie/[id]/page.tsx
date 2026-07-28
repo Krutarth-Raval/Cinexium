@@ -75,8 +75,32 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
     }
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    "name": details.title,
+    "description": details.overview,
+    "image": details.backdrop_path ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}` : (details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : 'https://cinexium.site/og-image.png'),
+    "url": `https://cinexium.site/movie/${id}`,
+    "dateCreated": details.release_date,
+    ...(trailer?.key && {
+      "trailer": {
+        "@type": "VideoObject",
+        "name": `${details.title} Trailer`,
+        "description": `Official trailer for ${details.title}`,
+        "thumbnailUrl": `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`,
+        "uploadDate": details.release_date || new Date().toISOString(),
+        "embedUrl": `https://www.youtube.com/embed/${trailer.key}`
+      }
+    })
+  };
+
   return (
     <div className="min-h-screen bg-[#0f1115] pb-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <MovieHero 
         mediaId={id}
         mediaType="movie"
@@ -87,6 +111,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         posterPath={details.poster_path}
         trailerKey={trailer?.key}
         isPremium={isPremium}
+        isLoggedIn={!!session?.user}
         releaseDate={details.release_date}
       />
       

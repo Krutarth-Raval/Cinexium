@@ -11,6 +11,48 @@ import { FollowsModal } from '@/components/profile/FollowsModal';
 import { Suspense } from 'react';
 import { UsernameDisplay } from '@/components/profile/UsernameDisplay';
 import { OwnProfileActionsDrawer } from '@/components/profile/OwnProfileActionsDrawer';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params;
+  const user = await prisma.user.findUnique({
+    where: { username }
+  });
+
+  if (!user) return { title: 'Not Found' };
+  
+  if (user.isPrivate) {
+    return {
+      title: `@${user.username} - Cinexium`,
+      robots: { index: false, follow: false }
+    };
+  }
+
+  const title = `${user.name} (@${user.username}) - Cinexium Profile`;
+  const description = user.bio || `Check out ${user.name}'s movie and TV show collections on Cinexium.`;
+  const image = user.avatar || 'https://cinexium.site/og-image.png';
+  const url = `https://cinexium.site/profile/${user.username}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      images: [{ url: image, width: 400, height: 400, alt: title }],
+      type: 'profile',
+      username: user.username,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [image],
+    }
+  };
+}
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -125,8 +167,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     </div>
   );
 
+  const jsonLd = (!user.isPrivate) ? {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": user.name,
+      "alternateName": user.username,
+      "image": user.avatar || 'https://cinexium.site/og-image.png',
+      "description": user.bio,
+      "url": `https://cinexium.site/profile/${user.username}`
+    }
+  } : null;
+
   return (
     <div className="min-h-screen pt-4 md:pt-24 pb-24 px-4 max-w-4xl mx-auto">
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
       {/* Mobile Top Navigation */}
       <div className="flex md:hidden items-center justify-between mb-2">
         <div className="flex items-center gap-2">

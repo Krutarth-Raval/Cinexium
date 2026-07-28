@@ -12,6 +12,27 @@ import { tmdb } from '@/lib/tmdb';
 import { authOptions } from '@/lib/authOptions';
 import { getUserHistory } from '@/lib/history';
 import { prisma } from '@/lib/prisma';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Cinexium - Discover Trending Movies & TV Shows',
+  description: 'Discover trending movies and TV series, explore ratings and trailers, build your ultimate watchlist, and connect with cinema fans worldwide on Cinexium.',
+  alternates: {
+    canonical: 'https://cinexium.site/',
+  },
+  openGraph: {
+    title: 'Cinexium - Discover Trending Movies & TV Shows',
+    description: 'Discover trending movies and TV series, explore ratings and trailers, build your ultimate watchlist, and connect with cinema fans worldwide on Cinexium.',
+    url: 'https://cinexium.site/',
+    images: [{ url: 'https://cinexium.site/og-image.png', width: 1200, height: 630, alt: 'Cinexium' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Cinexium - Discover Trending Movies & TV Shows',
+    description: 'Discover trending movies and TV series, explore ratings and trailers, build your ultimate watchlist, and connect with cinema fans worldwide on Cinexium.',
+    images: ['https://cinexium.site/og-image.png'],
+  },
+};
 
 const getCountryCode = (countryName: string) => {
   if (!countryName) return 'US';
