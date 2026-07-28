@@ -10,15 +10,22 @@ function isAbortError(error: unknown) {
   return error instanceof Error && error.name === 'AbortError';
 }
 
-async function fetchTmdbJson<T>(url: string, revalidate = 3600, timeoutMs = 10000): Promise<T> {
+async function fetchTmdbJson<T>(url: string, revalidate: number | false = 3600, tags: string[] = [], timeoutMs = 10000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(url, {
-      next: { revalidate },
+    const fetchOptions: RequestInit = {
       signal: controller.signal,
-    });
+    };
+
+    if (revalidate === false) {
+      fetchOptions.cache = 'no-store';
+    } else {
+      fetchOptions.next = { revalidate, tags: tags.length > 0 ? tags : undefined };
+    }
+
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`TMDB request failed with ${response.status}`);
@@ -67,6 +74,15 @@ const getCategoryFilters = (category: Category, type: 'movie' | 'tv') => {
   }
 };
 
+const getCategoryRevalidate = (category: Category) => {
+  switch (category) {
+    case 'now_playing': return 1800; // Trending -> 1800s
+    case 'popular': return 3600; // Popular -> 3600s
+    case 'top_rated': return 86400; // Top Rated -> 86400s
+    default: return 3600;
+  }
+};
+
 const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, region: string): Promise<MediaItem[]> => {
   if (!TMDB_API_KEY) {
     console.warn('TMDB_API_KEY is not set');
@@ -75,11 +91,12 @@ const fetchMediaList = cache(async (type: 'movie' | 'tv', category: Category, re
 
   const regionFilter = getRegionFilters(region, type);
   const categoryFilter = getCategoryFilters(category, type);
+  const revalidate = getCategoryRevalidate(category);
   
   const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=1${regionFilter}${categoryFilter}`;
   
   try {
-    const data = await fetchTmdbJson<{ results?: any[] }>(url);
+    const data = await fetchTmdbJson<{ results?: any[] }>(url, revalidate, [type, category, region]);
     
     return (data.results || [])
       .filter((item: any) => item.poster_path) // Require poster for carousels
@@ -108,7 +125,7 @@ export const tmdb = {
     try {
       const regionFilter = getRegionFilters(region, 'movie');
       const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&page=1&sort_by=popularity.desc&watch_region=${countryCode}&with_watch_monetization_types=flatrate|free|ads|rent|buy${regionFilter}`;
-      const data = await fetchTmdbJson<{ results?: any[] }>(url);
+      const data = await fetchTmdbJson<{ results?: any[] }>(url, 1800, ['trending', countryCode, region]);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path)
@@ -116,7 +133,7 @@ export const tmdb = {
           id: item.id.toString(),
           title: item.title || item.name || item.original_title || item.original_name,
           description: item.overview,
-          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
           type: 'movie' as const,
         }))
@@ -135,7 +152,7 @@ export const tmdb = {
     if (!TMDB_API_KEY) return [];
     try {
       const url = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=en-US`;
-      const data = await fetchTmdbJson<{ results?: any[] }>(url);
+      const data = await fetchTmdbJson<{ results?: any[] }>(url, 1800, ['trending', 'global']);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv'))
@@ -143,7 +160,7 @@ export const tmdb = {
           id: item.id.toString(),
           title: item.title || item.name || item.original_title || item.original_name,
           description: item.overview,
-          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
           type: (item.media_type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
         }))
@@ -185,7 +202,8 @@ export const tmdb = {
           const typePath = item.type === 'movie' ? 'movie' : 'tv';
           const data = await fetchTmdbJson<{ videos?: { results?: any[] } }>(
             `${TMDB_BASE_URL}/${typePath}/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`,
-            3600,
+            86400,
+            [`${typePath}-videos`, item.id],
             4000
           );
           const videos = data.videos?.results || [];
@@ -209,7 +227,11 @@ export const tmdb = {
   getMediaDetails: cache(async (type: 'movie' | 'tv', id: string): Promise<MediaItem | null> => {
     if (!TMDB_API_KEY) return null;
     try {
-      const item = await fetchTmdbJson<any>(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`);
+      const item = await fetchTmdbJson<any>(
+        `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`,
+        86400,
+        [`${type}-details`, id]
+      );
       return {
         id: item.id.toString(),
         title: item.title || item.name || item.original_title || item.original_name,
@@ -234,19 +256,25 @@ export const tmdb = {
         ? 'credits,videos,recommendations,similar,release_dates,watch/providers' 
         : 'credits,videos,recommendations,similar,content_ratings,watch/providers';
         
-      return await fetchTmdbJson<any>(`${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=${appendParams}`, 3600, 5000);
+      return await fetchTmdbJson<any>(
+        `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US&append_to_response=${appendParams}`,
+        86400,
+        [`${type}-full-details`, id],
+        5000
+      );
     } catch {
       return null;
     }
   }),
 
   // Search media
-  searchMedia: async (query: string, type: 'movie' | 'tv' | 'multi', region?: string): Promise<MediaItem[]> => {
+  searchMedia: cache(async (query: string, type: 'movie' | 'tv' | 'multi', region?: string): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY || !query) return [];
     try {
       const data = await fetchTmdbJson<{ results?: any[] }>(
         `${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`,
-        3600,
+        false, // no-store
+        [],
         3500
       );
       
@@ -272,7 +300,7 @@ export const tmdb = {
           id: item.id.toString(),
           title: item.title || item.name || item.original_title || item.original_name,
           description: item.overview,
-          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
           type: (item.media_type ? (item.media_type === 'movie' ? 'movie' : 'series') : (type === 'movie' ? 'movie' : 'series')) as MediaItem['type'],
           releaseDate: item.primary_release_date || item.first_air_date || null,
@@ -280,10 +308,10 @@ export const tmdb = {
     } catch {
       return [];
     }
-  },
+  }),
 
   // Discover by Genre ID sorted by release date
-  discoverByGenre: async (genreId: string, type: 'movie' | 'tv'): Promise<MediaItem[]> => {
+  discoverByGenre: cache(async (genreId: string, type: 'movie' | 'tv'): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY) return [];
     
     const dateField = type === 'movie' ? 'primary_release_date' : 'first_air_date';
@@ -293,7 +321,7 @@ export const tmdb = {
     const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=1&with_genres=${genreId}${sortFilter}`;
     
     try {
-      const data = await fetchTmdbJson<{ results?: any[] }>(url);
+      const data = await fetchTmdbJson<{ results?: any[] }>(url, 604800, [`genre`, genreId, type]);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path) // Require poster
@@ -301,7 +329,7 @@ export const tmdb = {
           id: item.id.toString(),
           title: item.title || item.name || item.original_title || item.original_name,
           description: item.overview,
-          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
           type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
           releaseDate: item[dateField],
@@ -309,10 +337,10 @@ export const tmdb = {
     } catch {
       return [];
     }
-  },
+  }),
 
   // Paginated discover for infinite scroll
-  getDiscoverMedia: async (type: 'movie' | 'tv', region: string, page: number = 1, genreId?: string): Promise<MediaItem[]> => {
+  getDiscoverMedia: cache(async (type: 'movie' | 'tv', region: string, page: number = 1, genreId?: string): Promise<MediaItem[]> => {
     if (!TMDB_API_KEY) return [];
     
     let regionFilter = '';
@@ -339,7 +367,7 @@ export const tmdb = {
     const url = `${TMDB_BASE_URL}/discover/${type}?api_key=${TMDB_API_KEY}&language=en-US&page=${page}${regionFilter}${sortFilter}`;
 
     try {
-      const data = await fetchTmdbJson<{ results?: any[] }>(url);
+      const data = await fetchTmdbJson<{ results?: any[] }>(url, 3600, [`discover`, type, region, page.toString(), genreId || 'all']);
       
       return (data.results || [])
         .filter((item: any) => item.poster_path) // Require poster
@@ -347,7 +375,7 @@ export const tmdb = {
           id: item.id.toString(),
           title: item.title || item.name || item.original_title || item.original_name,
           description: item.overview,
-          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : '',
+          bannerUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : '',
           posterUrl: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
           type: (type === 'movie' ? 'movie' : 'series') as MediaItem['type'],
           releaseDate: item.release_date || item.first_air_date || '',
@@ -355,5 +383,5 @@ export const tmdb = {
     } catch {
       return [];
     }
-  }
+  })
 };

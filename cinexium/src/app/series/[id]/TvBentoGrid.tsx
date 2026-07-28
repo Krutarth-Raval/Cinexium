@@ -442,7 +442,7 @@ export const TvBentoGrid = ({ details, region }: { details: any, region?: string
                         >
                           <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary-500 transition-all shadow-lg bg-[#252a34]">
                             <img
-                              src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                              src={`https://image.tmdb.org/t/p/w500${provider.logo_path}`}
                               alt={provider.provider_name}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             />

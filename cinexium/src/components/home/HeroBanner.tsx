@@ -3,9 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/Button';
-import { CustomTrailerPlayer, type CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
-import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
-import { OverviewDrawer } from '@/components/media/OverviewDrawer';
+import dynamic from 'next/dynamic';
+import type { CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
+
+const CustomTrailerPlayer = dynamic(() => import('@/components/media/CustomTrailerPlayer').then(m => m.CustomTrailerPlayer), { ssr: false });
+const SaveMediaModal = dynamic(() => import('@/components/collection/SaveMediaModal').then(m => m.SaveMediaModal), { ssr: false });
+const OverviewDrawer = dynamic(() => import('@/components/media/OverviewDrawer').then(m => m.OverviewDrawer), { ssr: false });
+import Image from 'next/image';
 
 export interface MediaItem {
   id: string;
@@ -146,11 +150,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 </div>
               ) : (
                 <>
-                  <img
+                  <Image
                     src={item.bannerUrl}
                     alt={item.title}
-                    className="w-full h-full object-cover"
-                    loading={index === 0 ? "eager" : "lazy"}
+                    className="object-cover object-center"
+                    fill
+                    priority={index === 0}
+                    loading={index === 0 ? undefined : "lazy"}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1280px"
                   />
                   {/* Gradients only on desktop to make overlaid text readable, softened for better image clarity */}
                   <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/50 to-transparent" />
@@ -171,10 +178,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
               className={`sm:hidden absolute inset-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${index === currentIndex ? 'opacity-100' : 'opacity-0'
                 }`}
             >
-              <img
+              <Image
                 src={item.bannerUrl}
                 alt="Decorative blurred background for banner"
-                className="w-full h-full object-cover blur-3xl scale-125 opacity-70"
+                className="object-cover object-center blur-3xl scale-125 opacity-70"
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1280px"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-[#0f1115]/75" />
             </div>
@@ -309,18 +319,22 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
         `}} />
       </div>
 
-      <SaveMediaModal
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        mediaId={currentItem.id}
-        mediaType={currentItem.type}
-      />
-      <OverviewDrawer
-        isOpen={isOverviewOpen}
-        onClose={() => setIsOverviewOpen(false)}
-        title={currentItem.title}
-        overview={currentItem.description}
-      />
+      {isSaveModalOpen && (
+        <SaveMediaModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          mediaId={currentItem.id}
+          mediaType={currentItem.type}
+        />
+      )}
+      {isOverviewOpen && (
+        <OverviewDrawer
+          isOpen={isOverviewOpen}
+          onClose={() => setIsOverviewOpen(false)}
+          title={currentItem.title}
+          overview={currentItem.description}
+        />
+      )}
     </div>
   );
 };

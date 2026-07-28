@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   
   const title = `${details.name} - Cinexium`;
   const description = details.overview || 'Explore details, ratings, and trailers for this TV show on Cinexium.';
-  const image = details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : (details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : '/og-image.png');
+  const image = details.backdrop_path ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}` : (details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : '/og-image.png');
   const url = `https://cinexium.site/series/${id}`;
 
   return {

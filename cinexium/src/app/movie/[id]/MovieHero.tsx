@@ -2,15 +2,19 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CustomTrailerPlayer, CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
-import { SaveMediaModal } from '@/components/collection/SaveMediaModal';
-import { ShareCollectionModal } from '@/app/collection/[id]/ShareCollectionModal';
-import { MediaCommentsDrawer } from '@/components/media/MediaCommentsDrawer';
-import { MediaLikesDrawer } from '@/components/media/MediaLikesDrawer';
+import dynamic from 'next/dynamic';
+import type { CustomTrailerPlayerRef } from '@/components/media/CustomTrailerPlayer';
+
+const CustomTrailerPlayer = dynamic(() => import('@/components/media/CustomTrailerPlayer').then(m => m.CustomTrailerPlayer), { ssr: false });
+const SaveMediaModal = dynamic(() => import('@/components/collection/SaveMediaModal').then(m => m.SaveMediaModal), { ssr: false });
+const ShareCollectionModal = dynamic(() => import('@/app/collection/[id]/ShareCollectionModal').then(m => m.ShareCollectionModal), { ssr: false });
+const MediaCommentsDrawer = dynamic(() => import('@/components/media/MediaCommentsDrawer').then(m => m.MediaCommentsDrawer), { ssr: false });
+const MediaLikesDrawer = dynamic(() => import('@/components/media/MediaLikesDrawer').then(m => m.MediaLikesDrawer), { ssr: false });
 import { trackHistoryAction } from '@/app/actions/history';
 import { getMediaDetailHref, normalizeMediaTypeForRoute } from '@/lib/media';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import Image from 'next/image';
 
 export const MovieHero = ({
   mediaId,
@@ -107,7 +111,7 @@ export const MovieHero = ({
     }
   };
 
-  const bannerUrl = backdropPath ? `https://image.tmdb.org/t/p/original${backdropPath}` : (posterPath ? `https://image.tmdb.org/t/p/original${posterPath}` : '');
+  const bannerUrl = backdropPath ? `https://image.tmdb.org/t/p/w1280${backdropPath}` : (posterPath ? `https://image.tmdb.org/t/p/w1280${posterPath}` : '');
   const publicMediaType = normalizeMediaTypeForRoute(mediaType);
 
   // Fallback to the first sentence of the overview if no tagline is provided by TMDB
@@ -291,9 +295,13 @@ export const MovieHero = ({
               onPlayingChange={setIsTrailerPlaying}
             />
           ) : bannerUrl ? (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${bannerUrl})` }}
+            <Image
+              src={bannerUrl}
+              alt={title || "Media Banner"}
+              fill
+              priority
+              className="object-cover object-center"
+              sizes="100vw"
             />
           ) : null}
 
@@ -333,47 +341,57 @@ export const MovieHero = ({
 
 
 
-      <SaveMediaModal
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        mediaId={mediaId}
-        mediaType={mediaType}
-        onSaveSuccess={(isAdded, isStillSaved) => {
-          setSavesCount(prev => Math.max(0, isAdded ? prev + 1 : prev - 1));
-          if (isStillSaved !== undefined) setIsSaved(isStillSaved);
-        }}
-      />
+      {isSaveModalOpen && (
+        <SaveMediaModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          mediaId={mediaId}
+          mediaType={mediaType}
+          onSaveSuccess={(isAdded, isStillSaved) => {
+            setSavesCount(prev => Math.max(0, isAdded ? prev + 1 : prev - 1));
+            if (isStillSaved !== undefined) setIsSaved(isStillSaved);
+          }}
+        />
+      )}
 
-      <ShareCollectionModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        collectionId={mediaId} // using mediaId for sharing
-        collectionName={title}
-        collectionThumbnail={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : ''}
-        collectionItemCount={0}
-        creatorUsername={`Cinexium:${publicMediaType}`} // generic for movies and series
-        shareUrlPath={getMediaDetailHref(publicMediaType, mediaId)}
-        onShareSuccess={() => {
-          setSharesCount(prev => prev + 1);
-          fetch(`/api/media/${mediaId}/share`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: mediaType }) 
-          }).catch(console.error);
-        }}
-      />
-      <MediaCommentsDrawer
-        isOpen={isCommentsDrawerOpen}
-        onClose={() => setIsCommentsDrawerOpen(false)}
-        mediaId={mediaId}
-        mediaType={mediaType}
-        onCommentsCountChange={setCommentsCount}
-      />
-      <MediaLikesDrawer
-        isOpen={isLikesDrawerOpen}
-        onClose={() => setIsLikesDrawerOpen(false)}
-        mediaId={mediaId}
-      />
+      {isShareModalOpen && (
+        <ShareCollectionModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          collectionId={mediaId} // using mediaId for sharing
+          collectionName={title}
+          collectionThumbnail={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : ''}
+          collectionItemCount={0}
+          creatorUsername={`Cinexium:${publicMediaType}`} // generic for movies and series
+          shareUrlPath={getMediaDetailHref(publicMediaType, mediaId)}
+          onShareSuccess={() => {
+            setSharesCount(prev => prev + 1);
+            fetch(`/api/media/${mediaId}/share`, { 
+              method: 'POST', 
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: mediaType }) 
+            }).catch(console.error);
+          }}
+        />
+      )}
+      
+      {isCommentsDrawerOpen && (
+        <MediaCommentsDrawer
+          isOpen={isCommentsDrawerOpen}
+          onClose={() => setIsCommentsDrawerOpen(false)}
+          mediaId={mediaId}
+          mediaType={mediaType}
+          onCommentsCountChange={setCommentsCount}
+        />
+      )}
+      
+      {isLikesDrawerOpen && (
+        <MediaLikesDrawer
+          isOpen={isLikesDrawerOpen}
+          onClose={() => setIsLikesDrawerOpen(false)}
+          mediaId={mediaId}
+        />
+      )}
     </div>
   );
 };

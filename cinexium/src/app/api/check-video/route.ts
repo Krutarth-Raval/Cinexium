@@ -22,7 +22,8 @@ export async function GET(request: Request) {
         'Accept-Language': 'en-US,en;q=0.5',
       },
       // Very short timeout so we don't hang the UI
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(3000),
+      next: { revalidate: 3600 }
     });
     
     // Vidlink returns 500 when media is not found
