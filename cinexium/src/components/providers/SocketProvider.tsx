@@ -40,8 +40,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const clearUnreadMessages = () => setHasUnreadMessages(false);
 
+  const userId = (session?.user as any)?.id;
+
   useEffect(() => {
-    const userId = (session?.user as any)?.id;
     if (!userId) return;
 
     // Check for initial unread messages
@@ -138,7 +139,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       channel?.unbind('messageUpdated', handleMessageUpdated);
       channel?.unbind('premiumActivated', handlePremiumActivated);
     };
-  }, [router, session]);
+  }, [router, userId]);
 
   return (
     <SocketContext.Provider value={{ pusherClient, isConnected, hasUnreadMessages, clearUnreadMessages }}>

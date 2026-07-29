@@ -85,13 +85,15 @@ async function registerToken(deviceId: string, permission: NotificationPermissio
 }
 
 export function usePushNotifications() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const promptTimerRef = useRef<number | null>(null);
   const promptedThisVisitRef = useRef(false);
 
+  const userId = (session?.user as any)?.id;
+
   useEffect(() => {
-    if (status !== 'authenticated' || !pathname || !hasFirebaseMessagingConfig()) {
+    if (!userId || !pathname || !hasFirebaseMessagingConfig()) {
       return;
     }
 
@@ -115,10 +117,10 @@ export function usePushNotifications() {
       window.removeEventListener('pageshow', handlePresence);
       window.removeEventListener('hashchange', handlePresence);
     };
-  }, [pathname, status]);
+  }, [pathname, userId]);
 
   useEffect(() => {
-    if (status !== 'authenticated' || !pathname || !hasFirebaseMessagingConfig()) {
+    if (!userId || !pathname || !hasFirebaseMessagingConfig()) {
       return;
     }
 
@@ -161,10 +163,10 @@ export function usePushNotifications() {
       cancelled = true;
       unsubscribeFromMessages?.();
     };
-  }, [pathname, status]);
+  }, [pathname, userId]);
 
   useEffect(() => {
-    if (status !== 'authenticated' || !hasFirebaseMessagingConfig()) {
+    if (!userId || !hasFirebaseMessagingConfig()) {
       return;
     }
 
@@ -234,5 +236,5 @@ export function usePushNotifications() {
         window.removeEventListener(eventName, handleInteraction)
       );
     };
-  }, [status]);
+  }, [userId]);
 }

@@ -48,8 +48,10 @@ export const Navbar = () => {
     document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
   };
 
+  const userId = (session?.user as any)?.id;
+
   useEffect(() => {
-    if (!session) {
+    if (!userId) {
       setUserData(null);
       setIsResolvingUser(false);
       return;
@@ -92,7 +94,7 @@ export const Navbar = () => {
       .finally(() => {
         setIsResolvingUser(false);
       });
-  }, [session]);
+  }, [userId]);
 
   useEffect(() => {
     const handleThemeChange = (e: Event) => {
