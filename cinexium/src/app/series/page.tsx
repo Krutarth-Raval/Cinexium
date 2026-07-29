@@ -1,6 +1,7 @@
 import { InfiniteMediaGrid } from '@/components/media/InfiniteMediaGrid';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'TV Series - Cinexium',
@@ -25,8 +26,8 @@ export default async function SeriesPage() {
   const region = cookieStore.get('cinexium_region')?.value || 'hollywood';
 
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-[#0f1115]"></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0f1115]"></div>}>
       <InfiniteMediaGrid key={region} type="tv" title="Series" region={region} />
-    </React.Suspense>
+    </Suspense>
   );
 }
