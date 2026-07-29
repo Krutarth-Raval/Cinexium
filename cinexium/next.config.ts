@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  experimental: {
+    staleTimes: {
+      dynamic: 180,
+    },
+  },
   serverExternalPackages: ["@prisma/client", "bcryptjs", "@consumet/extensions"],
   async headers() {
     return [
