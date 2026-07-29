@@ -24,6 +24,8 @@ export const ToggleMediaCarousel: React.FC<ToggleMediaCarouselProps> = ({
 
   const items = selectedType === 'movie' ? movies : series;
 
+  const prevSelectedType = useRef<ToggleOption>(selectedType);
+
   const checkScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
@@ -33,13 +35,14 @@ export const ToggleMediaCarousel: React.FC<ToggleMediaCarouselProps> = ({
   };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ left: 0, behavior: 'auto' });
+    if (scrollRef.current && prevSelectedType.current !== selectedType) {
+      scrollRef.current.scrollLeft = 0;
+      prevSelectedType.current = selectedType;
     }
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, [items]);
+  }, [selectedType, items]);
 
   if ((!movies || movies.length === 0) && (!series || series.length === 0)) {
     return null;

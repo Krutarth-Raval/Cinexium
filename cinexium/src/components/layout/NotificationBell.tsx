@@ -197,6 +197,7 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                         {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                         {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
                         {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
+                        {n.type === 'COMMENT_LIKE' && 'liked your comment.'}
                         {n.type === 'SUBSCRIPTION_REQUEST' && `requested ${n.referenceType === 'yearly' ? 'Yearly' : 'Monthly'} Premium.`}
                       </span>
 
@@ -235,14 +236,14 @@ export const NotificationBell = ({ isMobile = false }: { isMobile?: boolean }) =
                         </div>
                       )}
 
-                      {n.type === 'COMMENT_REPLY' && n.referenceId && (
+                      {(n.type === 'COMMENT_REPLY' || n.type === 'COMMENT_LIKE') && n.referenceId && (
                         <div className="mt-2">
                           <Link
                             href={`/${n.referenceType === 'tv' ? 'series' : 'movie'}/${n.referenceId}`}
                             onClick={() => setIsOpen(false)}
                             className="inline-block py-1 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded text-xs font-medium"
                           >
-                            View Reply
+                            {n.type === 'COMMENT_REPLY' ? 'View Reply' : 'View Comment'}
                           </Link>
                         </div>
                       )}

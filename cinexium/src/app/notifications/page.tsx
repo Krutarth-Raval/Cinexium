@@ -167,6 +167,7 @@ export default function NotificationsPage() {
                   {n.type === 'REQUEST_ACCEPTED' && 'accepted your follow request.'}
                   {n.type === 'FOLLOW_REQUEST' && 'requested to follow you.'}
                   {n.type === 'COMMENT_REPLY' && 'replied to your comment.'}
+                  {n.type === 'COMMENT_LIKE' && 'liked your comment.'}
                   {n.type === 'COMMUNITY_JOIN_REQUEST' && 'requested to join your community.'}
                   {n.type === 'SUBSCRIPTION_REQUEST' && `requested ${n.referenceType === 'yearly' ? 'Yearly' : 'Monthly'} Premium.`}
                 </p>
@@ -188,13 +189,13 @@ export default function NotificationsPage() {
                   </div>
                 )}
 
-                {n.type === 'COMMENT_REPLY' && n.referenceId && (
+                {(n.type === 'COMMENT_REPLY' || n.type === 'COMMENT_LIKE') && n.referenceId && (
                   <div className="mt-3">
                     <Link
                       href={`/${n.referenceType === 'tv' ? 'series' : 'movie'}/${n.referenceId}`}
                       className="inline-block py-1.5 px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-bold"
                     >
-                      View Reply
+                      {n.type === 'COMMENT_REPLY' ? 'View Reply' : 'View Comment'}
                     </Link>
                   </div>
                 )}

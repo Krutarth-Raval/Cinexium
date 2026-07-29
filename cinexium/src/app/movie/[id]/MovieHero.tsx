@@ -183,8 +183,8 @@ export const MovieHero = ({
 
   const ActionButtons = ({ isMobile = false }) => {
     // Determine button text and styling based on availability
-    let buttonText = isPremium ? 'Watch Now' : 'Subscribe to Watch';
-    let buttonColor = isPremium ? 'bg-primary-600 text-white hover:bg-primary-500' : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-black hover:from-yellow-400 hover:to-amber-400';
+    let buttonText = 'Watch Now';
+    let buttonColor = 'bg-primary-600 text-white hover:bg-primary-500';
     let buttonIcon = (
       <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
         <path d="M8 5v14l11-7z" />
@@ -206,8 +206,8 @@ export const MovieHero = ({
         </svg>
       );
     } else if (isWatermark) {
-      buttonText = isPremium ? 'Watch (CAM/Watermark)' : 'Subscribe to Watch';
-      buttonColor = isPremium ? 'bg-orange-600 text-white hover:bg-orange-500' : buttonColor;
+      buttonText = 'Watch (CAM/Watermark)';
+      buttonColor = 'bg-orange-600 text-white hover:bg-orange-500';
     }
 
     return (
@@ -216,11 +216,7 @@ export const MovieHero = ({
           <button
             onClick={() => {
               if (isDisabled) return;
-              if (isPremium) {
-                router.push(`/watch/${publicMediaType}/${mediaId}`);
-              } else {
-                router.push(`/premium`);
-              }
+              router.push(`/watch/${publicMediaType}/${mediaId}`);
             }}
             disabled={isDisabled}
             className={`flex items-center justify-center gap-2 font-bold rounded-xl transition-colors shadow-lg ${isMobile ? 'w-full py-3.5' : 'px-8 py-3.5'} shrink-0 ${buttonColor}`}
