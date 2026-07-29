@@ -184,7 +184,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ items }) => {
                 className="object-cover object-center blur-3xl scale-125 opacity-70"
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1280px"
-                loading="lazy"
+                priority={index === 0}
+                loading={index === 0 ? undefined : "lazy"}
               />
               <div className="absolute inset-0 bg-[#0f1115]/75" />
             </div>
