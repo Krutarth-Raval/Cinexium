@@ -62,6 +62,7 @@ export default function SearchPage() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [didYouMean, setDidYouMean] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -184,6 +185,7 @@ export default function SearchPage() {
                 </svg>
               </div>
               <input
+                ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -266,7 +268,10 @@ export default function SearchPage() {
             ].map((tip) => (
               <button 
                 key={tip.prefix}
-                onClick={() => setQuery(tip.prefix)}
+                onClick={() => {
+                  setQuery(tip.prefix);
+                  inputRef.current?.focus();
+                }}
                 className={`flex h-full min-h-[88px] w-full flex-col items-center justify-center rounded-2xl border border-white/5 bg-[#13161c]/60 px-3 py-3 text-center backdrop-blur-md ${tip.groupBorder} ${tip.layoutClass} ${tip.cardClass} hover:bg-white/5 transition-all duration-300 group shadow-lg sm:min-h-[96px] sm:px-4 sm:py-4`}
               >
                 <div className={`mb-2 text-gray-500 ${tip.groupHover} transition-colors duration-300`}>
