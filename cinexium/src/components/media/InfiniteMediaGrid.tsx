@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 const formatGenreName = (genre: string) => {
@@ -13,11 +14,16 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedGenre, setSelectedGenre] = useState('');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // Search State
-  const [query, setQuery] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
+  const initialGenre = searchParams.get('genre') || '';
+  const initialQuery = searchParams.get('q') || '';
+
+  const [selectedGenre, setSelectedGenre] = useState(initialGenre);
+  const [query, setQuery] = useState(initialQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [didYouMean, setDidYouMean] = useState<string | null>(null);
@@ -116,21 +122,34 @@ export const InfiniteMediaGrid = ({ type, title, region = 'hollywood' }: { type:
   }, [submittedQuery, type]);
 
   const handleGenreClick = (genre: string) => {
-    if (genre === 'All') {
-      setSelectedGenre('');
-      setQuery('');
-      setSubmittedQuery('');
+    const val = genre === 'All' ? '' : genre;
+    setSelectedGenre(val);
+    setQuery('');
+    setSubmittedQuery('');
+    
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    if (val) {
+      params.set('genre', val);
     } else {
-      setSelectedGenre(genre);
-      setQuery('');
-      setSubmittedQuery('');
+      params.delete('genre');
     }
+    params.delete('q');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSelectedGenre('');
     setSubmittedQuery(query);
+    
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    if (query) {
+      params.set('q', query);
+    } else {
+      params.delete('q');
+    }
+    params.delete('genre');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const isSearching = submittedQuery.length > 0;

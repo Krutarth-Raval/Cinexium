@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from 'use-debounce';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { CollectionQuickActions } from '@/components/collection/CollectionQuickActions';
 import { SearchHistoryDrawer, renderHistoryText } from '@/components/ui/SearchHistoryDrawer';
@@ -52,9 +52,13 @@ interface SearchData {
   groupChats: SearchResultItem[];
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  
+  const initialQuery = searchParams.get('q') || '';
+  const [query, setQuery] = useState(initialQuery);
   const [debouncedQuery] = useDebounce(query, 500);
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -78,6 +82,11 @@ export default function SearchPage() {
       try {
         setSearchHistory(JSON.parse(saved));
       } catch (e) {}
+    }
+    
+    // Initial load from URL
+    if (initialQuery) {
+      handleSearch(initialQuery);
     }
   }, []);
 
@@ -108,10 +117,17 @@ export default function SearchPage() {
     });
   };
   const handleSearch = async (searchQuery: string = query) => {
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
     if (!searchQuery.trim()) {
+      params.delete('q');
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       setResults(null);
       return;
     }
+    
+    params.set('q', searchQuery);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    
     setLoading(true);
     try {
       const res = await fetch(`/api/global-search?q=${encodeURIComponent(searchQuery)}`);
@@ -389,6 +405,14 @@ export default function SearchPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#0f1115]"></div>}>
+      <SearchContent />
+    </React.Suspense>
   );
 }
 

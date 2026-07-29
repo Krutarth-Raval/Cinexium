@@ -24,5 +24,9 @@ export default async function MoviesPage() {
   const cookieStore = await cookies();
   const region = cookieStore.get('cinexium_region')?.value || 'hollywood';
 
-  return <InfiniteMediaGrid key={region} type="movie" title="Movies" region={region} />;
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#0f1115]"></div>}>
+      <InfiniteMediaGrid key={region} type="movie" title="Movies" region={region} />
+    </React.Suspense>
+  );
 }
