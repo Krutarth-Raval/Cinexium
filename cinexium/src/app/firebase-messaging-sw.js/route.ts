@@ -140,7 +140,13 @@ export async function GET() {
 
     self.addEventListener('notificationclick', (event) => {
       event.notification.close();
-      const data = event.notification.data || {};
+      let data = event.notification.data || {};
+      if (data.FCM_MSG && data.FCM_MSG.data) {
+        data = data.FCM_MSG.data;
+      } else if (data.FCM_MSG && data.FCM_MSG.notification && data.FCM_MSG.notification.data) {
+        data = data.FCM_MSG.notification.data;
+      }
+      
       const deepLink = new URL(data.deepLink || '/', self.location.origin).toString();
 
       event.waitUntil((async () => {

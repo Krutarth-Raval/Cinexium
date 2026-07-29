@@ -220,10 +220,40 @@ async function sendPushPayloadToUser(
     },
   });
 
-  const response = await messaging.sendEachForMulticast({
+  const fcmMessage: any = {
     tokens,
     data: payload,
-  });
+    android: {
+      priority: 'high',
+    },
+    webpush: {
+      headers: {
+        Urgency: 'high',
+      },
+    },
+  };
+
+  if (payload.op === 'show') {
+    fcmMessage.notification = {
+      title: payload.title,
+      body: payload.body,
+    };
+    fcmMessage.webpush.notification = {
+      icon: payload.icon,
+      image: payload.image,
+      badge: payload.badge,
+      tag: payload.tag,
+      data: {
+        deepLink: payload.deepLink,
+        type: payload.type,
+        eventKey: payload.eventKey,
+        notificationId: payload.notificationId,
+        tag: payload.tag,
+      },
+    };
+  }
+
+  const response = await messaging.sendEachForMulticast(fcmMessage);
 
   logPushDebug({
     eventKey: debug.eventKey,
