@@ -75,11 +75,10 @@ export const VerifyOtpForm = () => {
       }
 
       if (action === 'signup') {
-        router.push('/premium');
+        window.location.href = '/premium';
       } else {
-        router.push('/');
+        window.location.href = '/';
       }
-      router.refresh();
     } catch (err: any) {
       setError(err.message || 'Verification failed');
     } finally {

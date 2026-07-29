@@ -60,7 +60,7 @@ export const ClientHistoryCarousel: React.FC<ClientHistoryCarouselProps> = ({ ti
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, [items]);
+  }, []);
 
   if (!items || items.length === 0) return null;
 
