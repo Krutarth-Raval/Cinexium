@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com",
+              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.themoviedb.org https://suggestqueries.google.com https://*.pusher.com wss://*.pusher.com https://accounts.google.com https://www.google.com https://vercel.live https://cdn.paddle.com https://*.paddle.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com https://*.googleapis.com https://graphql.anilist.co",
               "frame-src *;",
               "media-src 'self' blob: https:",
               "object-src 'none'",
