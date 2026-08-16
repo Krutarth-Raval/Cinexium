@@ -62,8 +62,8 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     const generateUrl = async () => {
       setIframeLoading(true);
       const finalUrl = mediaType === 'movie'
-        ? `https://vidlink.pro/movie/${mediaId}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`
-        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}?player=jw&title=false&primaryColor=a855f7&iconColor=ffffff`;
+        ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
+        : `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
 
       if (isMounted) {
         setIframeUrl(finalUrl);
@@ -84,13 +84,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
           <button onClick={() => router.back()} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors pointer-events-auto backdrop-blur-md shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-          
-          <h1 className="text-lg md:text-xl font-bold truncate text-shadow pointer-events-auto flex-1 min-w-0">
-            {mediaType === 'tv' ? `${title} (S${selectedSeason} E${selectedEpisode})` : title}
-          </h1>
-          
           <div className="pointer-events-auto ml-auto flex items-center gap-2 shrink-0">
-
             {mediaType === 'tv' && (
               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1.5 md:p-2 px-3 md:px-4 bg-primary-600 hover:bg-primary-500 rounded-lg text-xs md:text-sm font-bold shadow-lg transition-colors flex items-center gap-1.5">
                 <svg className="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -117,8 +111,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
               onLoad={() => setIframeLoading(false)}
               className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
               allowFullScreen
-              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              referrerPolicy="origin"
+              allow="autoplay; encrypted-media; picture-in-picture"
             />
           ) : null}
         </div>
@@ -132,21 +125,24 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
 
-          <div className="p-4 border-b border-white/5 md:mt-20">
-            <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Select Season</h3>
-            <select
-              className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-primary-500 cursor-pointer"
-              value={selectedSeason}
-              onChange={(e) => {
-                setSelectedSeason(Number(e.target.value));
-              }}
-            >
-              {validSeasons.map((season) => (
-                <option key={season.id} value={season.season_number}>
-                  {season.name || `Season ${season.season_number}`}
-                </option>
-              ))}
-            </select>
+          <div className="p-4 border-b border-white/5 md:mt-20 flex flex-col gap-3">
+            
+            <div className="flex flex-col">
+              <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Select Season</h3>
+              <select
+                className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white outline-none focus:border-primary-500 cursor-pointer"
+                value={selectedSeason}
+                onChange={(e) => {
+                  setSelectedSeason(Number(e.target.value));
+                }}
+              >
+                {validSeasons.map((season) => (
+                  <option key={season.id} value={season.season_number}>
+                    {season.name || `Season ${season.season_number}`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">

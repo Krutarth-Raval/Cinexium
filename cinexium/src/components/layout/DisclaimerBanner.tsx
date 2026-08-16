@@ -29,7 +29,7 @@ export const DisclaimerBanner = () => {
   };
 
   return (
-    <div className="hidden lg:flex w-full py-4 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-[#0f1115] text-gray-400 text-xs sm:text-sm items-center justify-between gap-4 z-40 relative">
+    <div className="hidden lg:flex w-full py-4 px-4 sm:px-6 lg:px-8 border-t border-white/10 bg-[#0f1115] text-gray-400 text-xs sm:text-sm items-center justify-between gap-4">
       <div className="flex-1 text-center sm:text-left">
         <p>
           <strong>Notice:</strong> We do not host any videos. Everything comes from third-party sources.
