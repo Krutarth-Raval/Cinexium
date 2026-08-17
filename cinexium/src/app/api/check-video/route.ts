@@ -10,10 +10,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const url = type === 'movie' 
-      ? `https://vidlink.pro/movie/${id}`
-      : `https://vidlink.pro/tv/${id}/1/1`;
+    // For TV shows, checking 1/1 on a single provider is unreliable and causes false "Not Available" states.
+    // Instead, rely on the releaseDate check in the UI, and assume true here since we have multiple servers.
+    if (type === 'tv') {
+      return NextResponse.json({ available: true });
+    }
 
+    const url = `https://vidlink.pro/movie/${id}`;
     const res = await fetch(url, { 
       method: 'HEAD',
       headers: {
