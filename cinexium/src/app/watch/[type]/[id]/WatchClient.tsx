@@ -62,8 +62,8 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     const generateUrl = async () => {
       setIframeLoading(true);
       const finalUrl = mediaType === 'movie'
-        ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
-        : `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
+        ? `https://vidlink.pro/movie/${mediaId}`
+        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
 
       if (isMounted) {
         setIframeUrl(finalUrl);
@@ -112,6 +112,7 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
               className={`w-full h-full border-0 outline-none relative z-20 transition-opacity duration-500 ${iframeLoading ? 'opacity-0' : 'opacity-100'}`}
               allowFullScreen
               allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="origin"
             />
           ) : null}
         </div>
