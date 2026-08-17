@@ -61,9 +61,21 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     let isMounted = true;
     const generateUrl = async () => {
       setIframeLoading(true);
-      const finalUrl = mediaType === 'movie'
-        ? `https://vidlink.pro/movie/${mediaId}`
-        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
+      
+      // Vidlink blocks localhost, while vidsrc works on localhost but often fails in deployment. 
+      // We use the hostname to determine which provider to use.
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      let finalUrl = '';
+      if (mediaType === 'movie') {
+        finalUrl = isLocal 
+          ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
+          : `https://vidlink.pro/movie/${mediaId}`;
+      } else {
+        finalUrl = isLocal 
+          ? `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`
+          : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
+      }
 
       if (isMounted) {
         setIframeUrl(finalUrl);
