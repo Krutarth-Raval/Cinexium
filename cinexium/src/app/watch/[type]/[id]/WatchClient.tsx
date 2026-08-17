@@ -62,8 +62,8 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
     const generateUrl = async () => {
       setIframeLoading(true);
       const finalUrl = mediaType === 'movie'
-        ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
-        : `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
+        ? `https://vidlink.pro/movie/${mediaId}`
+        : `https://vidlink.pro/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
 
       if (isMounted) {
         setIframeUrl(finalUrl);
