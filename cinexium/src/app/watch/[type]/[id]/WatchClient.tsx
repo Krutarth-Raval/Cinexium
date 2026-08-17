@@ -67,6 +67,14 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
 
       if (isMounted) {
         setIframeUrl(finalUrl);
+        
+        // Fallback: forcefully hide the loading spinner after 3 seconds.
+        // Adblockers often block tracking scripts inside the iframe, preventing the onLoad event from ever firing.
+        setTimeout(() => {
+          if (isMounted) {
+            setIframeLoading(false);
+          }
+        }, 3000);
       }
     };
 
