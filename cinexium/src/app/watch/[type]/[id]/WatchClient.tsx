@@ -79,10 +79,6 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
         finalUrl = mediaType === 'movie'
           ? `https://vidsrc.me/embed/movie?tmdb=${mediaId}`
           : `https://vidsrc.me/embed/tv?tmdb=${mediaId}&season=${selectedSeason}&episode=${selectedEpisode}`;
-      } else if (selectedServer === 'vidsrc_cc') {
-        finalUrl = mediaType === 'movie'
-          ? `https://vidsrc.cc/v2/embed/movie/${mediaId}`
-          : `https://vidsrc.cc/v2/embed/tv/${mediaId}/${selectedSeason}/${selectedEpisode}`;
       }
 
       if (isMounted) {
@@ -117,7 +113,6 @@ export default function WatchClient({ mediaId, mediaType, title, seasons = [], r
             <div className="flex items-center gap-1 bg-black/50 border border-white/10 rounded-lg p-1 backdrop-blur-md">
                <button onClick={() => setSelectedServer('vidlink')} className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold rounded-md transition ${selectedServer === 'vidlink' ? 'bg-primary-600 text-white shadow-md' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>Server 1</button>
                <button onClick={() => setSelectedServer('vidsrc')} className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold rounded-md transition ${selectedServer === 'vidsrc' ? 'bg-primary-600 text-white shadow-md' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>Server 2</button>
-               <button onClick={() => setSelectedServer('vidsrc_cc')} className={`px-2.5 py-1.5 md:px-3 md:py-1.5 text-[10px] md:text-xs font-bold rounded-md transition ${selectedServer === 'vidsrc_cc' ? 'bg-primary-600 text-white shadow-md' : 'text-white/60 hover:text-white hover:bg-white/10'}`}>Server 3</button>
             </div>
 
             {mediaType === 'tv' && (
