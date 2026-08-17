@@ -95,6 +95,60 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
     })
   };
 
+  // Strip down the massive TMDB details object to ONLY what the client component needs
+  // This drastically reduces the RSC payload size and prevents hitting Vercel Fast Origin Transfer data limits.
+  const bentoGridDetails = {
+    id: details.id,
+    title: details.title,
+    genres: details.genres,
+    overview: details.overview,
+    vote_average: details.vote_average,
+    vote_count: details.vote_count,
+    popularity: details.popularity,
+    homepage: details.homepage,
+    status: details.status,
+    runtime: details.runtime,
+    release_date: details.release_date,
+    original_language: details.original_language,
+    budget: details.budget,
+    revenue: details.revenue,
+    release_dates: details.release_dates,
+    'watch/providers': details['watch/providers'],
+    production_companies: details.production_companies?.slice(0, 6) || [],
+    credits: {
+      cast: details.credits?.cast?.slice(0, 20).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character,
+        profile_path: c.profile_path
+      })) || [],
+      crew: details.credits?.crew?.filter((c: any) => c.job === 'Director' || c.job === 'Screenplay' || c.job === 'Writer').map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        job: c.job,
+        profile_path: c.profile_path
+      })) || []
+    },
+    recommendations: {
+      results: details.recommendations?.results?.slice(0, 20).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        poster_path: r.poster_path,
+        genre_ids: r.genre_ids,
+        original_language: r.original_language
+      })) || []
+    },
+    similar: {
+      results: details.similar?.results?.slice(0, 20).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        poster_path: s.poster_path,
+        genre_ids: s.genre_ids,
+        original_language: s.original_language
+      })) || []
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f1115] pb-24">
       <script
@@ -115,7 +169,7 @@ export default async function MovieDetailsPage({ params }: { params: Promise<{ i
         releaseDate={details.release_date}
       />
       
-      <MovieBentoGrid details={details} region={region} />
+      <MovieBentoGrid details={bentoGridDetails} region={region} />
     </div>
   );
 }

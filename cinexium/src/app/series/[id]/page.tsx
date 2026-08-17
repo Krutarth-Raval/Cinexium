@@ -95,6 +95,67 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
     })
   };
 
+  // Strip down the massive TMDB details object to ONLY what the client component needs
+  // This drastically reduces the RSC payload size and prevents hitting Vercel Fast Origin Transfer data limits.
+  const bentoGridDetails = {
+    id: details.id,
+    name: details.name,
+    genres: details.genres,
+    overview: details.overview,
+    vote_average: details.vote_average,
+    vote_count: details.vote_count,
+    popularity: details.popularity,
+    homepage: details.homepage,
+    status: details.status,
+    episode_run_time: details.episode_run_time,
+    last_episode_to_air: details.last_episode_to_air,
+    first_air_date: details.first_air_date,
+    release_date: details.release_date,
+    original_language: details.original_language,
+    number_of_seasons: details.number_of_seasons,
+    number_of_episodes: details.number_of_episodes,
+    release_dates: details.release_dates,
+    'watch/providers': details['watch/providers'],
+    production_companies: details.production_companies?.slice(0, 6) || [],
+    created_by: details.created_by?.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      profile_path: c.profile_path
+    })) || [],
+    credits: {
+      cast: details.credits?.cast?.slice(0, 20).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character,
+        profile_path: c.profile_path
+      })) || [],
+      crew: details.credits?.crew?.filter((c: any) => c.job === 'Executive Producer' || c.job === 'Writer' || c.job === 'Screenplay').map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        job: c.job,
+        profile_path: c.profile_path
+      })) || []
+    },
+    recommendations: {
+      results: details.recommendations?.results?.slice(0, 20).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        poster_path: r.poster_path,
+        genre_ids: r.genre_ids,
+        original_language: r.original_language
+      })) || []
+    },
+    similar: {
+      results: details.similar?.results?.slice(0, 20).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        poster_path: s.poster_path,
+        genre_ids: s.genre_ids,
+        original_language: s.original_language
+      })) || []
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f1115] pb-24">
       <script
@@ -116,7 +177,7 @@ export default async function TvDetailsPage({ params }: { params: Promise<{ id: 
         releaseDate={details.first_air_date}
       />
       
-      <TvBentoGrid details={details} region={region} />
+      <TvBentoGrid details={bentoGridDetails} region={region} />
     </div>
   );
 }
